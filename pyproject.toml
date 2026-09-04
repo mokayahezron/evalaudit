@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evalaudit"
+version = "0.1.0"
+description = "Statistical validity checks for human-graded AI evaluations. Rater agreement, judge validation, and whether your result holds up."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "YOUR NAME", email = "you@yourdomain.com" }]
+keywords = ["llm", "evaluation", "statistics", "inter-rater-reliability", "krippendorff", "bradley-terry", "llm-as-judge", "annotation-quality"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.22",
+    "scipy>=1.9",
+    "pandas>=1.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov"]
+
+[project.urls]
+Homepage = "https://github.com/YOURUSERNAME/evalaudit"
+Issues = "https://github.com/YOURUSERNAME/evalaudit/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["evalaudit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
