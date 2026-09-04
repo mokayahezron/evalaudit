@@ -9,7 +9,7 @@ description = "Statistical validity checks for human-graded AI evaluations. Rate
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "YOUR NAME", email = "you@yourdomain.com" }]
+authors = [{ name = "Hezron Mokaya", email = "ondibahezron@gmail.com" }]
 keywords = ["llm", "evaluation", "statistics", "inter-rater-reliability", "krippendorff", "bradley-terry", "llm-as-judge", "annotation-quality"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -28,8 +28,8 @@ dependencies = [
 dev = ["pytest>=7.0", "pytest-cov"]
 
 [project.urls]
-Homepage = "https://github.com/YOURUSERNAME/evalaudit"
-Issues = "https://github.com/YOURUSERNAME/evalaudit/issues"
+Homepage = "https://github.com/ondibahezron-glitch/evalaudit"
+Issues = "https://github.com/ondibahezron-glitch/evalaudit/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["evalaudit"]
