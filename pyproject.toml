@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "evalaudit"
-version = "0.1.0"
+version = "0.0.1"
 description = "Statistical validity checks for human-graded AI evaluations. Rater agreement, judge validation, and whether your result holds up."
 readme = "README.md"
 requires-python = ">=3.9"

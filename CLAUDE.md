@@ -1,4 +1,4 @@
-# CLAUDE.md — evalaudit project rules
+# CLAUDE.md, evalaudit project rules
 
 ## Design invariants
 
@@ -14,16 +14,31 @@
 
 ## Implementation style
 
-- Vectorise bootstraps in numpy. Draw index matrices in one call and compute row statistics — no Python loops over resamples.
+- Vectorise bootstraps in numpy. Draw index matrices in one call and compute row statistics. No Python loops over resamples.
 - Use `rng.integers(0, n, size=(n_boot, n))` for bootstrap index matrices.
 
 ## Build order
 
 scores → compare → agreement → pairwise → judge → power → audit
 
-The core of the package is **agreement**, **judge**, and **pairwise** — these are the point, not extras. scores and compare are the foundation they stand on.
+The core of the package is **agreement**, **judge**, and **pairwise**. These are the point, not extras. scores and compare are the foundation they stand on.
 
 ## Commands
 
 - Install dev: `pip install -e ".[dev]"`
 - Run tests: `pytest -q`
+
+## Git
+Never run `git commit`, `git push`, or any history-rewriting command.
+Make changes and show the diff. The user reviews and commits.
+
+## Writing style
+Write plainly, the way a knowledgeable person would talk. No em-dashes.
+No "not X, but Y" constructions. No colon-then-reveal sentences.
+Short, direct sentences over clever phrasing. This applies to docstrings,
+README text, commit messages, and the summary() strings.
+
+## Git
+Never run git commit, git push, git reset, or any command that writes to
+git history or the remote. Make file changes and show the diff. The user
+commits.

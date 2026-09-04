@@ -5,8 +5,8 @@
 **Statistical validity checks for human-graded AI evaluations.**
 
 Three experts graded 200 items. One of them disagreed with the other two on
-almost everything. Nobody noticed, because nobody computed agreement — and
-half the items were only graded once, so it could not have been computed.
+almost everything. Nobody noticed, because nobody computed agreement. Half the items were
+only graded once, so it could not have been computed anyway.
 
 That evaluation produced a number. The number is now in a slide deck.
 
@@ -57,7 +57,7 @@ Two rules the library follows throughout:
 | Module | Question |
 |---|---|
 | `agreement` | Do your graders agree? Which grader is the outlier? Which items are ambiguous rather than hard? |
-| `judge` | Does your LLM judge track your humans — and on which slices does it stop? Is it biased by position or length? |
+| `judge` | Does your LLM judge track your humans, and on which slices does it stop? Is it biased by position or length? |
 | `pairwise` | In a blind pairwise comparison, which models are actually separable? |
 | `power` | Could this many comparisons ever have detected the effect you care about? |
 | `scores` | Is there an interval around your headline number, and how wide? |
@@ -87,7 +87,7 @@ the time. Those tests run in CI and you can read them in `tests/`.
 ## Related
 
 [`promptstats`](https://pypi.org/project/promptstats/) covers the automated
-side well — prompt sensitivity, model comparison across prompt variations,
+side well: prompt sensitivity, model comparison across prompt variations,
 bootstrapped intervals on benchmark scores. If your evaluation has no human
 graders in it, start there.
 
@@ -96,12 +96,10 @@ graders in it, start there.
 ## Install
 
 ```bash
-git clone https://github.com/ondibahezron-glitch/evalaudit.git
-cd evalaudit
-pip install -e ".[dev]"
+pip install evalaudit
 ```
 
-Python 3.9+, numpy, scipy, pandas. Nothing else. PyPI package coming soon.
+Python 3.9+, numpy, scipy, pandas. Nothing else.
 
 ---
 
