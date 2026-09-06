@@ -874,3 +874,203 @@ class LengthBias:
 
     def __str__(self) -> str:  # pragma: no cover
         return self.summary()
+
+
+def _points(x: float) -> str:
+    """A difference as points of pass rate, trimmed of trailing zeros."""
+    return f"{round(x * 100, 1):g}"
+
+
+def _rate(x: float) -> str:
+    """A rate as a percentage, trimmed of trailing zeros."""
+    return f"{round(x * 100, 1):g}%"
+
+
+@dataclass(frozen=True)
+class PowerResult:
+    """What an eval of a given size could find, or the size a target needs.
+
+    One relation solved in two directions. ``solved_for`` says which, either
+    ``"difference"`` from :func:`evalaudit.detectable_effect` or ``"n"``
+    from :func:`evalaudit.min_sample_size`.
+
+    ``n`` is the number of paired comparisons in a paired design and the
+    total number of items across both groups in an independent one, which
+    is the convention ``ComparisonResult`` already uses.
+
+    ``attainable`` is False when no difference reaches the requested power
+    at this size. For a paired design ``difference`` is then the figure the
+    arithmetic returns even though it sits above the discordance rate,
+    which is the ceiling a paired difference cannot pass. For an
+    independent design there is no such figure and ``difference`` is NaN.
+
+    ``discordance_assumed`` is True when no discordance rate was supplied
+    and the conservative default stood in. The summary says so every time.
+    Nothing here assumes that rate quietly.
+    """
+
+    difference: float
+    n: int
+    baseline: float
+    power: float
+    alpha: float
+    paired: bool
+    solved_for: str
+    attainable: bool
+    discordance_rate: Optional[float] = None
+    discordance_assumed: bool = False
+    n_discordant: Optional[int] = None
+    n_per_group: Optional[float] = None
+    reference_difference: Optional[float] = None
+    n_for_reference: Optional[int] = None
+
+    @property
+    def has_difference(self) -> bool:
+        return bool(np.isfinite(self.difference))
+
+    def summary(self) -> str:
+        if self.solved_for == "n":
+            return self._required_size()
+        return self._reach()
+
+    # ------------------------------------------------------------------
+    # min_sample_size
+    # ------------------------------------------------------------------
+
+    def _required_size(self) -> str:
+        target = (
+            f"To detect a {_points(self.difference)} point difference at "
+            f"{_rate(self.power)} power and a {_rate(self.alpha)} "
+            f"significance level"
+        )
+        if self.paired:
+            head = f"{target} you need roughly {self.n:,} paired comparisons."
+            return (
+                head
+                + self._discordant_sentence()
+                + self._assumed_sentence()
+                + (
+                    f" The baseline pass rate does not enter a paired binary "
+                    f"calculation. Two systems can both pass "
+                    f"{_rate(self.baseline)} of items and disagree on none of "
+                    f"them or on all of them, and it is the disagreement that "
+                    f"sets the number above."
+                )
+            )
+
+        head = (
+            f"{target} from a {_rate(self.baseline)} baseline you need "
+            f"roughly {self.n:,} items, {self.n_per_group:,g} in each group."
+        )
+        return head + self._pairing_sentence()
+
+    # ------------------------------------------------------------------
+    # detectable_effect
+    # ------------------------------------------------------------------
+
+    def _reach(self) -> str:
+        if self.paired:
+            head = f"This eval ran {self.n:,} paired comparisons."
+        else:
+            head = (
+                f"This eval ran {self.n:,} items, {self.n_per_group:,g} in "
+                f"each group."
+            )
+        if not self.attainable:
+            return head + self._out_of_reach() + self._discordant_sentence()
+        return (
+            head
+            + self._smallest_finding()
+            + self._discordant_sentence()
+            + self._reference_sentence()
+            + self._assumed_sentence()
+            + (self._floor_sentence() if self.paired else self._pairing_sentence())
+        )
+
+    def _smallest_finding(self) -> str:
+        against = "" if self.paired else f" against a {_rate(self.baseline)} baseline"
+        return (
+            f" At {_rate(self.power)} power and a {_rate(self.alpha)} "
+            f"significance level{against} the smallest difference it could "
+            f"have found is {_points(self.difference)} points, and anything "
+            f"smaller was out of reach before the first item was graded."
+        )
+
+    def _out_of_reach(self) -> str:
+        if self.paired:
+            if self.has_difference:
+                needed = (
+                    f" Reaching {_rate(self.power)} power here would take a "
+                    f"difference of {_points(self.difference)} points."
+                )
+            else:
+                needed = (
+                    f" No difference reaches {_rate(self.power)} power at "
+                    f"this size."
+                )
+            return needed + (
+                f" A difference can never exceed the discordance rate, which "
+                f"here is {_rate(self.discordance_rate)}, so no difference at "
+                f"all was detectable. This eval could not have found "
+                f"anything, whatever the two systems really do."
+            )
+        return (
+            f" A {_rate(self.baseline)} baseline leaves at most a "
+            f"{_points(1.0 - self.baseline)} point difference before the pass "
+            f"rate hits 100%, and this many items cannot find even that at "
+            f"{_rate(self.power)} power. So no difference at all was "
+            f"detectable, and this eval could not have found anything."
+        )
+
+    # ------------------------------------------------------------------
+    # Shared clauses
+    # ------------------------------------------------------------------
+
+    def _discordant_sentence(self) -> str:
+        if not self.paired or self.n_discordant is None:
+            return ""
+        return (
+            f" At a {_rate(self.discordance_rate)} discordance rate that is "
+            f"about {self.n_discordant:,} discordant pairs, and McNemar reads "
+            f"only those. The rest of the items agree across both systems and "
+            f"carry no information about which one is better."
+        )
+
+    def _reference_sentence(self) -> str:
+        if self.n_for_reference is None or self.reference_difference is None:
+            return ""
+        unit = "comparisons" if self.paired else "items"
+        return (
+            f" To find a {_points(self.reference_difference)} point "
+            f"difference you would have needed roughly "
+            f"{self.n_for_reference:,} {unit}, and this eval ran {self.n:,}."
+        )
+
+    def _assumed_sentence(self) -> str:
+        if not self.discordance_assumed:
+            return ""
+        return (
+            f" The discordance rate was not supplied, so "
+            f"{_rate(self.discordance_rate)} was assumed. That is a "
+            f"conservative stand-in and it is not a measurement. Supply the "
+            f"rate your own eval produced, since a lower rate needs fewer "
+            f"pairs and a higher one needs more."
+        )
+
+    def _floor_sentence(self) -> str:
+        return (
+            " This is the standard normal approximation for McNemar, and it "
+            "runs a little ahead of the continuity corrected and exact forms "
+            "evalaudit actually uses. Read the number as a floor on what the "
+            "eval could have found. The true reach is slightly worse."
+        )
+
+    def _pairing_sentence(self) -> str:
+        return (
+            " Running both systems on the same items would cut this sharply. "
+            "Pairing removes the item to item difficulty that an independent "
+            "comparison has to absorb, and most evals can pair."
+        )
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()

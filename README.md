@@ -70,8 +70,39 @@ The first four are the point. The last three are the foundation they stand on.
 
 ## Status
 
-Early. `scores` is implemented. `agreement`, `judge` and `pairwise` are
-specified and landing over the coming weeks.
+Early, and filling in along the build order.
+
+| Module | State |
+|---|---|
+| `scores` | Implemented |
+| `compare` | Implemented |
+| `agreement` | Implemented |
+| `judge` | Implemented |
+| `power` | Implemented |
+| `pairwise` | Specified, landing next |
+| `audit` | Specified, last |
+
+### What `power` answers
+
+```python
+from evalaudit import detectable_effect
+
+print(detectable_effect(500, discordance_rate=12 / 500).summary())
+```
+
+```
+This eval ran 500 paired comparisons. At 80% power and a 5% significance
+level the smallest difference it could have found is 1.9 points [...] At a
+2.4% discordance rate that is about 12 discordant pairs, and McNemar reads
+only those. The rest of the items agree across both systems and carry no
+information about which one is better.
+```
+
+Paired binary power runs on the discordance rate, not on the item count and
+not on the pass rate. An eval with 500 items and 12 discordant pairs carries
+the information of a 12 item study. When the rate is not supplied, a
+conservative 0.3 stands in and the summary says so rather than assuming it
+quietly.
 
 ---
 

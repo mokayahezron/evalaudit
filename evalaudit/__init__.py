@@ -9,11 +9,13 @@ from ._types import (
     KappaResult,
     LengthBias,
     PositionBias,
+    PowerResult,
     ScoreCI,
 )
 from .agreement import cohens_kappa, fleiss_kappa, rater_agreement
 from .compare import compare_independent, compare_paired
 from .judge import judge_validation, length_bias, position_bias
+from .power import detectable_effect, min_sample_size
 from .scores import score_ci
 
 __all__ = [
@@ -26,6 +28,8 @@ __all__ = [
     "judge_validation",
     "position_bias",
     "length_bias",
+    "detectable_effect",
+    "min_sample_size",
     "ScoreCI",
     "ComparisonResult",
     "AgreementResult",
@@ -33,4 +37,5 @@ __all__ = [
     "JudgeValidation",
     "PositionBias",
     "LengthBias",
+    "PowerResult",
 ]
