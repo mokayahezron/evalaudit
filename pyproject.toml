@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-cov", "statsmodels>=0.14"]
+dev = ["pytest>=7.0", "pytest-cov", "statsmodels>=0.14", "krippendorff>=0.6"]
 
 [project.urls]
 Homepage = "https://github.com/ondibahezron-glitch/evalaudit"
