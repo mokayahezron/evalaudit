@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 
 
@@ -392,6 +393,484 @@ class AgreementResult:
             f"distinguish the raters. Do not read the top of the dropout "
             f"table as an outlier."
         )
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()
+
+
+# Slices thinner than this get a hedge in the summary even when they clear
+# the interval. Same count ScoreCI uses to call an estimate weak.
+_THIN_SLICE = 30
+
+# Why a slice has no alpha. Checked in this order, which is the opposite of
+# the order rater_dropout uses. There, a rater whose removal leaves everyone
+# agreeing is a finding worth stating over the item count. Here a slice with
+# one item is too small to measure whatever else is true of it.
+_NOTE_SLICE_ONE_ITEM = "one item, too few to measure agreement"
+_NOTE_SLICE_NO_VARIANCE = (
+    "human and judge used one label throughout, so alpha has no denominator"
+)
+
+
+@dataclass(frozen=True)
+class JudgeValidation:
+    """How well an LLM judge's labels line up with human labels.
+
+    ``agreement`` is Krippendorff's alpha between the two, so it is the same
+    statistic ``rater_agreement`` reports and reads the same way. A judge is
+    a rater. ``accuracy`` is the plain share of items where the two labels
+    matched, reported beside it because people ask for it and because the
+    gap between the two numbers is informative on its own. On a lopsided
+    label set a judge that always guesses the common label scores high
+    accuracy and no agreement at all.
+
+    ``by_slice`` is the part worth reading. Judges track humans on the easy
+    cases and come apart where the decision is close, so a good headline
+    number routinely hides the failure. The table is sorted ascending, worst
+    first, and ``summary()`` refuses to name the top row unless its
+    agreement falls below the interval on the overall figure.
+    """
+
+    agreement: float
+    ci_low: float
+    ci_high: float
+    accuracy: float
+    n_items: int
+    n_dropped: int
+    level: str
+    by_slice: pd.DataFrame
+    confidence: float = 0.95
+    n_boot: int = 0
+    n_boot_usable: int = 0
+
+    @property
+    def has_interval(self) -> bool:
+        return self.ci_low == self.ci_low and self.ci_high == self.ci_high
+
+    @property
+    def width(self) -> float:
+        return self.ci_high - self.ci_low
+
+    @property
+    def slice_is_distinguishable(self) -> bool:
+        """True when the worst slice clears the overall interval outright.
+
+        The noise guard rater_dropout uses, in the form this statistic
+        takes. Cut a homogeneous population into five slices and one of them
+        is last by sampling noise alone, so a table that always ranks
+        somebody first needs a rule about when the first row means anything.
+
+        The rule is that the slice's own interval has to sit entirely below
+        the interval on the overall figure. The slice's agreement being
+        below the overall lower bound is necessary and is not enough on its
+        own, because a slice holds a fraction of the items and its sampling
+        error is correspondingly wider. Cut three hundred homogeneous items
+        into five slices of sixty and the lowest one drops under the overall
+        lower bound most of the time, so that test alone names a slice on
+        noise, which is the thing it exists to prevent.
+
+        One slice is the whole dataset under another name, so it never
+        qualifies. Without intervals there is nothing to place the slices
+        against and the answer is False rather than a guess.
+        """
+        if not self.has_interval or len(self.by_slice) < 2:
+            return False
+        worst = self.by_slice.iloc[0]
+        return bool(
+            np.isfinite(worst["agreement"])
+            and np.isfinite(worst["ci_high"])
+            and worst["ci_high"] < self.ci_low
+        )
+
+    @property
+    def worst_slice(self):
+        """The slice worth investigating, or None when the data cannot say."""
+        if not self.slice_is_distinguishable:
+            return None
+        return self.by_slice.iloc[0]["slice"]
+
+    def summary(self) -> str:
+        return self._head() + self._verdict() + self._slice_sentence()
+
+    def _head(self) -> str:
+        conf = f"{self.confidence * 100:.0f}%"
+        accuracy = f" Plain accuracy is {_pct(self.accuracy)}."
+        dropped = ""
+        if self.n_dropped:
+            dropped = (
+                f" {self.n_dropped} items were set aside because one side "
+                f"had no label."
+            )
+
+        if self.agreement != self.agreement:  # NaN
+            return (
+                f"Judge and human agreement is undefined ({self.level}, "
+                f"{self.n_items} items). Every label that could be compared "
+                f"was identical, so there is no disagreement to divide by. "
+                f"That is not perfect agreement, it is a rubric with one "
+                f"label in it." + accuracy + dropped
+            )
+
+        if self.has_interval:
+            head = (
+                f"Judge and human agree at alpha {self.agreement:.3f} "
+                f"({conf} CI: {self.ci_low:.3f} to {self.ci_high:.3f}, "
+                f"{self.level}, {self.n_items} items)."
+            )
+        else:
+            head = (
+                f"Judge and human agree at alpha {self.agreement:.3f} "
+                f"({self.level}, {self.n_items} items). No interval was "
+                f"computed, so nothing here is placed against sampling error."
+            )
+        return head + accuracy + dropped
+
+    def _verdict(self) -> str:
+        if self.agreement != self.agreement:
+            return ""
+        if self.agreement >= _ALPHA_RELIABLE:
+            return (
+                f" That is at or above {_ALPHA_RELIABLE:.3f}, the "
+                f"conventional bar for treating coded data as reliable."
+            )
+        if self.agreement >= _ALPHA_FLOOR:
+            return (
+                f" That sits between {_ALPHA_FLOOR:.3f} and "
+                f"{_ALPHA_RELIABLE:.3f}, which supports tentative "
+                f"conclusions and no firm ones."
+            )
+        return (
+            f" That is below {_ALPHA_FLOOR:.3f}, the conventional floor for "
+            f"drawing any conclusion from coded data. The judge is not a "
+            f"stand-in for the humans at this level."
+        )
+
+    def _slice_sentence(self) -> str:
+        if self.by_slice.empty:
+            return ""
+
+        if len(self.by_slice) < 2:
+            return (
+                " One slice is the whole dataset under another name, so "
+                "there is nothing to compare it against."
+            )
+
+        if self.slice_is_distinguishable:
+            row = self.by_slice.iloc[0]
+            count = int(row["n_items"])
+            sentence = (
+                f" Worst slice {row['slice']!r} agrees at "
+                f"{row['agreement']:.3f} on {count} items, and its interval "
+                f"tops out at {row['ci_high']:.3f}, clear of the "
+                f"{self.ci_low:.3f} lower bound on the overall figure. The "
+                f"headline number is carried by the rest of the data."
+            )
+            if count < _THIN_SLICE:
+                sentence += (
+                    f" That slice holds only {count} items, so treat the gap "
+                    f"as provisional and grade more of them before acting."
+                )
+            return sentence
+
+        if not self.has_interval:
+            return (
+                " Without an interval on the overall figure there is nothing "
+                "to place the slices against, so the data cannot single out "
+                "a slice. Do not read the top of the table as a failure."
+            )
+
+        row = self.by_slice.iloc[0]
+        if not np.isfinite(row["agreement"]) or not np.isfinite(row["ci_high"]):
+            return (
+                " No slice carries both an agreement figure and an interval, "
+                "so the data cannot single out a slice. Do not read the top "
+                "of the table as a failure."
+            )
+        return (
+            f" The lowest slice {row['slice']!r} runs up to "
+            f"{row['ci_high']:.3f} against a lower bound of "
+            f"{self.ci_low:.3f} on the overall figure, so the two overlap "
+            f"and the data cannot single out a slice. Something is always "
+            f"last. Do not read the top of the table as a failure."
+        )
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()
+
+
+@dataclass(frozen=True)
+class PositionBias:
+    """Whether the judge favours whichever output it saw first.
+
+    Two designs answer this question and they answer it with different
+    arithmetic, so ``design`` says which one the data turned out to be.
+
+    ``"randomised"`` means each pair was judged once with the order shuffled
+    beforehand. Then the position-A win rate is tested against a half.
+
+    ``"both_orders"`` means the same pair was judged twice, once each way.
+    Then the headline is the consistency rate, the share of pairs where the
+    judge named the same output both times, and the direction of the pairs
+    it flipped on says whether the flipping was position or noise.
+    """
+
+    design: str
+    estimate: float
+    ci_low: float
+    ci_high: float
+    p_value: float
+    position_a_rate: float
+    n_a_wins: int
+    n_decisive: int
+    consistency_rate: float
+    n_pairs: int
+    n_pairs_scored: int
+    n_judgements: int
+    n_both_orders: int
+    n_ties: int
+    confidence: float = 0.95
+
+    @property
+    def has_position_effect(self) -> bool:
+        """True when the interval on the position-A rate clears a half.
+
+        In the both-orders design this reads the direction of the flips, not
+        the consistency rate, because an inconsistent judge and a
+        position-biased one are different problems.
+        """
+        if self.design == "both_orders":
+            if self.n_decisive == 0 or self.p_value != self.p_value:
+                return False
+            return bool(self.p_value < 1 - self.confidence)
+        if not (self.ci_low == self.ci_low):
+            return False
+        return not (self.ci_low <= 0.5 <= self.ci_high)
+
+    def summary(self) -> str:
+        conf = f"{self.confidence * 100:.0f}%"
+        if self.design == "both_orders":
+            return self._both_orders(conf) + self._ties()
+        return self._randomised(conf) + self._ties()
+
+    def _randomised(self, conf: str) -> str:
+        head = (
+            f"Each pair was judged once, so this reports the position-A win "
+            f"rate. Position A won {_pct(self.position_a_rate)} of "
+            f"{self.n_decisive} judgements ({conf} CI: {_pct(self.ci_low)} "
+            f"to {_pct(self.ci_high)}, exact binomial p={self.p_value:.4f})."
+        )
+
+        if self.has_position_effect:
+            side = "first" if self.position_a_rate > 0.5 else "second"
+            verdict = (
+                f" The interval clears 50%, so the judge favours whichever "
+                f"output it sees {side}."
+            )
+        else:
+            verdict = (
+                " The interval covers 50%, so the data cannot show that "
+                "position moved the judge."
+            )
+
+        caveat = (
+            " This assumes presentation order was randomised, which the data "
+            "cannot confirm. If the same system sat in position A each time, "
+            "the same number appears when that system is simply better."
+        )
+
+        stray = ""
+        if self.n_both_orders:
+            stray = (
+                f" {self.n_both_orders} pairs were also run in the reverse "
+                f"order, too few to change which analysis applies."
+            )
+        return head + verdict + caveat + stray
+
+    def _both_orders(self, conf: str) -> str:
+        head = (
+            f"{self.n_both_orders} of {self.n_pairs} pairs were run in both "
+            f"orders, so this reports the consistency rate. The judge named "
+            f"the same output under both orderings on "
+            f"{_pct(self.consistency_rate)} of {self.n_pairs_scored} pairs "
+            f"({conf} CI: {_pct(self.ci_low)} to {_pct(self.ci_high)})."
+        )
+
+        if self.n_decisive == 0:
+            return head + (
+                " It never flipped, so there is no direction to test and "
+                "nothing here points at position."
+            )
+
+        direction = (
+            f" Of the {self.n_decisive} pairs it flipped on, {self.n_a_wins} "
+            f"went to whichever output was shown first "
+            f"({_pct(self.position_a_rate)}, exact binomial "
+            f"p={self.p_value:.4f})."
+        )
+
+        if self.has_position_effect:
+            side = "first" if self.position_a_rate > 0.5 else "second"
+            verdict = (
+                f" The flips have a direction, so this is position bias "
+                f"rather than an unsteady judge. It reaches for whatever it "
+                f"sees {side}."
+            )
+        else:
+            verdict = (
+                " The flips split evenly across the two positions, so this "
+                "is an unsteady judge rather than a position-biased one. "
+                "Inconsistency is its own problem and does not become "
+                "position bias without a direction."
+            )
+        return head + direction + verdict
+
+    def _ties(self) -> str:
+        if not self.n_ties:
+            return ""
+        return (
+            f" {self.n_ties} judgements were ties and are left out of the "
+            f"rates above."
+        )
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()
+
+
+@dataclass(frozen=True)
+class LengthBias:
+    """Two logistic fits on the same length difference, and they answer
+    different questions.
+
+    The first regresses judge preference on the length difference between
+    the two answers. A positive coefficient says the judge goes for the
+    longer answer, and on its own that is not bias, because longer answers
+    may be better.
+
+    The second regresses judge-human disagreement on the same length
+    difference, oriented by what the humans picked, so a positive
+    coefficient says the judge breaks with the humans on the pairs where the
+    humans went short. Holding the human verdict fixed removes the part of
+    the length-quality link the human labels capture. It does not remove the
+    rest. A binary human label is a coarse measure of quality and the length
+    difference still carries quality information the label missed, so on a
+    corpus where length tracks quality closely this coefficient stays
+    positive for a judge with no length preference at all. It is the sharper
+    of the two and it is not a clean separation.
+    """
+
+    coefficient: float
+    ci_low: float
+    ci_high: float
+    p_value: float
+    sd_difference: float
+    note: str
+    disagreement_coefficient: float
+    disagreement_ci_low: float
+    disagreement_ci_high: float
+    disagreement_p_value: float
+    disagreement_sd_difference: float
+    disagreement_note: str
+    n: int
+    n_disagreements: int
+    longer_rate: float
+    has_human: bool
+    confidence: float = 0.95
+
+    @property
+    def odds_ratio_per_sd(self) -> float:
+        """What one standard deviation of extra length does to the odds.
+
+        The raw coefficient is a log-odds per character, which nobody can
+        read. This puts it on a step the data actually contains.
+        """
+        return float(np.exp(self.coefficient * self.sd_difference))
+
+    @property
+    def disagreement_odds_ratio_per_sd(self) -> float:
+        return float(
+            np.exp(self.disagreement_coefficient * self.disagreement_sd_difference)
+        )
+
+    def summary(self) -> str:
+        return self._preference() + self._disagreement()
+
+    def _preference(self) -> str:
+        conf = f"{self.confidence * 100:.0f}%"
+        if self.coefficient != self.coefficient:  # NaN
+            return (
+                f"No judge preference model: {self.note} ({self.n} pairs). "
+                f"The judge picked the longer answer on "
+                f"{_pct(self.longer_rate)} of pairs."
+            )
+
+        head = (
+            f"Judge preference against length: {self.sd_difference:.0f} "
+            f"characters of extra length multiplies the odds the judge picks "
+            f"that answer by {self.odds_ratio_per_sd:.2f} ({conf} CI: "
+            f"{np.exp(self.ci_low * self.sd_difference):.2f} to "
+            f"{np.exp(self.ci_high * self.sd_difference):.2f}, "
+            f"p={self.p_value:.4f}, {self.n} pairs). It picked the longer "
+            f"answer on {_pct(self.longer_rate)} of pairs."
+        )
+
+        if self.ci_low <= 0 <= self.ci_high:
+            return head + (
+                " The interval covers no effect, so the data cannot show "
+                "that length moved the judge."
+            )
+        return head + (
+            " A positive coefficient here is not bias on its own, because "
+            "longer answers may simply be better."
+        )
+
+    def _disagreement(self) -> str:
+        conf = f"{self.confidence * 100:.0f}%"
+        if not self.has_human:
+            return (
+                " Without human labels there is no second model, so this "
+                "cannot separate a length preference from longer answers "
+                "being better. Supply human_preferences to get the sharper "
+                "of the two."
+            )
+
+        if self.disagreement_coefficient != self.disagreement_coefficient:
+            return (
+                f" No disagreement model: {self.disagreement_note} "
+                f"({self.n_disagreements} disagreements)."
+            )
+
+        head = (
+            f" Judge-human disagreement against the same length difference, "
+            f"oriented by what the humans picked: "
+            f"{self.disagreement_sd_difference:.0f} characters multiplies "
+            f"the odds the judge breaks with them by "
+            f"{self.disagreement_odds_ratio_per_sd:.2f} ({conf} CI: "
+            f"{np.exp(self.disagreement_ci_low * self.disagreement_sd_difference):.2f}"
+            f" to "
+            f"{np.exp(self.disagreement_ci_high * self.disagreement_sd_difference):.2f}"
+            f", p={self.disagreement_p_value:.4f}, "
+            f"{self.n_disagreements} disagreements)."
+        )
+
+        if self.disagreement_ci_low <= 0 <= self.disagreement_ci_high:
+            verdict = (
+                " That interval covers no effect, so the judge does not "
+                "depart from the humans in the direction of length."
+            )
+        else:
+            verdict = (
+                " The judge departs from the humans in the direction of "
+                "length."
+            )
+
+        caveat = (
+            " Holding the human verdict fixed strips the part of the "
+            "length-quality link the human labels capture, and it does not "
+            "remove the rest, since a binary label is a coarse measure of "
+            "quality. Read this as the sharper of the two numbers rather "
+            "than as proof."
+        )
+        return head + verdict + caveat
 
     def __str__(self) -> str:  # pragma: no cover
         return self.summary()

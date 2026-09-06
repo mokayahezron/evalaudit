@@ -1540,6 +1540,61 @@ def test_string_rater_and_item_ids_survive():
     assert set(r.item_disagreement["item_id"]) == {"essay-01", "essay-02"}
 
 
+def test_string_ratings_survive_at_nominal():
+    """Labels, not numbers, in the rating column.
+
+    The common shape for a categorical rubric. Graders tick "pass" or
+    "fail" and nobody maps them to integers on the way in. Nominal is
+    defined on unordered labels, so this has to work without the caller
+    doing that mapping.
+
+    Checked by relabelling rather than against a fixed number. Alpha does
+    not care what the categories are called, only which ratings match, so
+    the string version and the same data mapped to integers have to agree
+    exactly, and both have to match the reference package on the integers.
+
+    This was broken for the life of the module. _coded_values built the
+    value domain from the row count and returned the unique labels where
+    the per-row codes belonged, so a non-numeric rating column raised
+    IndexError out of the coincidence matrix. It surfaced through
+    judge_validation, where string labels are the normal case, and the
+    regression belongs here where the code lives.
+    """
+    rng = np.random.default_rng(163)
+    labels = np.array(["pass", "fail", "borderline"])
+    codes = rng.integers(0, 3, size=(4, 30))
+
+    lettered = to_long(codes.astype(float)).assign(
+        rating=lambda d: labels[d["rating"].astype(int)]
+    )
+    numeric = to_long(codes.astype(float))
+
+    from_labels = rater_agreement(lettered, bootstrap_ci=False).alpha
+    from_numbers = rater_agreement(numeric, bootstrap_ci=False).alpha
+
+    assert from_labels == pytest.approx(from_numbers, abs=1e-12)
+    assert from_labels == pytest.approx(
+        kref.alpha(reliability_data=codes, level_of_measurement="nominal"),
+        abs=1e-9,
+    )
+    assert 0.0 < from_labels < 1.0, "the fixture stopped exercising the metric"
+
+
+def test_string_ratings_are_refused_at_the_ordered_levels():
+    """The other half. Ordinal and interval read the values as positions, so
+    labels there are a question the data cannot answer.
+    """
+    rows = [
+        ("i1", "alice", "pass"), ("i1", "bob", "fail"),
+        ("i2", "alice", "fail"), ("i2", "bob", "fail"),
+    ]
+    df = pd.DataFrame(rows, columns=["item_id", "rater_id", "rating"])
+
+    for level in ["ordinal", "interval"]:
+        with pytest.raises(ValueError, match="numeric"):
+            rater_agreement(df, level=level, bootstrap_ci=False)
+
+
 # --------------------------------------------------------------------------
 # Public surface
 # --------------------------------------------------------------------------

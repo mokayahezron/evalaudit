@@ -175,8 +175,8 @@ def _coded_values(data: pd.DataFrame, level: str):
                 f"between two ratings depends on their values. Map the labels "
                 f"to numbers, or use level='nominal'."
             ) from None
-        domain, codes = pd.factorize(raw, sort=False)[::-1]
-        return np.arange(len(codes), dtype=float), np.asarray(domain)
+        codes, domain = pd.factorize(raw, sort=False)
+        return np.arange(len(domain), dtype=float), np.asarray(codes)
 
     values = np.unique(numeric)
     return values, np.searchsorted(values, numeric)
