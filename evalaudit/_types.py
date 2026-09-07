@@ -8,6 +8,7 @@ McNemar, but nothing tells a product manager their result does not hold.
 
 from __future__ import annotations
 
+import html as _html
 from dataclasses import dataclass
 from typing import Optional
 
@@ -17,6 +18,19 @@ import pandas as pd
 
 def _pct(x: float) -> str:
     return f"{x * 100:.1f}%"
+
+
+def _plural(word: str, n: int) -> str:
+    return word if n == 1 else word + "s"
+
+
+def _escape(text: str) -> str:
+    """HTML escape for a text node.
+
+    System names, slice labels and rater ids come out of the client's
+    spreadsheet and land in the report. They are data, not markup.
+    """
+    return _html.escape(str(text), quote=False)
 
 
 @dataclass(frozen=True)
@@ -559,7 +573,7 @@ class JudgeValidation:
             row = self.by_slice.iloc[0]
             count = int(row["n_items"])
             sentence = (
-                f" Worst slice {row['slice']!r} agrees at "
+                f" Worst slice {str(row['slice'])!r} agrees at "
                 f"{row['agreement']:.3f} on {count} items, and its interval "
                 f"tops out at {row['ci_high']:.3f}, clear of the "
                 f"{self.ci_low:.3f} lower bound on the overall figure. The "
@@ -587,7 +601,7 @@ class JudgeValidation:
                 "of the table as a failure."
             )
         return (
-            f" The lowest slice {row['slice']!r} runs up to "
+            f" The lowest slice {str(row['slice'])!r} runs up to "
             f"{row['ci_high']:.3f} against a lower bound of "
             f"{self.ci_low:.3f} on the overall figure, so the two overlap "
             f"and the data cannot single out a slice. Something is always "
@@ -1071,6 +1085,260 @@ class PowerResult:
             "Pairing removes the item to item difficulty that an independent "
             "comparison has to absorb, and most evals can pair."
         )
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()
+
+
+# --------------------------------------------------------------------------
+# audit
+# --------------------------------------------------------------------------
+
+# The three words a finding can carry, in the order a report is read. They
+# are not degrees of one thing. Critical means the conclusion does not hold,
+# warning means it holds and something weakens it, info is context.
+_SEVERITIES = ("critical", "warning", "info")
+
+# The line for judge-human agreement. It is the same number as _ALPHA_FLOOR
+# and it is not the same kind of number. See AuditConfig.
+_JUDGE_THRESHOLD = _ALPHA_FLOOR
+
+
+@dataclass(frozen=True)
+class AuditConfig:
+    """What the audit is being asked to check, and what it may assume.
+
+    Everything here has a default that suits a two system pass rate eval, so
+    a first run needs none of it. The three worth setting are ``claim``,
+    which puts the sentence being audited at the top of the report,
+    ``effect_of_interest``, which is the difference the decision actually
+    turns on, and ``claims_direction``, which says whether anyone is
+    asserting that one system beat the other. A margin whose interval
+    crosses zero is critical when a direction is being claimed and a warning
+    when it is not, because in the second case nobody is leaning on it.
+
+    ``paired`` is left as None so the design is read off the data. Two
+    systems scored on the same number of items are taken as paired, which is
+    how most evals are built. Set it when that guess would be wrong.
+
+    ``discordance_rate`` is for paired binary designs only. When both score
+    sets are 0/1 the rate is measured from the data and this is ignored,
+    since a measured rate always beats a supplied one.
+
+    ``n_boot`` sizes the agreement and judge bootstraps, the two that
+    resample. The score and comparison intervals keep their own module
+    defaults, which are higher because those resamples are cheap.
+
+    Thresholds
+    ----------
+    The two default to the same number and they earned it differently, so
+    they are separate settings and should be set separately.
+
+    ``agreement_threshold`` is 0.667, which is Krippendorff's own published
+    line: above 0.800 is reliable, 0.667 to 0.800 supports tentative
+    conclusions, below 0.667 supports none. ``rater_agreement`` already
+    reads its verdict off those same cutoffs, so the audit is repeating the
+    module rather than inventing a rule.
+
+    ``judge_threshold`` is 0.667 because it was borrowed from there. It is a
+    convention imported from content analysis, where it describes when two
+    humans coding text agree well enough to pool their work. Nobody has
+    validated it as the point where an LLM judge becomes safe to rank
+    systems with, and this library is not claiming they have. Set it from
+    what the decision can tolerate. A judge picking which of two models
+    ships needs to track humans far more closely than one triaging a queue
+    for human review, and neither number is 0.667 for any reason beyond
+    habit.
+    """
+
+    claim: Optional[str] = None
+    claims_direction: bool = True
+    effect_of_interest: Optional[float] = None
+    confidence: float = 0.95
+    level: str = "nominal"
+    agreement_threshold: float = _ALPHA_FLOOR
+    judge_threshold: float = _JUDGE_THRESHOLD
+    power: float = 0.8
+    alpha: float = 0.05
+    paired: Optional[bool] = None
+    discordance_rate: Optional[float] = None
+    n_boot: int = 1000
+    seed: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class Finding:
+    """One thing the audit found, and what it means for the claim.
+
+    ``severity`` is one of the three words in ``_SEVERITIES``. ``check``
+    names the check that produced this, which is what the report sorts on
+    inside a severity. ``result`` is the object the underlying module
+    returned, kept so a reader can go back to the numbers, and ``detail``
+    carries that object's own ``summary()`` word for word, framed by a line
+    on what it means for the claim and a line on what to do about it.
+    """
+
+    check: str
+    severity: str
+    title: str
+    detail: str
+    result: object = None
+
+    def summary(self) -> str:
+        return f"[{self.severity}] {self.title}. {self.detail}"
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()
+
+
+@dataclass(frozen=True)
+class SkippedCheck:
+    """A check that could not run, and the data that would have let it.
+
+    Silence about a check reads as a pass. Every check the audit knows how
+    to run either produces a finding or turns up here saying what was
+    missing, so a thin report is visibly thin.
+    """
+
+    check: str
+    title: str
+    reason: str
+
+    def summary(self) -> str:
+        return f"{self.title}: {self.reason}"
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()
+
+
+@dataclass(frozen=True)
+class AuditReport:
+    """Everything the audit found, ranked by what changes the decision.
+
+    ``findings`` is sorted by severity first, so the report opens with what
+    undoes the conclusion, and by check order inside a severity. A reader
+    who stops after the first entry has read the most important one.
+
+    ``not_run`` is the other half of the report. A check with no data behind
+    it is listed there with the reason, never left out.
+
+    A report of nothing but info is a result, not an empty file. It says the
+    eval holds up on everything that could be tested, and it still carries
+    every number, because those numbers are what makes it worth sending.
+    """
+
+    findings: tuple
+    not_run: tuple
+    config: AuditConfig
+
+    @property
+    def severity_counts(self) -> dict:
+        """How many findings of each severity, zeros included.
+
+        The zeros are the point. A report with no criticals says so rather
+        than leaving the reader to count.
+        """
+        counts = {severity: 0 for severity in _SEVERITIES}
+        for finding in self.findings:
+            counts[finding.severity] += 1
+        return counts
+
+    @property
+    def worst_severity(self) -> Optional[str]:
+        """The severity of the top finding, or None on an empty report."""
+        if not self.findings:
+            return None
+        return self.findings[0].severity
+
+    def summary(self) -> str:
+        counts = self.severity_counts
+        parts = []
+        if self.config.claim:
+            parts.append(f"Claim under audit: {self.config.claim}.")
+        parts.append(self._verdict(counts))
+        parts.append(self._coverage())
+        return " ".join(parts)
+
+    def _verdict(self, counts: dict) -> str:
+        criticals = counts["critical"]
+        warnings = counts["warning"]
+        if criticals:
+            return (
+                f"{criticals} critical {_plural('finding', criticals)}, "
+                f"{warnings} {_plural('warning', warnings)} and "
+                f"{counts['info']} for context. On the critical "
+                f"{_plural('finding', criticals)} the conclusion this data "
+                f"is being asked to support does not hold as stated."
+            )
+        if warnings:
+            return (
+                f"No critical findings. {warnings} "
+                f"{_plural('warning', warnings)} and {counts['info']} for "
+                f"context. The result stands and the design weakens it, so "
+                f"report it with what the {_plural('warning', warnings)} "
+                f"say attached."
+            )
+        ran = len(self.findings)
+        return (
+            f"No critical findings and no warnings. All {ran} "
+            f"{_plural('check', ran)} that ran came back clean, so the eval "
+            f"holds up on everything this report could test."
+        )
+
+    def _coverage(self) -> str:
+        if not self.not_run:
+            return "Every check ran."
+        missing = len(self.not_run)
+        tail = "It is" if missing == 1 else "They are"
+        return (
+            f"{missing} {_plural('check', missing)} could not run for lack "
+            f"of data. {tail} listed at the end."
+        )
+
+    def to_markdown(self) -> str:
+        lines = ["# Eval audit", "", self.summary(), "", "## Findings", ""]
+        for position, finding in enumerate(self.findings, start=1):
+            lines += [
+                f"### {position}. [{finding.severity}] {finding.title}",
+                "",
+                finding.detail,
+                "",
+            ]
+        if self.not_run:
+            lines += ["## Checks that could not run", ""]
+            lines += [f"- **{s.title}**: {s.reason}" for s in self.not_run]
+            lines.append("")
+        return "\n".join(lines)
+
+    def to_html(self) -> str:
+        parts = [
+            '<section class="evalaudit-report">',
+            "<h1>Eval audit</h1>",
+            f'<p class="audit-summary">{_escape(self.summary())}</p>',
+            '<ol class="audit-findings">',
+        ]
+        for finding in self.findings:
+            parts += [
+                f'<li class="audit-finding audit-{finding.severity}">',
+                f"<h2>{_escape(finding.title)}</h2>",
+                f'<p class="audit-severity">{finding.severity}</p>',
+                f"<p>{_escape(finding.detail)}</p>",
+                "</li>",
+            ]
+        parts.append("</ol>")
+        if self.not_run:
+            parts += [
+                "<h2>Checks that could not run</h2>",
+                '<ul class="audit-not-run">',
+            ]
+            parts += [
+                f"<li><strong>{_escape(s.title)}</strong>: "
+                f"{_escape(s.reason)}</li>"
+                for s in self.not_run
+            ]
+            parts.append("</ul>")
+        parts.append("</section>")
+        return "\n".join(parts)
 
     def __str__(self) -> str:  # pragma: no cover
         return self.summary()

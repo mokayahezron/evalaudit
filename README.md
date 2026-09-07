@@ -64,7 +64,8 @@ Two rules the library follows throughout:
 | `compare` | Does the margin between two systems survive a paired test? |
 | `audit` | All of the above, as a report ranked by what changes the conclusion. |
 
-The first four are the point. The last three are the foundation they stand on.
+Agreement, judge, pairwise, and audit are the point. Scores, compare, and power
+are the foundation they stand on.
 
 ---
 
@@ -79,8 +80,8 @@ Early, and filling in along the build order.
 | `agreement` | Implemented |
 | `judge` | Implemented |
 | `power` | Implemented |
-| `pairwise` | Specified, landing next |
-| `audit` | Specified, last |
+| `audit` | Specified, landing next |
+| `pairwise` | Specified, follows audit |
 
 ### What `power` answers
 
