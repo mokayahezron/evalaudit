@@ -17,19 +17,91 @@ That evaluation produced a number. The number is now in a slide deck.
 ## Start here
 
 ```python
-from evalaudit import score_ci
+import numpy as np
+import pandas as pd
+from evalaudit import audit
 
-wins = [1] * 58 + [0] * 42
-print(score_ci(wins).summary())
+rng = np.random.default_rng(0)
+
+new = (rng.random(120) < 0.58).astype(int)
+old = (rng.random(120) < 0.51).astype(int)
+
+ratings = pd.DataFrame({
+    "item_id": [f"i{i}" for i in range(40) for _ in range(2)],
+    "rater_id": ["ana", "raj"] * 40,
+    "rating": rng.integers(0, 2, 80),
+})
+
+report = audit(
+    scores={"new": new, "old": old},
+    ratings=ratings,
+    config={"claim": "the new model is better", "seed": 0},
+)
+print(report.to_markdown())
 ```
 
 ```
-58.0% pass rate (95% CI: 48.2%-67.2%, n=100). The interval spans
-19 points; treat differences smaller than that as unresolved.
+# Eval audit
+
+Claim under audit: the new model is better. 2 critical findings, 1 warning
+and 2 for context. On the critical findings the conclusion this data is
+being asked to support does not hold as stated. 3 checks could not run for
+lack of data. They are listed at the end.
+
+## Findings
+
+### 1. [critical] The headline margin does not exclude zero
+
+This is the margin between new and old, which is the number the claim rests
+on. Difference 2.5% (95% CI: -11.6% to 16.5%, paired, n=120). The interval
+crosses zero, so the data cannot confirm that either system is better. 75 of
+120 items changed between systems. Do not report a direction from this data.
+[...]
+
+### 2. [critical] This eval could not have detected the effect at issue
+
+The effect at issue is 2.5 points, the margin this eval reports. This eval
+ran 120 paired comparisons. At 80% power and a 5% significance level the
+smallest difference it could have found is 20 points [...] No conclusion
+about an effect this size can be drawn from this data, in either direction.
+A null result here says the eval was too small and says nothing about the
+systems. [...]
+
+### 3. [warning] Rater agreement is below the working threshold
+
+The grades under this eval reproduce less well than the 0.667 the report is
+holding them to. Krippendorff's alpha -0.235 (95% CI: -0.539 to 0.057,
+nominal, 40 of 40 items graded more than once). That is below 0.667, the
+conventional floor for drawing any conclusion from coded data. [...]
+
+### 4. [info] Score interval for new
+
+The headline number for new, with the interval around it. 50.0% pass rate
+(95% CI: 41.2%-58.8%, n=120). [...]
+
+### 5. [info] Score interval for old
+
+The headline number for old, with the interval around it. 47.5% pass rate
+(95% CI: 38.8%-56.4%, n=120). [...]
+
+## Checks that could not run
+
+- **Judge against humans**: No judge labels supplied. Pass judge with human
+  and judge label sequences for the same items [...]
+- **Position bias**: No pairwise judgements supplied. Pass comparisons as a
+  frame with pair_id, option_a, option_b and winner columns [...]
+- **Length bias**: No judge preferences and lengths supplied. Pass judge
+  with preferences and lengths for the same pairs [...]
 ```
 
-The interval crosses 50%. On this data the new model might be worse than the
-old one. That evaluation cannot support the decision being made with it.
+Two systems, a 2.5 point margin, and forty items graded twice. The margin
+does not survive the fit, the eval was never large enough to find a margin
+that size, and the graders underneath it did not agree with each other. The
+report opens with whichever of those changes the decision, and it says out
+loud which checks it could not run.
+
+Every check runs only on the data you passed. Nothing is inferred from data
+that is not there.
 
 ---
 
@@ -64,8 +136,10 @@ Two rules the library follows throughout:
 | `compare` | Does the margin between two systems survive a paired test? |
 | `audit` | All of the above, as a report ranked by what changes the conclusion. |
 
-Agreement, judge, pairwise, and audit are the point. Scores, compare, and power
-are the foundation they stand on.
+`audit` is the deliverable and the other six are the checks it runs. Each one
+also stands alone when you want a single number instead of a report.
+Agreement, judge and pairwise are where human graded evaluation goes wrong.
+Scores, compare and power are the foundation those three stand on.
 
 ---
 
@@ -80,8 +154,25 @@ Early, and filling in along the build order.
 | `agreement` | Implemented |
 | `judge` | Implemented |
 | `power` | Implemented |
-| `audit` | Specified, landing next |
-| `pairwise` | Specified, follows audit |
+| `audit` | Implemented |
+| `pairwise` | Specified, next |
+
+### What `scores` answers
+
+```python
+from evalaudit import score_ci
+
+wins = [1] * 58 + [0] * 42
+print(score_ci(wins).summary())
+```
+
+```
+58.0% pass rate (95% CI: 48.2%-67.2%, n=100). The interval spans
+19 points; treat differences smaller than that as unresolved.
+```
+
+The interval crosses 50%. On this data the new model might be worse than the
+old one. That evaluation cannot support the decision being made with it.
 
 ### What `power` answers
 
