@@ -412,6 +412,234 @@ class AgreementResult:
         return self.summary()
 
 
+# --------------------------------------------------------------------------
+# pairwise
+# --------------------------------------------------------------------------
+
+# How the two tie policies read in a summary. Davidson's model is the third
+# entry a reader might expect and it is deliberately absent. See
+# evalaudit.pairwise for why there is a hook and no implementation.
+_TIE_WORDS = {
+    "split": "ties split",
+    "drop": "ties dropped",
+}
+
+
+def _join(names) -> str:
+    """Names in a sentence, with the Oxford comma."""
+    names = list(names)
+    if len(names) == 1:
+        return str(names[0])
+    if len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    return ", ".join(str(n) for n in names[:-1]) + f", and {names[-1]}"
+
+
+@dataclass(frozen=True)
+class BTResult:
+    """Bradley-Terry ratings, and how few of the models they actually order.
+
+    ``ratings`` carries one row per model with its rating, an interval and
+    the number of comparisons behind it. ``win_matrix`` is the modelled
+    probability that the row model beats the column model. ``separable_pairs``
+    lists the pairs whose intervals do not overlap.
+
+    ``n_separable`` against ``n_pairs`` is the number worth reporting. A six
+    model leaderboard has fifteen pairs, and published boards routinely rank
+    all six off data that orders two or three of them.
+
+    The ratings are differences and nothing else. One model is pinned at zero
+    to make the fit identifiable, and which one is a free choice, so the level
+    of a single rating carries no information. Only gaps do. The intervals are
+    on each rating measured against the average of the field, then shifted
+    onto the anchor named in ``reference``. Anchoring the interval on the
+    reference instead would hand the reference an interval of width zero and
+    make ``n_separable`` depend on an arbitrary pick.
+
+    Non-overlapping intervals are a conservative test of a difference. Some
+    pair called inseparable here would separate under a direct test of the
+    gap, so read ``n_separable`` as a floor on what the data orders.
+
+    ``rating`` is NaN for every model when the fit does not exist. That is
+    two situations and they are not the same. ``connected`` is False when the
+    models fall into groups that never met, so there is no common scale.
+    ``undefeated`` or ``winless`` is non-empty when they all met and some set
+    of models never lost outside itself, which sends its rating to infinity.
+    """
+
+    ratings: pd.DataFrame
+    win_matrix: pd.DataFrame
+    separable_pairs: pd.DataFrame
+    reference: str
+    ties: str
+    n_models: int
+    n_comparisons: int
+    n_ties: int
+    n_dropped: int
+    n_items: int
+    n_pairs: int
+    connected: bool
+    comparable_groups: tuple
+    undefeated: tuple
+    winless: tuple
+    confidence: float = 0.95
+    n_boot: int = 0
+    n_boot_usable: int = 0
+    elo_scale: Optional[float] = None
+    elo_base: Optional[float] = None
+
+    @property
+    def has_fit(self) -> bool:
+        """True when the maximum exists and is unique.
+
+        Ford's condition. Every model has to be reachable from every other
+        through a chain of wins, which is stronger than everyone having
+        played. A model that never lost has no finite rating.
+        """
+        return self.connected and not self.undefeated
+
+    @property
+    def has_interval(self) -> bool:
+        if self.ratings.empty:
+            return False
+        return bool(self.ratings["ci_low"].notna().all())
+
+    @property
+    def is_elo(self) -> bool:
+        return self.elo_scale is not None
+
+    @property
+    def n_separable(self) -> int:
+        return int(len(self.separable_pairs))
+
+    @property
+    def units(self) -> str:
+        return "Elo" if self.is_elo else "log-odds"
+
+    def summary(self) -> str:
+        if not self.connected:
+            return self._disconnected()
+        if not self.has_fit:
+            return self._no_maximum()
+        return self._head() + self._separability() + self._reference_sentence()
+
+    # -- the two refusals ---------------------------------------------------
+
+    def _disconnected(self) -> str:
+        groups = "; ".join(_join(g) for g in self.comparable_groups)
+        return (
+            f"No ratings. The {self.n_models} models fall into "
+            f"{len(self.comparable_groups)} groups that never met: {groups}. "
+            f"Bradley-Terry puts models on one scale by chaining comparisons "
+            f"between them, and there is no chain from one group to the "
+            f"next, so nothing here can rank them against each other. Run "
+            f"comparisons across the groups, or rate each group on its own "
+            f"and report them as separate boards."
+        )
+
+    def _no_maximum(self) -> str:
+        head = (
+            f"No ratings. Every model was compared, and the fit still does "
+            f"not exist. "
+        )
+        if len(self.undefeated) == 1:
+            body = (
+                f"{self.undefeated[0]} never lost a comparison, so the "
+                f"likelihood keeps rising as its rating goes up and there is "
+                f"no maximum to report."
+            )
+        elif len(self.winless) == 1:
+            body = (
+                f"{self.winless[0]} never won a comparison, so the "
+                f"likelihood keeps rising as its rating goes down and there "
+                f"is no maximum to report."
+            )
+        else:
+            body = (
+                f"No model outside {_join(self.undefeated)} ever beat a "
+                f"model inside it, so that group's ratings run away from the "
+                f"rest and there is no maximum to report."
+            )
+        return head + body + (
+            " A rating needs every model reachable from every other through "
+            "a chain of wins, which a clean sweep breaks. Report the record "
+            "directly, or add comparisons that close the chain."
+        )
+
+    # -- the ordinary report ------------------------------------------------
+
+    def _head(self) -> str:
+        scale = (
+            f"Elo ratings (scale {self.elo_scale:g}, base {self.elo_base:g})"
+            if self.is_elo
+            else "Bradley-Terry ratings"
+        )
+        ties = _TIE_WORDS.get(self.ties, self.ties)
+        if self.ties == "drop" and self.n_dropped:
+            ties = f"{ties}, {self.n_dropped} of them"
+        elif self.n_ties:
+            ties = f"{ties}, {self.n_ties} of them"
+        return (
+            f"{scale} for {self.n_models} models from "
+            f"{self.n_comparisons} {_plural('comparison', self.n_comparisons)} "
+            f"({ties})."
+        )
+
+    def _separability(self) -> str:
+        if not self.has_interval:
+            return self._no_interval_sentence()
+
+        conf = f"{self.confidence * 100:.0f}%"
+        head = (
+            f" {self.n_separable} of {self.n_pairs} pairs "
+            f"{'is' if self.n_pairs == 1 else 'are'} separable at {conf}, "
+            f"meaning their intervals do not overlap."
+        )
+        if self.n_separable == 0:
+            return head + (
+                " Not one pair can be ordered from this data. Any ranking "
+                "built on it is a ranking of noise."
+            )
+        rest = self.n_pairs - self.n_separable
+        if rest == 0:
+            return head + " Every pair is ordered by this data."
+        return head + (
+            f" The other {rest} {_plural('pair', rest)} cannot be ordered, "
+            f"so a leaderboard that puts those models in a line is reporting "
+            f"an order the data does not carry."
+        )
+
+    def _no_interval_sentence(self) -> str:
+        if self.n_boot == 0:
+            return (
+                " No interval was requested, so no pair can be called "
+                "separable. Separability is the finding here, so run this "
+                "again with resamples."
+            )
+        dropped = self.n_boot - self.n_boot_usable
+        return (
+            f" No interval: {dropped} of {self.n_boot} resamples came back "
+            f"undefined, above the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this "
+            f"reports through. A resample that misses a comparison can leave "
+            f"a model unbeaten inside it, and those resamples are the ones "
+            f"with the widest ratings, so percentiles of the rest would "
+            f"understate the spread. Without an interval no pair can be "
+            f"called separable."
+        )
+
+    def _reference_sentence(self) -> str:
+        anchor = f"{self.elo_base:g}" if self.is_elo else "0"
+        return (
+            f" Ratings are anchored on {self.reference} at {anchor}. Only "
+            f"differences between models mean anything, and adding the same "
+            f"amount to every rating would change nothing about the fit or "
+            f"about which pairs separate."
+        )
+
+    def __str__(self) -> str:  # pragma: no cover
+        return self.summary()
+
+
 # Slices thinner than this get a hedge in the summary even when they clear
 # the interval. Same count ScoreCI uses to call an estimate weak.
 _THIN_SLICE = 30

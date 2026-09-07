@@ -25,11 +25,20 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-cov", "statsmodels>=0.14", "krippendorff>=0.6"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "statsmodels>=0.14",
+    "krippendorff>=0.6",
+    # Independent Bradley-Terry fit, used to check pairwise. It needs 3.10,
+    # and this package supports 3.9, so on 3.9 the choix checks skip and the
+    # statsmodels and slow-reference checks carry the fit on their own.
+    "choix>=0.4; python_version>='3.10'",
+]
 
 [project.urls]
-Homepage = "https://github.com/ondibahezron-glitch/evalaudit"
-Issues = "https://github.com/ondibahezron-glitch/evalaudit/issues"
+Homepage = "https://github.com/mokayahezron/evalaudit"
+Issues = "https://github.com/mokayahezron/evalaudit/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["evalaudit"]

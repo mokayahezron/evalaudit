@@ -1,6 +1,6 @@
 # evalaudit
 
-[![Tests](https://github.com/ondibahezron-glitch/evalaudit/actions/workflows/tests.yml/badge.svg)](https://github.com/ondibahezron-glitch/evalaudit/actions/workflows/tests.yml)
+[![Tests](https://github.com/mokayahezron/evalaudit/actions/workflows/tests.yml/badge.svg)](https://github.com/mokayahezron/evalaudit/actions/workflows/tests.yml)
 
 **Statistical validity checks for human-graded AI evaluations.**
 
@@ -130,14 +130,20 @@ Two rules the library follows throughout:
 |---|---|
 | `agreement` | Do your graders agree? Which grader is the outlier? Which items are ambiguous rather than hard? |
 | `judge` | Does your LLM judge track your humans, and on which slices does it stop? Is it biased by position or length? |
-| `pairwise` | In a blind pairwise comparison, which models are actually separable? |
+| `pairwise` | On a blind pairwise leaderboard, which pairs of models are actually separable and how many are not? Do the Elo gaps survive their intervals? |
 | `power` | Could this many comparisons ever have detected the effect you care about? |
 | `scores` | Is there an interval around your headline number, and how wide? |
 | `compare` | Does the margin between two systems survive a paired test? |
-| `audit` | All of the above, as a report ranked by what changes the conclusion. |
+| `audit` | Everything except `pairwise`, as a report ranked by what changes the conclusion. |
 
-`audit` is the deliverable and the other six are the checks it runs. Each one
-also stands alone when you want a single number instead of a report.
+`audit` is the deliverable. It runs five of these checks and orders what it
+finds by what changes the conclusion. Each of those five also stands alone
+when you want a single number instead of a report.
+
+`pairwise` runs on its own. A leaderboard is a different question from a
+single eval and arrives as a different frame, one row per comparison rather
+than one row per graded item, so it is not folded into the report.
+
 Agreement, judge and pairwise are where human graded evaluation goes wrong.
 Scores, compare and power are the foundation those three stand on.
 
@@ -145,7 +151,8 @@ Scores, compare and power are the foundation those three stand on.
 
 ## Status
 
-Early, and filling in along the build order.
+All seven modules are implemented. The examples below are run in CI, so what
+they print here is what they print for you.
 
 | Module | State |
 |---|---|
@@ -155,7 +162,7 @@ Early, and filling in along the build order.
 | `judge` | Implemented |
 | `power` | Implemented |
 | `audit` | Implemented |
-| `pairwise` | Specified, next |
+| `pairwise` | Implemented |
 
 ### What `scores` answers
 
@@ -196,14 +203,62 @@ the information of a 12 item study. When the rate is not supplied, a
 conservative 0.3 stands in and the summary says so rather than assuming it
 quietly.
 
+### What `pairwise` answers
+
+```python
+import numpy as np
+import pandas as pd
+from evalaudit import bradley_terry
+
+rng = np.random.default_rng(0)
+models = ["m1", "m2", "m3", "m4", "m5", "m6"]
+strength = dict(zip(models, [0.55, 0.35, 0.15, -0.05, -0.30, -0.70]))
+
+rows = []
+for i, first in enumerate(models):
+    for second in models[i + 1:]:
+        p = 1 / (1 + np.exp(-(strength[first] - strength[second])))
+        for _ in range(40):
+            rows.append((first, second, first if rng.random() < p else second))
+
+comparisons = pd.DataFrame(rows, columns=["model_a", "model_b", "winner"])
+comparisons["item_id"] = [f"q{i}" for i in range(len(rows))]
+
+print(bradley_terry(comparisons, seed=0).summary())
+```
+
+```
+Bradley-Terry ratings for 6 models from 600 comparisons (ties split). 5 of
+15 pairs are separable at 95%, meaning their intervals do not overlap. The
+other 10 pairs cannot be ordered [...] Ratings are anchored on m1 at 0.
+Only differences between models mean anything [...]
+```
+
+Six models make fifteen pairs. Six hundred comparisons separate five of
+them, and every one of those five is a pair containing the weakest model.
+The top five are not told apart from each other at all. A published board
+would still print them in a line, one through six, and readers would take
+that order seriously.
+
+`to_elo` puts the same fit on the 400 point scale people expect and carries
+the intervals across with it. Leaderboards publish Elo without intervals,
+which is how a 12 point gap gets read as a ranking.
+
+Two shapes of data get no ratings at all rather than numbers that look like
+a ranking. Models that split into groups which never met have no common
+scale, and a model that never lost has no finite rating. Both are refused
+and named.
+
 ---
 
 ## Coverage
 
 A statistics package earns trust by showing its intervals cover at the rate
-they claim. Every interval here is tested by simulation: generate 1,000
-datasets with a known truth, confirm the 95% interval contains it about 95% of
-the time. Those tests run in CI and you can read them in `tests/`.
+they claim. Every interval here is tested by simulation. Generate datasets
+with a known truth, then confirm the 95% interval contains it about 95% of
+the time. Runs per test range from a hundred or so to a thousand, set by what
+each simulation costs. Those tests run in CI and you can read them in
+`tests/`.
 
 ---
 

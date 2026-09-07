@@ -6,6 +6,7 @@ from ._types import (
     AgreementResult,
     AuditConfig,
     AuditReport,
+    BTResult,
     ComparisonResult,
     Finding,
     JudgeValidation,
@@ -18,6 +19,7 @@ from ._types import (
 )
 from .agreement import cohens_kappa, fleiss_kappa, rater_agreement
 from .compare import compare_independent, compare_paired
+from .pairwise import bradley_terry, to_elo
 from .judge import judge_validation, length_bias, position_bias
 from .power import detectable_effect, min_sample_size
 from .scores import score_ci
@@ -30,6 +32,8 @@ __all__ = [
     "rater_agreement",
     "cohens_kappa",
     "fleiss_kappa",
+    "bradley_terry",
+    "to_elo",
     "judge_validation",
     "position_bias",
     "length_bias",
@@ -40,6 +44,7 @@ __all__ = [
     "ComparisonResult",
     "AgreementResult",
     "KappaResult",
+    "BTResult",
     "JudgeValidation",
     "PositionBias",
     "LengthBias",
