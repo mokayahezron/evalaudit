@@ -136,9 +136,11 @@ Two rules the library follows throughout:
 | `compare` | Does the margin between two systems survive a paired test? |
 | `audit` | Everything except `pairwise`, as a report ranked by what changes the conclusion. |
 
-`audit` is the deliverable. It runs five of these checks and orders what it
-finds by what changes the conclusion. Each of those five also stands alone
-when you want a single number instead of a report.
+`audit` is the deliverable. It runs seven checks drawn from five of these
+modules and orders what it finds by what changes the conclusion. `judge`
+supplies three of the seven, since judge-human agreement, position bias and
+length bias are separate findings. Each of those five modules also stands
+alone when you want a single number instead of a report.
 
 `pairwise` runs on its own. A leaderboard is a different question from a
 single eval and arrives as a different frame, one row per comparison rather
@@ -254,11 +256,29 @@ and named.
 ## Coverage
 
 A statistics package earns trust by showing its intervals cover at the rate
-they claim. Every interval here is tested by simulation. Generate datasets
-with a known truth, then confirm the 95% interval contains it about 95% of
-the time. Runs per test range from a hundred or so to a thousand, set by what
-each simulation costs. Those tests run in CI and you can read them in
-`tests/`.
+they claim. Generate datasets with a known truth, then confirm the 95%
+interval contains it about 95% of the time. Runs per test range from a
+hundred or so to a thousand, set by what each simulation costs.
+
+The package builds fourteen intervals and eight of them are tested that way.
+Those eight are the Wilson and bootstrap intervals on a single score, the
+Tango, bootstrap and Hodges-Lehmann intervals on a paired difference, and the
+bootstrap intervals on Krippendorff's alpha, on judge-human alpha, and on
+Bradley-Terry ratings.
+
+Three more are pinned against a reference instead, which is the sharper test
+where one exists. The score interval for two independent proportions is swept
+against its own p-value over every table at two group sizes, since that
+interval is the test inverted and the two must never disagree about zero. The
+Wilson intervals in `position_bias` and both logistic intervals in
+`length_bias` are matched against `statsmodels`.
+
+The last three have nothing pinning their bounds, and this is the place to
+say so rather than leave you to find out. They are the Student-t interval in
+`score_ci`, Welch's interval in `compare_independent`, and the two-sample
+bootstrap beside it.
+
+Those tests run in CI and you can read them in `tests/`.
 
 ---
 
