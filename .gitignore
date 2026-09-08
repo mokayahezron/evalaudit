@@ -16,4 +16,5 @@ htmlcov/
 .idea/
 data/raw/
 outputs/
-*.jsonl
+*.jsonl/
+AUDIT.md
