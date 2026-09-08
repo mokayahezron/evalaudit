@@ -1373,15 +1373,37 @@ def test_alpha_is_undefined_when_every_comparable_rating_is_identical():
 # Cohen's kappa, checked against statsmodels
 # --------------------------------------------------------------------------
 
-@pytest.mark.parametrize(
-    "r1, r2",
-    [
-        ([1, 1, 1, 0, 0, 0, 1, 0, 1, 0], [1, 0, 1, 1, 0, 0, 1, 1, 1, 0]),
-        ([2, 1, 3, 2, 1, 3, 3, 2, 1, 1, 2, 3], [2, 2, 3, 2, 1, 1, 3, 2, 1, 2, 2, 3]),
-        ([1] * 20 + [0] * 20, [1] * 15 + [0] * 5 + [1] * 5 + [0] * 15),
-    ],
-    ids=["binary", "three-way", "lopsided"],
-)
+# Expected agreement is the two raters' marginals crossed, sum_c p1_c p2_c.
+# When one rater used every category equally often their marginals are a
+# constant vector, and crossing the two is then arithmetically the same as
+# squaring either one. So a fixture with a uniform rater cannot tell the
+# right expression from several wrong ones, including squaring rater 1's
+# marginals instead of crossing them.
+#
+# Every fixture below except the last one is uniform in rater 1, so the
+# last one is the only one doing this part of the job. The three before it
+# were named for the shape of the *data*, and one of them was named for a
+# lopsidedness it does not have.
+KAPPA_CASES = [
+    ([1, 1, 1, 0, 0, 0, 1, 0, 1, 0], [1, 0, 1, 1, 0, 0, 1, 1, 1, 0]),
+    ([2, 1, 3, 2, 1, 3, 3, 2, 1, 1, 2, 3], [2, 2, 3, 2, 1, 1, 3, 2, 1, 2, 2, 3]),
+    ([1] * 20 + [0] * 20, [1] * 15 + [0] * 5 + [1] * 5 + [0] * 15),
+    ([1] * 30 + [0] * 10, [1] * 25 + [0] * 5 + [1] * 3 + [0] * 7),
+]
+
+KAPPA_IDS = [
+    "binary-balanced",
+    "three-way-balanced",
+    # 20/20 against 20/20. Both margins are even. This was called "lopsided"
+    # and it is the most balanced fixture here.
+    "both-margins-even",
+    # 30/10 against 28/12. The only fixture where the two raters' marginals
+    # differ and neither is uniform.
+    "unbalanced-margins",
+]
+
+
+@pytest.mark.parametrize("r1, r2", KAPPA_CASES, ids=KAPPA_IDS)
 def test_cohens_kappa_matches_statsmodels(r1, r2):
     result = cohens_kappa(r1, r2)
 
@@ -1396,6 +1418,33 @@ def test_cohens_kappa_matches_statsmodels(r1, r2):
     assert result.n_items == len(r1)
     assert result.n_raters == 2
     assert result.method == "cohen"
+
+
+def test_the_kappa_fixtures_include_an_unbalanced_rater():
+    """Guard the guard.
+
+    The cross-marginal check above is only a check on fixtures where the two
+    raters' marginals differ and neither is uniform. Three of the four are
+    uniform in rater 1, which is how a wrong expected-agreement term sat
+    there undetected. This fails if the one fixture that does the work is
+    removed or quietly balanced.
+    """
+    discriminating = []
+    for r1, r2 in KAPPA_CASES:
+        cats = sorted(set(r1) | set(r2))
+        m1 = np.array([sum(1 for v in r1 if v == c) for c in cats], dtype=float)
+        m2 = np.array([sum(1 for v in r2 if v == c) for c in cats], dtype=float)
+        n = len(r1)
+        crossed = float(m1 @ m2) / (n * n)
+        squared = float(m1 @ m1) / (n * n)
+        if abs(crossed - squared) > 1e-12:
+            discriminating.append((list(m1), list(m2)))
+
+    assert discriminating, (
+        "every kappa fixture has a uniform rater-1 marginal, so crossing the "
+        "two raters' marginals and squaring rater 1's give the same number "
+        "on all of them. At least one fixture must tell those apart."
+    )
 
 
 def test_cohens_kappa_perfect_and_chance():

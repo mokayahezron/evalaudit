@@ -1060,9 +1060,20 @@ class LengthBias:
                 " The interval covers no effect, so the data cannot show "
                 "that length moved the judge."
             )
+        if self.coefficient > 0:
+            return head + (
+                " A positive coefficient here is not bias on its own, because "
+                "longer answers may simply be better."
+            )
+        # The two signs do not read the same way, so they do not get the
+        # same sentence. The excuse that saves a positive coefficient is
+        # that length carries quality, and it does not run in reverse.
         return head + (
-            " A positive coefficient here is not bias on its own, because "
-            "longer answers may simply be better."
+            " A negative coefficient is harder to explain away than a "
+            "positive one. Length can track quality, so a preference for "
+            "long answers may be reading real content. Brevity rarely "
+            "tracks quality in the same way, so a preference for short "
+            "answers usually points at the judge."
         )
 
     def _disagreement(self) -> str:
@@ -1099,18 +1110,25 @@ class LengthBias:
                 " That interval covers no effect, so the judge does not "
                 "depart from the humans in the direction of length."
             )
-        else:
+        elif self.disagreement_coefficient > 0:
             verdict = (
                 " The judge departs from the humans in the direction of "
                 "length."
+            )
+        else:
+            # The predictor is the length the humans passed over minus the
+            # one they picked, so a negative coefficient is the judge
+            # breaking with them on the pairs where the humans went long.
+            verdict = (
+                " The judge departs from the humans in the direction of "
+                "brevity."
             )
 
         caveat = (
             " Holding the human verdict fixed strips the part of the "
             "length-quality link the human labels capture, and it does not "
             "remove the rest, since a binary label is a coarse measure of "
-            "quality. Read this as the sharper of the two numbers rather "
-            "than as proof."
+            "quality. Read this as an indication rather than as proof."
         )
         return head + verdict + caveat
 

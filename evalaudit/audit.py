@@ -751,17 +751,27 @@ def _length_finding(judge_data: dict, cfg: AuditConfig):
     )
 
     if _length_flagged(result):
+        _, _, coefficient = _deciding_fit(result)
+        toward_long = coefficient > 0
         return Finding(
             check="length",
             severity="warning",
-            title="The judge is pulled by how long the answer is",
+            title=(
+                "The judge is pulled by how long the answer is"
+                if toward_long
+                else "The judge is pulled toward shorter answers"
+            ),
             detail=_detail(
-                "A judge that rewards length ranks the wordier system "
-                "higher whatever it says, and it can do that while "
-                "agreeing with humans on most pairs.",
+                _length_lead(result, toward_long),
                 result,
-                "Check whether the winning system is simply the longer one. "
-                "Comparing answers trimmed to a common length, or scoring "
+                (
+                    "Check whether the winning system is simply the longer "
+                    "one. "
+                    if toward_long
+                    else "Check whether the winning system is simply the "
+                    "shorter one. "
+                )
+                + "Comparing answers trimmed to a common length, or scoring "
                 "with length in the rubric rather than in the judge, will "
                 "say whether the margin survives.",
             ),
@@ -782,24 +792,103 @@ def _length_finding(judge_data: dict, cfg: AuditConfig):
     )
 
 
-def _length_flagged(result) -> bool:
-    """Whether the length fit is a finding, and which fit decides it.
+def _length_lead(result, toward_long: bool) -> str:
+    """The sentence that frames the numbers, before the reader meets them.
 
-    With human labels the disagreement fit decides, because it is the
-    sharper of the two. It asks whether the judge breaks with the humans on
-    the pairs where the humans went short, and a plain preference for longer
-    answers is not bias on its own, since longer answers may be better.
-
-    Without human labels, or when the judge never disagreed and there was
-    nothing to fit, the preference model decides and the summary carries
-    that caveat.
+    Three cases, and the third is the one that costs a reader most. When
+    the two fits sign differently the paragraph carries a title pointing
+    one way and an odds ratio pointing the other, both correct, with
+    nothing between them saying why. Every sentence is defensible and the
+    paragraph still reads as a contradiction. So the warning goes first,
+    where it arrives before the numbers rather than after them.
     """
-    low, high = result.ci_low, result.ci_high
-    if result.has_human and np.isfinite(result.disagreement_ci_low):
-        low, high = result.disagreement_ci_low, result.disagreement_ci_high
+    if _fits_disagree(result):
+        if toward_long:
+            return (
+                "Two models run here and they point opposite ways. The "
+                "judge picks the shorter answer more often, and on the "
+                "pairs where it breaks with the humans it breaks toward "
+                "the longer one. The verdict below runs on the second, "
+                "which is the sharper of the two."
+            )
+        return (
+            "Two models run here and they point opposite ways. The judge "
+            "picks the longer answer more often, and on the pairs where it "
+            "breaks with the humans it breaks toward the shorter one. The "
+            "verdict below runs on the second, which is the sharper of the "
+            "two."
+        )
+    if toward_long:
+        return (
+            "A judge that rewards length ranks the wordier system higher "
+            "whatever it says, and it can do that while agreeing with "
+            "humans on most pairs."
+        )
+    return (
+        "A judge that rewards brevity ranks the terser system higher "
+        "whatever it says, and it can do that while agreeing with humans "
+        "on most pairs."
+    )
+
+
+def _fits_disagree(result) -> bool:
+    """True when the verdict runs on the disagreement fit and they differ.
+
+    Both conditions matter. Two fits that sign differently are only worth
+    warning about when the one the reader is being handed is not the one
+    the raw preference number will suggest.
+    """
+    if not _uses_disagreement_fit(result):
+        return False
+    if not (
+        np.isfinite(result.coefficient)
+        and np.isfinite(result.disagreement_coefficient)
+    ):
+        return False
+    return (result.coefficient > 0) != (result.disagreement_coefficient > 0)
+
+
+def _length_flagged(result) -> bool:
+    """Whether the deciding fit's interval clears zero, in either direction.
+
+    Which fit that is lives in :func:`_deciding_fit`.
+    """
+    low, high, _ = _deciding_fit(result)
     if not (np.isfinite(low) and np.isfinite(high)):
         return False
     return not low <= 0.0 <= high
+
+
+def _uses_disagreement_fit(result) -> bool:
+    """Whether the verdict runs on the disagreement fit.
+
+    The selection rule itself, kept in one place so the predicate, the
+    direction and the lead cannot drift apart.
+    """
+    return bool(
+        result.has_human and np.isfinite(result.disagreement_ci_low)
+    )
+
+
+def _deciding_fit(result):
+    """The bounds and coefficient the verdict runs on, as one selection.
+
+    Whether the finding fires and which way it points have to come off the
+    same fit, so the rule for picking it lives in one place rather than
+    twice. Positive means pulled toward the longer answer in both fits,
+    since the disagreement model's predictor is the length the humans
+    passed over minus the one they picked. The two can still sign
+    differently. A judge that prefers long answers at every gap, less
+    strongly as the gap widens, breaks with the humans toward the shorter
+    answer.
+    """
+    if _uses_disagreement_fit(result):
+        return (
+            result.disagreement_ci_low,
+            result.disagreement_ci_high,
+            result.disagreement_coefficient,
+        )
+    return result.ci_low, result.ci_high, result.coefficient
 
 
 # --------------------------------------------------------------------------

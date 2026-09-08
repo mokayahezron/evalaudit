@@ -1,6 +1,14 @@
 """evalaudit: statistical validity checks for AI evaluations."""
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version as _version
+
+try:
+    __version__ = _version("evalaudit")
+except PackageNotFoundError:
+    # Running from a source tree with nothing installed. There is no
+    # version to report and there is no literal to fall back on, since a
+    # literal here is what put two different releases on the same number.
+    __version__ = "unknown"
 
 from ._types import (
     AgreementResult,

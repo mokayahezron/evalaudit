@@ -45,8 +45,15 @@ from evalaudit import (
     ScoreCI,
     SkippedCheck,
     audit,
+    length_bias,
 )
-from evalaudit.audit import CHECK_ORDER, CHECK_TITLES, SEVERITY_ORDER, _ranked
+from evalaudit.audit import (
+    CHECK_ORDER,
+    CHECK_TITLES,
+    SEVERITY_ORDER,
+    _detail,
+    _ranked,
+)
 
 
 # --------------------------------------------------------------------------
@@ -189,6 +196,111 @@ def length_biased():
         "preferences": pref,
         "lengths": np.column_stack([len_a, len_b]),
         "human_preferences": human,
+    }
+
+
+@pytest.fixture
+def length_biased_short():
+    """The judge goes for the shorter answer and the humans do not.
+
+    The mirror image of ``length_biased``. Built with the sign of the logit
+    flipped, so both fits land clearly below zero rather than clearly above,
+    and every sentence the audit writes about this judge has to point the
+    other way. The suite had no fixture like this, which is how the
+    long-answer wording survived on data that contradicts it.
+    """
+    rng = np.random.default_rng(5)
+    n = 400
+    len_a = rng.normal(800, 200, n)
+    len_b = rng.normal(800, 200, n)
+    d = (len_a - len_b) / 200.0
+    pref = (rng.random(n) < 1 / (1 + np.exp(1.5 * d))).astype(int)
+    human = (rng.random(n) < 0.5).astype(int)
+    return {
+        "preferences": pref,
+        "lengths": np.column_stack([len_a, len_b]),
+        "human_preferences": human,
+    }
+
+
+@pytest.fixture
+def length_fits_disagree_in_sign():
+    """The two fits point opposite ways, so only one of them can decide.
+
+    ``length_biased`` makes both fits strongly positive and
+    ``length_biased_short`` makes both strongly negative, so neither pins
+    which fit the verdict reads. Deleting the human branch of
+    ``_deciding_fit`` passes the whole suite against those two. This is the
+    fixture that separates them.
+
+    The construction leans on the two fits measuring different things. Let
+    p(m) be the chance the judge takes the longer answer at length gap m.
+    The preference fit asks whether p(m) sits above a half, which is a
+    question about level. On a corpus where the humans took the longer
+    answer every time, the disagreement fit reduces to regressing "the
+    judge took the shorter one" on minus the gap, which asks whether p(m)
+    rises or falls with m, a question about trend. Level and trend are free
+    of each other, so they can point opposite ways.
+
+    The judge here prefers the longer answer at every gap, 0.90 at no gap
+    falling to 0.57 at three standard deviations, never below a half. It
+    likes long answers throughout, its enthusiasm flattens as the gap
+    widens, and the pairs it breaks with the humans on are the wide-gap
+    ones, where it breaks toward the shorter answer.
+
+    Read the limits before reusing this. The fixture needs the humans to
+    pick the longer answer on 100% of pairs, and it is pinned there rather
+    than merely happening to land there. At 95% the disagreement interval
+    crosses zero on three of eight seeds and the fixture stops separating
+    anything. So this is a corner of the space and not a typical corpus.
+    What makes the corner worth testing is that it is the confound
+    length_bias's own docstring is about, length and human-judged quality
+    coinciding exactly.
+    """
+    rng = np.random.default_rng(11)
+    n = 800
+    len_a = rng.normal(800, 220, n)
+    len_b = rng.normal(800, 220, n)
+    gap = np.abs(len_a - len_b) / 220.0
+    a_is_long = len_a > len_b
+
+    p_long = 0.56 + (0.95 - 0.56) / (1 + np.exp(2.0 * (gap - 1.0)))
+    judge_long = rng.random(n) < p_long
+
+    return {
+        "preferences": np.where(a_is_long, judge_long, ~judge_long).astype(int),
+        "lengths": np.column_stack([len_a, len_b]),
+        "human_preferences": a_is_long.astype(int),
+    }
+
+
+@pytest.fixture
+def length_fits_disagree_toward_long():
+    """The mirror of ``length_fits_disagree_in_sign``, signs swapped.
+
+    The preference fit lands clearly negative and the disagreement fit
+    clearly positive, so the verdict reads long while the judge's raw
+    preference reads short. Without this the long-verdict half of the
+    disagreeing lead would ship untested, which is the defect this fixture
+    family exists to close.
+
+    Same corner as its mirror, and the same limit. The humans take the
+    shorter answer on 100% of pairs, and the fixture is pinned there.
+    """
+    rng = np.random.default_rng(11)
+    n = 800
+    len_a = rng.normal(800, 220, n)
+    len_b = rng.normal(800, 220, n)
+    gap = np.abs(len_a - len_b) / 220.0
+    a_is_long = len_a > len_b
+
+    p_short = 0.56 + (0.95 - 0.56) / (1 + np.exp(2.0 * (gap - 1.0)))
+    judge_short = rng.random(n) < p_short
+
+    return {
+        "preferences": np.where(a_is_long, ~judge_short, judge_short).astype(int),
+        "lengths": np.column_stack([len_a, len_b]),
+        "human_preferences": (~a_is_long).astype(int),
     }
 
 
@@ -557,6 +669,269 @@ def test_length_bias_is_a_warning(judge_good, length_biased):
     assert isinstance(f.result, LengthBias)
 
 
+def test_the_fixture_really_is_a_short_preferring_judge(length_biased_short):
+    """Guard the guard.
+
+    Every assertion below is worthless if the fit does not actually land
+    below zero, so pin that separately from the prose it drives.
+    """
+    r = length_bias(
+        length_biased_short["preferences"],
+        length_biased_short["lengths"],
+        human_preferences=length_biased_short["human_preferences"],
+    )
+    assert r.ci_high < 0, f"preference interval is {(r.ci_low, r.ci_high)}"
+    assert r.disagreement_ci_high < 0, (
+        f"disagreement interval is "
+        f"{(r.disagreement_ci_low, r.disagreement_ci_high)}"
+    )
+
+
+def test_a_short_preferring_judge_is_not_called_a_long_preferring_one(
+    judge_good, length_biased_short
+):
+    """The title, the lead and the caveat all follow the sign of the fit.
+
+    A judge that reaches for the terser answer is still a finding, and it is
+    still a warning. What it is not is a judge pulled toward length, and the
+    report must not say so while printing a coefficient that says otherwise.
+
+    The three strings are written out here rather than imported, so that
+    rewording the report fails this test and the new wording gets read.
+    """
+    r = audit(judge={**judge_good, **length_biased_short}, config={"seed": 1})
+    f = _one(r, "length")
+
+    assert f.severity == "warning"
+    assert f.title == "The judge is pulled toward shorter answers"
+    assert (
+        "A judge that rewards brevity ranks the terser system higher "
+        "whatever it says, and it can do that while agreeing with humans "
+        "on most pairs."
+    ) in f.detail
+    assert (
+        "A negative coefficient is harder to explain away than a positive "
+        "one. Length can track quality, so a preference for long answers "
+        "may be reading real content. Brevity rarely tracks quality in the "
+        "same way, so a preference for short answers usually points at the "
+        "judge."
+    ) in f.detail
+
+    # The two remaining directional sentences. The advice tells the reader
+    # what to go and look at, and the disagreement verdict says which way
+    # the judge left the humans. Both pointed at length regardless of sign.
+    assert (
+        "Check whether the winning system is simply the shorter one."
+    ) in f.detail
+    assert (
+        "The judge departs from the humans in the direction of brevity."
+    ) in f.detail
+
+    assert "pulled by how long" not in f.title
+    assert "rewards length ranks the wordier system" not in f.detail
+    assert "A positive coefficient here is not bias on its own" not in f.detail
+    assert "simply the longer one" not in f.detail
+    assert "departs from the humans in the direction of length" not in f.detail
+
+
+def test_a_long_preferring_judge_keeps_the_long_answer_wording(
+    judge_good, length_biased
+):
+    """The positive branch is unchanged, and the two do not collapse.
+
+    A fix that pointed every finding at brevity would pass the test above
+    and be no better than the bug.
+    """
+    f = _one(
+        audit(judge={**judge_good, **length_biased}, config={"seed": 1}),
+        "length",
+    )
+    assert f.severity == "warning"
+    assert f.title == "The judge is pulled by how long the answer is"
+    assert (
+        "A judge that rewards length ranks the wordier system higher "
+        "whatever it says, and it can do that while agreeing with humans "
+        "on most pairs."
+    ) in f.detail
+    assert (
+        "A positive coefficient here is not bias on its own, because "
+        "longer answers may simply be better."
+    ) in f.detail
+    assert (
+        "Check whether the winning system is simply the longer one."
+    ) in f.detail
+    assert (
+        "The judge departs from the humans in the direction of length."
+    ) in f.detail
+    assert "toward shorter answers" not in f.title
+    assert "rewards brevity" not in f.detail
+    assert "simply the shorter one" not in f.detail
+    assert "direction of brevity" not in f.detail
+
+
+def test_the_two_fits_really_do_disagree_in_sign(length_fits_disagree_in_sign):
+    """Guard the guard.
+
+    The test below says nothing unless the fixture actually splits the two
+    fits, and the split is delicate enough to be worth pinning separately.
+    """
+    r = length_bias(
+        length_fits_disagree_in_sign["preferences"],
+        length_fits_disagree_in_sign["lengths"],
+        human_preferences=length_fits_disagree_in_sign["human_preferences"],
+    )
+    assert r.coefficient > 0, f"preference coefficient is {r.coefficient}"
+    assert r.ci_low > 0, f"preference interval is {(r.ci_low, r.ci_high)}"
+    assert r.disagreement_ci_high < 0, (
+        f"disagreement interval is "
+        f"{(r.disagreement_ci_low, r.disagreement_ci_high)}"
+    )
+
+
+def test_the_verdict_follows_the_disagreement_fit_when_the_two_disagree(
+    judge_good, length_fits_disagree_in_sign
+):
+    """The sharper fit decides the direction, not the louder one.
+
+    On this fixture the preference fit says long and the disagreement fit
+    says short. The disagreement fit is the one that holds the human
+    verdict fixed, so it is the one the finding is written from. Reading
+    the preference fit instead would point every sentence the other way.
+
+    This is the assertion that deleting the human branch of _deciding_fit
+    fails. The two fixtures either side of it pass with that branch gone.
+    """
+    f = _one(
+        audit(
+            judge={**judge_good, **length_fits_disagree_in_sign},
+            config={"seed": 1},
+        ),
+        "length",
+    )
+
+    assert f.severity == "warning"
+    assert f.title == "The judge is pulled toward shorter answers"
+    assert "Check whether the winning system is simply the shorter one." in f.detail
+    assert "Check whether the winning system is simply the longer one." not in f.detail
+
+    # The lead on this fixture is the disagreeing one, not the plain
+    # brevity lead. That is asserted in
+    # test_the_lead_says_two_models_disagree_before_the_numbers_arrive.
+    assert "Two models run here and they point opposite ways." in f.detail
+
+
+# The lead that runs when the two fits point opposite ways. Written out
+# here rather than imported, so rewording it fails these tests.
+DISAGREEING_LEAD_SHORT = (
+    "Two models run here and they point opposite ways. The judge picks the "
+    "longer answer more often, and on the pairs where it breaks with the "
+    "humans it breaks toward the shorter one. The verdict below runs on the "
+    "second, which is the sharper of the two."
+)
+DISAGREEING_LEAD_LONG = (
+    "Two models run here and they point opposite ways. The judge picks the "
+    "shorter answer more often, and on the pairs where it breaks with the "
+    "humans it breaks toward the longer one. The verdict below runs on the "
+    "second, which is the sharper of the two."
+)
+
+
+def test_the_lead_says_two_models_disagree_before_the_numbers_arrive(
+    judge_good, length_fits_disagree_in_sign
+):
+    """The disagreeing lead runs, in the form that matches the split.
+
+    Why the bridge belongs in the lead. On this fixture the title reads
+    short while the odds ratio and the long-answer rate read long, and
+    every one of those is correct. A reader who is told nothing until the
+    end meets the contradiction first and the explanation second. So the
+    warning is the lead rather than another caveat behind the numbers.
+
+    Four assertions carry that. The title reads short. The short-verdict
+    lead is present. The long-verdict lead is absent, so the two forms
+    cannot collapse into whichever one the fixture happens to reach. And
+    the plain brevity lead is gone, so the disagreeing lead replaced it
+    rather than stacking in front of it.
+
+    Where the lead lands in the paragraph is not checked here. That is a
+    property of _detail rather than of this finding, and it is pinned by
+    test_detail_puts_the_lead_first_and_the_action_last.
+    """
+    f = _one(
+        audit(
+            judge={**judge_good, **length_fits_disagree_in_sign},
+            config={"seed": 1},
+        ),
+        "length",
+    )
+    assert f.title == "The judge is pulled toward shorter answers"
+    assert DISAGREEING_LEAD_SHORT in f.detail
+    assert DISAGREEING_LEAD_LONG not in f.detail
+
+    # And it replaces the plain lead rather than stacking on top of it.
+    assert "A judge that rewards brevity ranks the terser system" not in f.detail
+
+
+def test_the_mirror_fits_really_do_disagree_in_sign(
+    length_fits_disagree_toward_long
+):
+    """Guard the guard, the other way round.
+
+    Its sibling fixture has one of these and this one did not. Without it a
+    mirror fixture that quietly stopped splitting the two fits would fail
+    the test below on a lead assertion, which says nothing about why.
+    """
+    r = length_bias(
+        length_fits_disagree_toward_long["preferences"],
+        length_fits_disagree_toward_long["lengths"],
+        human_preferences=length_fits_disagree_toward_long["human_preferences"],
+    )
+    assert r.coefficient < 0, f"preference coefficient is {r.coefficient}"
+    assert r.ci_high < 0, f"preference interval is {(r.ci_low, r.ci_high)}"
+    assert r.disagreement_ci_low > 0, (
+        f"disagreement interval is "
+        f"{(r.disagreement_ci_low, r.disagreement_ci_high)}"
+    )
+
+
+def test_the_disagreeing_lead_mirrors_when_the_verdict_reads_long(
+    judge_good, length_fits_disagree_toward_long
+):
+    """Same case with the signs swapped, so neither half ships untested."""
+    f = _one(
+        audit(
+            judge={**judge_good, **length_fits_disagree_toward_long},
+            config={"seed": 1},
+        ),
+        "length",
+    )
+    assert f.severity == "warning"
+    assert f.title == "The judge is pulled by how long the answer is"
+    assert DISAGREEING_LEAD_LONG in f.detail
+    assert DISAGREEING_LEAD_SHORT not in f.detail
+    assert "A judge that rewards length ranks the wordier system" not in f.detail
+
+
+@pytest.mark.parametrize(
+    "fixture_name", ["length_biased", "length_biased_short"]
+)
+def test_agreeing_fits_keep_the_plain_lead(judge_good, fixture_name, request):
+    """When the two fits agree there is nothing to warn the reader about.
+
+    The disagreeing lead costs the reader a sentence and buys nothing here,
+    and a lead that always says "two models point opposite ways" would be
+    false on most data.
+    """
+    length_fixture = request.getfixturevalue(fixture_name)
+    f = _one(
+        audit(judge={**judge_good, **length_fixture}, config={"seed": 1}),
+        "length",
+    )
+    assert DISAGREEING_LEAD_SHORT not in f.detail
+    assert DISAGREEING_LEAD_LONG not in f.detail
+    assert "Two models run here and they point opposite ways" not in f.detail
+
+
 def test_length_bias_reads_the_disagreement_fit_when_humans_are_there(
     judge_good, length_biased
 ):
@@ -705,6 +1080,36 @@ def test_every_finding_carries_the_result_summary_verbatim(
     for f in r.findings:
         assert f.result is not None
         assert f.result.summary() in f.detail
+
+
+class _StubResult:
+    """A result that carries nothing but a recognisable summary.
+
+    No fixture, no arithmetic, no digits. The ordering contract is a
+    property of _detail alone, so the test should not be able to fail
+    because a coefficient moved.
+    """
+
+    def summary(self) -> str:
+        return "MIDDLE"
+
+
+def test_detail_puts_the_lead_first_and_the_action_last():
+    """Lead, then the module's own summary, then what to do about it.
+
+    The order is the contract. Every finding in the report is built by
+    handing this function a sentence that frames the numbers, and framing
+    only works before the reader meets them. The length finding leans on
+    this hardest: when the two fits sign differently the lead is the only
+    thing standing between a title and an odds ratio that point opposite
+    ways, and it is worth nothing if it arrives after them.
+    """
+    text = _detail("LEAD", _StubResult(), "ACTION")
+
+    assert "LEAD" in text
+    assert "MIDDLE" in text
+    assert "ACTION" in text
+    assert text.index("LEAD") < text.index("MIDDLE") < text.index("ACTION")
 
 
 def test_detail_says_more_than_the_summary_alone(undecided_scores):

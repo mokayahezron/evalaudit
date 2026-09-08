@@ -44,6 +44,33 @@ NAMES_A_SLICE = "Worst slice "
 # agreeing with whatever the implementation happens to say.
 REFUSES_A_SLICE = "cannot single out a slice"
 
+# The clauses that tell the two position_bias verdicts apart, copied out by
+# hand rather than imported.
+#
+# Asserting `"first" in summary` does not do this. Both verdicts print "went
+# to whichever output was shown first" one sentence earlier, so that test
+# holds whichever way has_position_effect goes, and a judge that took the
+# first-shown output on every flip could be described as splitting evenly
+# without anything failing. These are the words that differ. If the report
+# is reworded, these fail and the new wording gets read.
+CALLS_IT_POSITION_BIAS = (
+    "The flips have a direction, so this is position bias rather than an "
+    "unsteady judge. It reaches for whatever it sees first."
+)
+CALLS_IT_AN_UNSTEADY_JUDGE = (
+    "The flips split evenly across the two positions, so this is an unsteady "
+    "judge rather than a position-biased one."
+)
+# The randomised branch's own pair. Same reasoning.
+RANDOMISED_CLEARS_A_HALF = (
+    "The interval clears 50%, so the judge favours whichever output it sees "
+    "first."
+)
+RANDOMISED_COVERS_A_HALF = (
+    "The interval covers 50%, so the data cannot show that position moved "
+    "the judge."
+)
+
 # The per-slice notes, same reasoning as the dropout notes in
 # test_agreement.py. A reader is supposed to learn which case happened.
 NOTE_SLICE_ONE_ITEM = "one item, too few to measure agreement"
@@ -1167,7 +1194,9 @@ def test_a_first_position_judge_is_caught():
 
     assert r.p_value < 0.001
     assert r.ci_low > 0.5
-    assert "first" in r.summary().lower()
+    assert r.has_position_effect
+    assert RANDOMISED_CLEARS_A_HALF in r.summary()
+    assert RANDOMISED_COVERS_A_HALF not in r.summary()
 
 
 def test_the_randomised_branch_states_what_it_assumes():
@@ -1240,7 +1269,13 @@ def test_a_judge_that_always_picks_the_first_output_scores_zero():
     assert r.position_a_rate == pytest.approx(1.0)
     assert r.n_decisive == 100
     assert r.p_value < 1e-20
-    assert "first" in r.summary().lower()
+
+    # The verdict, not just the numbers behind it. Every flip went to the
+    # first-shown output, so this is the strongest position effect the
+    # design can produce and the report has to name it as one.
+    assert r.has_position_effect
+    assert CALLS_IT_POSITION_BIAS in r.summary()
+    assert CALLS_IT_AN_UNSTEADY_JUDGE not in r.summary()
 
 
 def test_flips_that_are_noise_split_evenly_across_positions():
@@ -1266,6 +1301,14 @@ def test_flips_that_are_noise_split_evenly_across_positions():
     assert margin < 0.08, f"the band grew to {margin:.3f}, tighten the fixture"
     assert abs(r.position_a_rate - 0.5) < margin
     assert r.p_value > 1e-5
+
+    # The other half of the claim. An unsteady judge must not be reported as
+    # a position-biased one, and this is the pair of assertions that stops
+    # the two branches collapsing into whichever one the fixture happens to
+    # reach.
+    assert not r.has_position_effect
+    assert CALLS_IT_AN_UNSTEADY_JUDGE in r.summary()
+    assert CALLS_IT_POSITION_BIAS not in r.summary()
 
 
 def test_the_both_orders_summary_reports_both_numbers():
@@ -1612,6 +1655,27 @@ def test_without_human_labels_only_the_first_model_is_reported():
     text = r.summary().lower()
     assert "without human labels" in text or "no human labels" in text
     assert "cannot separate" in text
+
+
+def test_the_disagreement_caveat_does_not_claim_to_be_the_sharper_number():
+    """The caveat hedges the second fit without ranking it.
+
+    "The sharper of the two" belongs in the audit's lead, where it tells a
+    reader which of two fits the verdict was written from before they meet
+    the numbers. Repeating it here says the same thing a second time in the
+    same paragraph, and the second time carries no information the first
+    did not.
+
+    The string is written out rather than imported, so rewording it fails
+    here and the new wording gets read.
+    """
+    rng = np.random.default_rng(82)
+    human, judge, lengths = quality_pairs(300, rng, judge_length_weight=0.01)
+
+    text = length_bias(judge, lengths, human_preferences=human).summary()
+
+    assert "Read this as an indication rather than as proof." in text
+    assert "sharper of the two" not in text
 
 
 def test_n_disagreements_is_reported():
