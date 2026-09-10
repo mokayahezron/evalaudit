@@ -44,6 +44,26 @@ NAMES_A_SLICE = "Worst slice "
 # agreeing with whatever the implementation happens to say.
 REFUSES_A_SLICE = "cannot single out a slice"
 
+# The three sentences that carry REFUSES_A_SLICE, told apart. The phrase above
+# is in all of them, so on its own it says a slice was refused and not why.
+# The three refusals are different findings and a test that cannot separate
+# them cannot tell a working rule from one that reports the wrong reason.
+# Each constant runs through the shared tail and occurs once in the package,
+# in one branch of JudgeValidation._slice_sentence, so pointing an assertion
+# at one keeps the old check and adds the branch.
+REFUSES_FOR_NO_INTERVAL = (
+    "Without an interval on the overall figure there is nothing to place the "
+    "slices against, so the data cannot single out a slice."
+)
+REFUSES_FOR_NO_FIGURE = (
+    "No slice carries both an agreement figure and an interval, so the data "
+    "cannot single out a slice."
+)
+REFUSES_FOR_OVERLAP = (
+    "on the overall figure, so the two overlap and the data cannot single "
+    "out a slice."
+)
+
 # The clauses that tell the two position_bias verdicts apart, copied out by
 # hand rather than imported.
 #
@@ -305,8 +325,32 @@ def assert_slice_naming_rule(result):
     text = result.summary()
     if result.worst_slice is None:
         assert NAMES_A_SLICE not in text
-        if not result.by_slice.empty:
-            assert REFUSES_A_SLICE in text
+        # Asserted rather than guarded. Under two slices the rule has nothing
+        # to choose between and neither branch of it means anything, so
+        # arriving here with such a result is a broken fixture rather than a
+        # case to pass over quietly.
+        assert len(result.by_slice) > 1, (
+            "the naming rule was asserted on a result with fewer than two "
+            "slices, where the rule does not apply"
+        )
+        assert REFUSES_A_SLICE in text
+        # Which refusal, not just that one happened. Every branch below
+        # asserts, so no shape of data reaches the end of this having
+        # checked nothing.
+        row = result.by_slice.iloc[0]
+        if not result.has_interval:
+            assert REFUSES_FOR_NO_INTERVAL in text
+        elif not (
+            np.isfinite(row["agreement"]) and np.isfinite(row["ci_high"])
+        ):
+            assert REFUSES_FOR_NO_FIGURE in text
+        else:
+            assert REFUSES_FOR_OVERLAP in text
+            # Read off the table rather than off slice_is_distinguishable,
+            # which is the property under test and cannot vouch for itself.
+            assert not row["ci_high"] < result.ci_low, (
+                "refused a slice whose interval clears the overall one"
+            )
         return
 
     assert NAMES_A_SLICE in text
@@ -799,7 +843,7 @@ def test_summary_refuses_a_slice_cut_from_one_population():
     assert worst["ci_high"] > r.ci_low
     assert r.worst_slice is None
     assert NAMES_A_SLICE not in r.summary()
-    assert REFUSES_A_SLICE in r.summary()
+    assert REFUSES_FOR_OVERLAP in r.summary()
     assert_slice_naming_rule(r)
 
 
@@ -819,7 +863,7 @@ def test_the_slice_rule_needs_the_slice_interval_to_clear_as_well():
         [("a", 200, 0.25), ("b", 200, 0.3), ("c", 200, 0.32)],
     ]
     named_any = False
-    refused_any = False
+    first_rule_checks = 0
 
     for i, spec in enumerate(cases):
         rng = np.random.default_rng(100 + i)
@@ -839,12 +883,23 @@ def test_the_slice_rule_needs_the_slice_interval_to_clear_as_well():
         assert_slice_naming_rule(r)
 
         named_any |= expected
-        refused_any |= not expected
-        # the first rule that must not be in use instead
-        if not expected and np.isfinite(worst["agreement"]):
+        # Asserted rather than guarded. A worst slice with no agreement
+        # figure says nothing about either rule, so a NaN here is a fixture
+        # that stopped testing what it was built to test.
+        assert np.isfinite(worst["agreement"]), (
+            f"case {i} carries no agreement on its worst slice, so it cannot "
+            f"say which rule is in use"
+        )
+        # The first rule that must not be in use instead. The count is
+        # asserted below, so a run where nothing was refused cannot pass as
+        # a check on it.
+        if not expected:
+            first_rule_checks += 1
             assert worst["agreement"] < r.agreement
 
-    assert named_any and refused_any, "the cases did not exercise both branches"
+    assert named_any and first_rule_checks, (
+        "the cases did not exercise both branches"
+    )
 
 
 def test_every_slice_carries_its_own_interval():
@@ -897,7 +952,59 @@ def test_summary_will_not_name_a_slice_without_an_interval():
     assert r.worst_slice is None
     assert not r.slice_is_distinguishable
     assert NAMES_A_SLICE not in r.summary()
-    assert REFUSES_A_SLICE in r.summary()
+    assert REFUSES_FOR_NO_INTERVAL in r.summary()
+    assert_slice_naming_rule(r)
+
+
+def one_label_slices():
+    """Two slices, each graded with one label throughout by both sides.
+
+    Neither slice varies, so neither carries an agreement figure. The two
+    used different labels, so the overall figure exists, with an interval.
+    """
+    human = np.array([0] * 40 + [1] * 40)
+    slices = np.array(["refusals"] * 40 + ["answers"] * 40, dtype=object)
+    return human, human.copy(), slices
+
+
+def thin_slice_with_no_interval():
+    """A thin slice with an agreement figure and no interval on it, beside a
+    slice that used one label throughout.
+
+    Six items and one disagreement. About a third of resamples miss that
+    item and have no variance, so the interval is refused. The other slice
+    has no figure and sorts last, which leaves the thin one on top.
+    """
+    human = np.array([0, 0, 0, 0, 0, 1] + [1] * 60)
+    judge = np.array([0, 0, 0, 0, 0, 0] + [1] * 60)
+    slices = np.array(["thin"] * 6 + ["answers"] * 60, dtype=object)
+    return human, judge, slices
+
+
+@pytest.mark.parametrize(
+    "build, top_row_has_agreement",
+    [(one_label_slices, False), (thin_slice_with_no_interval, True)],
+    ids=["no-slice-has-agreement", "top-slice-has-no-interval"],
+)
+def test_summary_refuses_a_slice_when_the_top_row_has_no_figure(
+    build, top_row_has_agreement
+):
+    """The refusal for a table whose top row cannot be measured.
+
+    One fixture for each half of the condition. A missing agreement figure
+    is enough on its own, and so is a missing interval beside a figure that
+    exists.
+    """
+    human, judge, slices = build()
+    r = judge_validation(human, judge, slices=slices, n_boot=500, seed=1)
+
+    top = r.by_slice.iloc[0]
+    assert r.has_interval, "the fixture lost the interval on the overall figure"
+    assert bool(np.isfinite(top["agreement"])) is top_row_has_agreement
+    assert np.isnan(top["ci_high"])
+    assert r.worst_slice is None
+    assert REFUSES_FOR_NO_FIGURE in r.summary()
+    assert_slice_naming_rule(r)
 
 
 def test_summary_hedges_a_thin_slice_it_does_name():

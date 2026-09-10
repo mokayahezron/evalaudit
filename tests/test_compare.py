@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 from scipy import stats
 from statsmodels.stats.contingency_tables import mcnemar as sm_mcnemar
+from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
 
 from evalaudit import ComparisonResult
 from evalaudit.compare import (
@@ -224,7 +225,11 @@ def test_summary_reports_discordant_for_binary():
     a = [1, 1, 0, 0, 1, 0, 1, 0, 1, 1]
     b = [1, 0, 1, 0, 1, 0, 0, 1, 1, 1]
     r = compare_paired(a, b, method="mcnemar")
-    assert "changed between systems" in r.summary()
+    # The whole sentence, both counts included. "changed between systems"
+    # alone is also the tail of "No items changed between systems", the
+    # empty-table sentence, so it passes when the summary says the opposite.
+    # The leading space stops "14 of 10" from matching.
+    assert " 4 of 10 items changed between systems." in r.summary()
 
 
 # --------------------------------------------------------------------------
@@ -569,6 +574,115 @@ def test_independent_bootstrap_allows_single_item_group():
     r = compare_independent([1.5], [1.0, 2.0, 3.0], method="bootstrap", seed=1)
     assert r.n == 4
     assert r.difference == pytest.approx(1.5 - 2.0)
+
+
+# --------------------------------------------------------------------------
+# Welch's t, continuous independent samples
+#
+# The interval is checked against statsmodels CompareMeans, which shares no
+# code with compare_independent. The p-value is checked against
+# scipy.stats.ttest_ind with equal_var=False, and against statsmodels as
+# well. The implementation calls that same scipy function, so the scipy check
+# alone pins the wiring and says nothing about the arithmetic.
+#
+# Every fixture has unequal variances and unequal group sizes. On equal
+# variances with equal sizes Welch and Student agree, so a fixture like that
+# passes whichever of the two the code computes.
+# --------------------------------------------------------------------------
+
+# Each case is (items in A, spread of A, items in B, spread of B).
+WELCH_CASES = {
+    # The small group is the tight one. Student's pooled variance is carried
+    # by the wide group, and its interval comes out about twice as wide.
+    "small-tight-vs-large-wide": (12, 0.05, 70, 0.30),
+    # The small group is the wide one. Student's interval comes out well
+    # under half as wide.
+    "small-wide-vs-large-tight": (12, 0.30, 70, 0.05),
+}
+
+
+def welch_samples(case):
+    n_a, sd_a, n_b, sd_b = WELCH_CASES[case]
+    rng = np.random.default_rng(3)
+    return rng.normal(0.62, sd_a, n_a), rng.normal(0.55, sd_b, n_b)
+
+
+def statsmodels_means(a, b):
+    return CompareMeans(DescrStatsW(a), DescrStatsW(b))
+
+
+@pytest.mark.parametrize("case", sorted(WELCH_CASES))
+def test_welch_fixtures_can_tell_welch_from_student(case):
+    """The fixtures, checked for the property they exist to have.
+
+    If the Welch and Student intervals came out close, an implementation
+    computing Student's would pass every Welch test below.
+    """
+    a, b = welch_samples(case)
+    means = statsmodels_means(a, b)
+    welch_lo, welch_hi = means.tconfint_diff(alpha=0.05, usevar="unequal")
+    student_lo, student_hi = means.tconfint_diff(alpha=0.05, usevar="pooled")
+    ratio = (welch_hi - welch_lo) / (student_hi - student_lo)
+    assert not 0.67 < ratio < 1.5, (
+        f"Welch and Student widths are within a factor of {ratio:.2f}"
+    )
+
+
+@pytest.mark.parametrize("case", sorted(WELCH_CASES))
+def test_welch_interval_matches_statsmodels(case):
+    a, b = welch_samples(case)
+    r = compare_independent(a, b, method="t")
+    lo, hi = statsmodels_means(a, b).tconfint_diff(alpha=0.05, usevar="unequal")
+    assert r.method == "t"
+    assert r.paired is False
+    assert r.binary is False
+    assert r.n == a.size + b.size
+    assert r.difference == pytest.approx(a.mean() - b.mean(), abs=1e-12)
+    assert r.ci_low == pytest.approx(lo, abs=1e-10)
+    assert r.ci_high == pytest.approx(hi, abs=1e-10)
+
+
+@pytest.mark.parametrize("case", sorted(WELCH_CASES))
+def test_welch_p_value_matches_scipy_and_statsmodels(case):
+    a, b = welch_samples(case)
+    r = compare_independent(a, b, method="t")
+    assert r.p_value == pytest.approx(
+        stats.ttest_ind(a, b, equal_var=False).pvalue, abs=1e-12
+    )
+    assert r.p_value == pytest.approx(
+        statsmodels_means(a, b).ttest_ind(usevar="unequal")[1], abs=1e-10
+    )
+
+
+@pytest.mark.parametrize("confidence", [0.50, 0.80, 0.90, 0.99])
+def test_welch_interval_follows_the_confidence_level(confidence):
+    """None of these levels is 0.95, so a critical value fixed at the
+    default fails every case."""
+    a, b = welch_samples("small-tight-vs-large-wide")
+    r = compare_independent(a, b, method="t", confidence=confidence)
+    lo, hi = statsmodels_means(a, b).tconfint_diff(
+        alpha=1 - confidence, usevar="unequal"
+    )
+    assert r.confidence == confidence
+    assert r.ci_low == pytest.approx(lo, abs=1e-10)
+    assert r.ci_high == pytest.approx(hi, abs=1e-10)
+
+
+def test_welch_at_two_items_per_group():
+    """The smallest groups the single-item guard lets through.
+
+    The spreads differ by a factor of twenty, so the Welch-Satterthwaite
+    degrees of freedom sit near 1 where Student would use 2.
+    """
+    a = np.array([0.40, 0.44])
+    b = np.array([0.10, 0.90])
+    r = compare_independent(a, b, method="t")
+    lo, hi = statsmodels_means(a, b).tconfint_diff(alpha=0.05, usevar="unequal")
+    assert r.ci_low == pytest.approx(lo, abs=1e-10)
+    assert r.ci_high == pytest.approx(hi, abs=1e-10)
+    assert r.p_value == pytest.approx(
+        stats.ttest_ind(a, b, equal_var=False).pvalue, abs=1e-12
+    )
 
 
 # --------------------------------------------------------------------------

@@ -43,6 +43,26 @@ NOTE_ONE_ITEM = "only one item left with two or more ratings"
 # item got called "essay-r05" is a test failing for the wrong reason.
 NAMES_A_RATER = "Dropping "
 
+# The three sentences that end "so the data cannot distinguish the raters",
+# told apart. That shared tail says no rater was named and does not say why,
+# and the three reasons are different findings. Each constant below runs
+# through the shared tail and occurs once in the package, in one branch of
+# AgreementResult._dropout_sentence, so pointing an assertion at one keeps
+# the old check and adds the branch.
+REFUSES_A_RATER_ALL_UNDEFINED = (
+    "Every leave-one-out alpha is undefined, so the data cannot distinguish "
+    "the raters."
+)
+REFUSES_A_RATER_NO_INTERVAL = (
+    "Without an interval on alpha there is nothing to measure the "
+    "leave-one-out differences against, so the data cannot distinguish the "
+    "raters."
+)
+REFUSES_A_RATER_INSIDE_NOISE = (
+    "on alpha, so the data cannot distinguish the raters. Do not read the "
+    "top of the dropout table as an outlier."
+)
+
 
 # --------------------------------------------------------------------------
 # Helpers
@@ -863,7 +883,7 @@ def test_one_overlapping_item_yields_no_alpha_and_no_interval():
     assert "1 of 501 items" in r.summary()
     assert "undefined" in text
     assert "no interval" in text
-    assert "cannot distinguish" in text
+    assert REFUSES_A_RATER_ALL_UNDEFINED in r.summary()
     # the withheld value must not appear anywhere in the prose
     assert "0.000" not in r.summary()
 
@@ -967,7 +987,7 @@ def test_bootstrap_refuses_when_too_many_resamples_are_undefined():
     text = r.summary().lower()
     assert "no interval" in text
     assert "undefined" in text
-    assert "cannot distinguish" in text
+    assert REFUSES_A_RATER_NO_INTERVAL in r.summary()
 
 
 def test_the_undefined_resample_floor_is_ninety_percent():
@@ -1248,7 +1268,7 @@ def test_summary_refuses_to_name_an_outlier_on_thin_data():
     assert not r.dropout_is_distinguishable
     assert r.top_dropout_rater is None
     assert NAMES_A_RATER not in r.summary()
-    assert "cannot distinguish" in r.summary().lower()
+    assert REFUSES_A_RATER_INSIDE_NOISE in r.summary()
 
 
 def test_the_naming_rule_is_the_shift_against_the_sampling_error():
@@ -1302,7 +1322,7 @@ def test_summary_will_not_name_anyone_without_an_interval():
     assert not r.dropout_is_distinguishable
     assert r.top_dropout_rater is None
     assert NAMES_A_RATER not in r.summary()
-    assert "cannot distinguish" in r.summary().lower()
+    assert REFUSES_A_RATER_NO_INTERVAL in r.summary()
 
 
 def test_summary_will_not_name_anyone_with_only_two_raters():

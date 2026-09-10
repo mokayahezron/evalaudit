@@ -8,6 +8,7 @@ computed independently; if your implementation returns these, it is correct.
 
 import numpy as np
 import pytest
+from scipy import stats
 
 from evalaudit.scores import score_ci
 
@@ -116,6 +117,62 @@ def test_bootstrap_coverage():
 
 
 # --------------------------------------------------------------------------
+# Student-t interval, continuous data
+#
+# The reference is scipy.stats.t.interval. It is handed the mean and scipy's
+# own standard error, both computed here from the data, so nothing in the
+# check is taken from the result under test.
+# --------------------------------------------------------------------------
+
+def scipy_t_interval(scores, confidence):
+    x = np.asarray(scores, dtype=float)
+    return stats.t.interval(
+        confidence, len(x) - 1, loc=x.mean(), scale=stats.sem(x)
+    )
+
+
+@pytest.mark.parametrize("n", [3, 8, 40, 400])
+def test_t_interval_matches_scipy(n):
+    xs = np.random.default_rng(n).normal(0.6, 0.15, n)
+    r = score_ci(xs, method="t")
+    lo, hi = scipy_t_interval(xs, 0.95)
+    assert r.method == "t"
+    assert r.binary is False
+    assert r.n == n
+    assert r.estimate == pytest.approx(xs.mean(), abs=1e-12)
+    assert r.ci_low == pytest.approx(lo, abs=1e-12)
+    assert r.ci_high == pytest.approx(hi, abs=1e-12)
+
+
+@pytest.mark.parametrize("confidence", [0.50, 0.80, 0.90, 0.99])
+def test_t_interval_follows_the_confidence_level(confidence):
+    """None of these levels is 0.95, so a critical value fixed at the
+    default fails every case."""
+    xs = np.random.default_rng(12).normal(0.6, 0.15, 25)
+    r = score_ci(xs, method="t", confidence=confidence)
+    lo, hi = scipy_t_interval(xs, confidence)
+    assert r.confidence == confidence
+    assert r.ci_low == pytest.approx(lo, abs=1e-12)
+    assert r.ci_high == pytest.approx(hi, abs=1e-12)
+
+
+def test_t_interval_at_two_items():
+    """Two items is the smallest sample with a variance.
+
+    One degree of freedom puts the critical value near 12.7, where the normal
+    one is 1.96. Counting n degrees of freedom instead of n - 1, or reading z
+    for t, moves the bounds furthest here.
+    """
+    xs = [0.40, 0.70]
+    r = score_ci(xs, method="t")
+    lo, hi = scipy_t_interval(xs, 0.95)
+    assert r.n == 2
+    assert r.estimate == pytest.approx(0.55, abs=1e-12)
+    assert r.ci_low == pytest.approx(lo, abs=1e-12)
+    assert r.ci_high == pytest.approx(hi, abs=1e-12)
+
+
+# --------------------------------------------------------------------------
 # The summary is the product
 # --------------------------------------------------------------------------
 
@@ -130,6 +187,38 @@ def test_summary_mentions_estimate_and_bounds():
 def test_summary_warns_on_small_n():
     r = score_ci([1, 1, 0, 1, 1])
     assert "5 observations" in r.summary()
+
+
+# The continuous branch of the summary, asserted as whole sentences. The tail
+# "The interval spans ..." is shared with the binary branch, so a fragment of
+# it passes on either. "Mean score" occurs once in the package, at the
+# continuous head, and only a whole sentence pins the head together with the
+# numbers printed in it.
+#
+# The numbers are what scipy.stats.t.interval gives for this data. None of
+# them sits within a ten-thousandth of a rounding boundary at three places,
+# so a harmless change to how the mean is summed cannot flip a printed digit.
+# Thirty items and twenty-nine sit either side of the small-sample warning.
+
+def continuous_scores(n):
+    return [0.35 + 0.02 * ((i * 3) % 13) for i in range(n)]
+
+
+def test_continuous_summary_is_the_whole_sentence():
+    r = score_ci(continuous_scores(30), method="t")
+    assert r.summary() == (
+        "Mean score 0.466 (95% CI: 0.438-0.494, n=30). The interval spans "
+        "0.057; treat differences smaller than that as unresolved."
+    )
+
+
+def test_continuous_summary_below_thirty_items_carries_the_warning():
+    r = score_ci(continuous_scores(29), method="t")
+    assert r.summary() == (
+        "Mean score 0.464 (95% CI: 0.435-0.493, n=29). The interval spans "
+        "0.058; treat differences smaller than that as unresolved. With only "
+        "29 observations this estimate is weak regardless of the point value."
+    )
 
 
 # --------------------------------------------------------------------------
