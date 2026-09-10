@@ -104,7 +104,8 @@ def _wilson(k: int, n: int, confidence: float) -> tuple[float, float]:
 
         (p + z^2/2n  +/-  z * sqrt( p(1-p)/n + z^2/4n^2 )) / (1 + z^2/n)
 
-    Clip to [0, 1] at the end.
+    The bounds are clipped to [0, 1]. The algebra keeps them inside that
+    range on its own, and the clip catches the rounding at p=0 and p=1.
     """
     p = k / n
     z = _stats.norm.ppf(1 - (1 - confidence) / 2)
@@ -122,9 +123,8 @@ def _bootstrap_mean(
 ) -> tuple[float, float]:
     """Percentile bootstrap of the mean.
 
-    Vectorise this. Draw an (n_boot, n) index matrix with
-    ``rng.integers(0, n, size=(n_boot, n))`` and take row means in one pass.
-    A Python loop here is the difference between instant and slow on a laptop.
+    Vectorised over resamples. One ``(n_boot, n)`` index matrix draws every
+    resample at once, and the means come out as row means of a single array.
     """
     rng = np.random.default_rng(seed)
     n = len(x)
