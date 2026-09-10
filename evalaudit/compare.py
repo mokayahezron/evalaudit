@@ -71,7 +71,7 @@ def compare_paired(
         below that the interval it would return cannot agree with its own
         p-value. Binary scores never clear that bar. Use McNemar for those.
     confidence
-        Nominal coverage, default 0.95.
+        Nominal coverage, strictly between 0 and 1, default 0.95.
     n_boot
         Bootstrap resamples, used by ``"bootstrap"`` only.
     seed
@@ -88,6 +88,8 @@ def compare_paired(
     """
     if method not in _PAIRED_METHODS:
         raise ValueError(f"method must be one of {_PAIRED_METHODS}, got {method!r}")
+    if not 0 < confidence < 1:
+        raise ValueError(f"confidence must be in (0, 1), got {confidence}")
 
     x = np.asarray(a, dtype=float)
     y = np.asarray(b, dtype=float)
@@ -154,7 +156,7 @@ def compare_independent(
         ``"bootstrap"`` resamples each group separately.
         ``"t"`` is Welch's t interval, which does not assume equal variance.
     confidence
-        Nominal coverage, default 0.95.
+        Nominal coverage, strictly between 0 and 1, default 0.95.
     n_boot
         Bootstrap resamples, used by ``"bootstrap"`` only.
     seed
@@ -170,6 +172,8 @@ def compare_independent(
         raise ValueError(
             f"method must be one of {_INDEPENDENT_METHODS}, got {method!r}"
         )
+    if not 0 < confidence < 1:
+        raise ValueError(f"confidence must be in (0, 1), got {confidence}")
 
     x = np.asarray(a, dtype=float)
     y = np.asarray(b, dtype=float)

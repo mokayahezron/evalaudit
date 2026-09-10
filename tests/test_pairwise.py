@@ -27,9 +27,24 @@ comparisons without moving the maximum. That lets choix and statsmodels,
 which only take whole comparisons, check the split policy exactly.
 
 The intervals are on each rating measured against the average of the field,
-then displayed against whichever model was named as the reference. That is
-what makes non-overlap mean the same thing whoever the reference is, and the
-coverage test targets that quantity rather than the gap to the reference.
+then displayed against whichever model was named as the reference. That keeps
+their widths from turning on whoever the reference is, and the coverage test
+targets that quantity rather than the gap to the reference.
+
+Separability is read off a second interval, on the gap between two ratings,
+taken from the same resamples. A pair separates when that interval excludes
+zero. Two rating intervals that overlap establish nothing about the gap, and
+the tests below include a pair built to show it. The gap interval is checked
+three ways. Against the binomial quantiles it reduces to with two models,
+which is exact. Against Woolf's closed-form interval on a log-odds, which it
+should approach. And against a bootstrap that refits every resample with a
+general optimiser, on the same draws, which is also exact.
+
+The bootstrap resamples items by default, keeping every comparison made on an
+item together. The fixtures built by ``frame`` give every row its own item,
+so for them resampling items and resampling comparisons draw the same
+resamples, and the tests that check the resampling unit build their own
+grouped data.
 """
 
 import math
@@ -37,6 +52,7 @@ import math
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import stats
 from scipy.optimize import minimize
 
 import statsmodels.api as sm
@@ -674,32 +690,362 @@ def test_win_matrix_is_half_when_the_models_are_level():
 
 def test_separable_pairs_has_the_columns_the_docstring_promises():
     r = bradley_terry(baseball(), n_boot=400, seed=0)
-    assert list(r.separable_pairs.columns) == [
-        "model_a", "model_b", "difference", "p_a_beats_b", "n_head_to_head"
-    ]
+    assert list(r.separable_pairs.columns) == PAIR_COLUMNS
+
+
+# The columns of separable_pairs. ci_low and ci_high are the interval on
+# ``difference``, the gap from model_a down to model_b.
+PAIR_COLUMNS = [
+    "model_a", "model_b", "difference", "ci_low", "ci_high",
+    "p_a_beats_b", "n_head_to_head",
+]
+
+
+def test_an_empty_pairs_table_still_has_every_column():
+    """No interval, and no fit, both leave the table empty. A reader who
+    selects ci_low from it should get an empty column, not a KeyError."""
+    for r in (
+        bradley_terry(baseball(), n_boot=0),
+        bradley_terry(two_islands(), n_boot=200, seed=0),
+    ):
+        assert r.separable_pairs.empty
+        assert list(r.separable_pairs.columns) == PAIR_COLUMNS
+
+
+# ``pairs`` is every pair of models, and separable_pairs is its separable
+# rows. The summary talks about the pairs that did not separate, so their
+# intervals have to be somewhere a reader can see them.
+PAIRS_COLUMNS = PAIR_COLUMNS + ["separable"]
+
+
+def test_pairs_lists_every_pair_once_with_the_higher_rated_model_first():
+    r = bradley_terry(baseball(), n_boot=400, seed=0)
+    assert list(r.pairs.columns) == PAIRS_COLUMNS
+    assert len(r.pairs) == r.n_pairs == 21
+    assert {
+        frozenset(pair) for pair in zip(r.pairs["model_a"], r.pairs["model_b"])
+    } == {
+        frozenset((x, y))
+        for i, x in enumerate(BASEBALL_NAMES) for y in BASEBALL_NAMES[i + 1:]
+    }
+    got = ratings_dict(r)
+    for _, row in r.pairs.iterrows():
+        assert got[row["model_a"]] >= got[row["model_b"]]
+        assert row["difference"] == pytest.approx(
+            got[row["model_a"]] - got[row["model_b"]], abs=1e-12
+        )
+        assert row["ci_low"] < row["ci_high"]
+        assert row["separable"] == (row["ci_low"] > 0 or row["ci_high"] < 0)
+    gaps = list(r.pairs["difference"])
+    assert gaps == sorted(gaps, reverse=True)
+
+
+def test_separable_pairs_are_the_separable_rows_of_pairs():
+    r = bradley_terry(baseball(), n_boot=400, seed=0)
+    expected = (
+        r.pairs[r.pairs["separable"]]
+        .drop(columns="separable")
+        .reset_index(drop=True)
+    )
+    pd.testing.assert_frame_equal(r.separable_pairs, expected)
+    assert r.n_separable == int(r.pairs["separable"].sum())
+
+
+def test_pairs_without_an_interval_still_carry_the_gaps():
+    """No resamples, so no interval and nothing separates. The gaps and the
+    head-to-head counts are still the fit's, and a reader can see them."""
+    r = bradley_terry(baseball(), n_boot=0)
+    assert len(r.pairs) == 21
+    assert r.pairs["ci_low"].isna().all()
+    assert r.pairs["ci_high"].isna().all()
+    assert not r.pairs["separable"].any()
+    assert (r.pairs["difference"] >= 0).all()
+    assert (r.pairs["n_head_to_head"] == 13).all()
+
+
+def test_pairs_is_empty_without_a_fit():
+    for r in (
+        bradley_terry(two_islands(), n_boot=200, seed=0),
+        bradley_terry(undefeated_alpha(), n_boot=200, seed=0),
+    ):
+        assert r.pairs.empty
+        assert list(r.pairs.columns) == PAIRS_COLUMNS
 
 
 def test_n_pairs_is_every_pair_of_models():
     assert bradley_terry(baseball(), n_boot=200, seed=0).n_pairs == 21
 
 
-def test_separable_pairs_are_exactly_the_non_overlapping_intervals():
-    r = bradley_terry(baseball(), n_boot=600, seed=1)
-    lo = dict(zip(r.ratings["model"], r.ratings["ci_low"]))
-    hi = dict(zip(r.ratings["model"], r.ratings["ci_high"]))
-    expected = set()
-    for i, a in enumerate(BASEBALL_NAMES):
-        for b in BASEBALL_NAMES[i + 1:]:
-            if hi[a] < lo[b] or hi[b] < lo[a]:
-                expected.add(frozenset((a, b)))
-    got = {
-        frozenset((row["model_a"], row["model_b"]))
-        for _, row in r.separable_pairs.iterrows()
+def direct_refit(credit, reference):
+    """Maximum likelihood on one tallied credit matrix, by a general optimiser.
+
+    The reference is pinned at zero, which is a different parameterisation
+    from the package's centred one, and the likelihood goes to BFGS with its
+    analytic gradient rather than to Newton's method.
+    """
+    m = credit.shape[0]
+    n = credit + credit.T
+    earned = credit.sum(axis=1)
+    free = [k for k in range(m) if k != reference]
+
+    def objective(theta):
+        r = np.zeros(m)
+        r[free] = theta
+        gap = r[:, None] - r[None, :]
+        p = 1.0 / (1.0 + np.exp(-gap))
+        loglik = -np.sum(credit * np.logaddexp(0.0, -gap))
+        gradient = earned - (n * p).sum(axis=1)
+        return -loglik, -gradient[free]
+
+    fit = minimize(
+        objective, np.zeros(m - 1), jac=True, method="BFGS",
+        options={"gtol": 1e-11, "maxiter": 2000},
+    )
+    r = np.zeros(m)
+    r[free] = fit.x
+    return r
+
+
+def refit_bootstrap_gaps(comparisons, n_boot, seed, confidence=0.95):
+    """Percentile intervals on every gap, refitting each resample from scratch.
+
+    Nothing from the package is used. Rows are tallied with np.add.at, each
+    resample is fitted by ``direct_refit``, and the gap on a resample is a
+    difference of two pinned ratings. Returns ``{(i, j): (low, high)}`` for
+    every pair of models in sorted order, on rating i minus rating j.
+
+    The resamples themselves are the same ones the package draws. Every item
+    in these fixtures carries one comparison, so resampling items is
+    resampling rows, and the draw follows the house convention for bootstrap
+    index matrices, ``rng.integers(0, n, size=(n_boot, n))``. That makes this
+    an exact check rather than one within Monte Carlo error. If the package
+    ever changes how it consumes its generator, this fails first, and the fix
+    belongs in the draw here and not in the tolerance.
+    """
+    models = all_models(comparisons)
+    index = {name: k for k, name in enumerate(models)}
+    m = len(models)
+    a = comparisons["model_a"].map(index).to_numpy()
+    b = comparisons["model_b"].map(index).to_numpy()
+    tie = np.array([is_tie(w) for w in comparisons["winner"]])
+    a_won = (comparisons["winner"] == comparisons["model_a"]).to_numpy()
+    credit_a = np.where(tie, 0.5, a_won.astype(float))
+    n_rows = len(comparisons)
+
+    draws = np.random.default_rng(seed).integers(
+        0, n_rows, size=(n_boot, n_rows)
+    )
+    fits = []
+    for rows in draws:
+        credit = np.zeros((m, m))
+        np.add.at(credit, (a[rows], b[rows]), credit_a[rows])
+        np.add.at(credit, (b[rows], a[rows]), 1.0 - credit_a[rows])
+        fits.append(direct_refit(credit, 0))
+    fits = np.array(fits)
+
+    tail = 100 * (1 - confidence) / 2
+    out = {}
+    for i in range(m):
+        for j in range(i + 1, m):
+            gap = fits[:, i] - fits[:, j]
+            out[(models[i], models[j])] = (
+                float(np.percentile(gap, tail)),
+                float(np.percentile(gap, 100 - tail)),
+            )
+    return out
+
+
+def oriented(gaps, top, bottom):
+    """The reference interval on top minus bottom, whichever way it is keyed."""
+    if (top, bottom) in gaps:
+        return gaps[(top, bottom)]
+    low, high = gaps[(bottom, top)]
+    return -high, -low
+
+
+def clear_of_zero(gaps):
+    """The pairs whose reference interval excludes zero, as frozensets."""
+    return {
+        frozenset(pair) for pair, (low, high) in gaps.items()
+        if low > 0 or high < 0
     }
-    assert got == expected
+
+
+def listed(result):
+    return {
+        frozenset((row["model_a"], row["model_b"]))
+        for _, row in result.separable_pairs.iterrows()
+    }
+
+
+def overlapping_rating_intervals_rule(result):
+    """The pairs the old definition called separable. Used only to show a
+    fixture tells the two definitions apart."""
+    lo = dict(zip(result.ratings["model"], result.ratings["ci_low"]))
+    hi = dict(zip(result.ratings["model"], result.ratings["ci_high"]))
+    models = list(result.ratings["model"])
+    return {
+        frozenset((x, y))
+        for i, x in enumerate(models) for y in models[i + 1:]
+        if hi[x] < lo[y] or hi[y] < lo[x]
+    }
+
+
+def test_separable_pairs_are_exactly_the_gaps_a_refit_puts_clear_of_zero():
+    """The definition, against a bootstrap that shares nothing with the
+    package but the draws.
+
+    The fixture also has to tell the new definition from the old one, or a
+    return to non-overlapping rating intervals would pass. On this data the
+    two disagree, and the last assertion says so.
+    """
+    r = bradley_terry(baseball(), n_boot=400, seed=0)
+    assert r.n_boot_usable == 400
+    gaps = refit_bootstrap_gaps(baseball(), n_boot=400, seed=0)
+
+    expected = clear_of_zero(gaps)
+    assert listed(r) == expected
     assert r.n_separable == len(expected)
-    assert len(r.separable_pairs) == len(expected)
     assert 0 < len(expected) < r.n_pairs
+    assert len(r.pairs) == len(gaps)
+    for _, row in r.pairs.iterrows():
+        low, high = oriented(gaps, row["model_a"], row["model_b"])
+        assert row["ci_low"] == pytest.approx(low, abs=1e-6)
+        assert row["ci_high"] == pytest.approx(high, abs=1e-6)
+
+    assert overlapping_rating_intervals_rule(r) != expected
+
+
+def small_trio():
+    """Three models, twenty comparisons per pair. a takes 12 of 20 from b, b
+    takes 12 of 20 from c, and a takes 16 of 20 from c."""
+    return frame(
+        [("a", "b", "a")] * 12 + [("a", "b", "b")] * 8
+        + [("b", "c", "b")] * 12 + [("b", "c", "c")] * 8
+        + [("a", "c", "a")] * 16 + [("a", "c", "c")] * 4
+    )
+
+
+def test_gap_intervals_match_a_direct_refit_on_a_small_case():
+    """Sixty comparisons, three hundred resamples, every one refitted by
+    BFGS. a over c clears zero and the two adjacent pairs do not. All three
+    intervals have to be the reference's to six places, the two that
+    include zero as well as the one that does not."""
+    r = bradley_terry(small_trio(), n_boot=300, seed=2)
+    assert r.n_boot_usable == 300
+    gaps = refit_bootstrap_gaps(small_trio(), n_boot=300, seed=2)
+
+    assert listed(r) == clear_of_zero(gaps) == {frozenset(("a", "c"))}
+    assert len(r.pairs) == 3
+    for _, row in r.pairs.iterrows():
+        low, high = oriented(gaps, row["model_a"], row["model_b"])
+        assert row["ci_low"] == pytest.approx(low, abs=1e-6)
+        assert row["ci_high"] == pytest.approx(high, abs=1e-6)
+
+
+@pytest.mark.parametrize("resample", ["items", "comparisons"])
+def test_two_model_gap_interval_is_the_binomial_quantile(resample):
+    """With two models the gap is log(W / (n - W)) in closed form, where W
+    is a's wins. Resampling n comparisons, or n items holding one each, makes
+    W binomial at the observed rate. The logit is monotone, so the
+    percentiles of the gap are the logits of the binomial quantiles.
+
+    Resamples with W at 0 or n have no maximum and are dropped, so the
+    quantiles are of the binomial with both ends cut off. At 22 of 26 that
+    removes about 1.3% of them, which this exercises.
+
+    22 of 26 is chosen so both quantiles sit well inside one step of that
+    binomial's CDF. The nearest step edge is 4.9 standard errors of an
+    empirical quantile away at 4000 resamples, so each percentile lands on
+    the lattice point itself and the comparison is exact. The design is
+    lopsided on purpose. At 8 of 16 the interval is symmetric about zero and
+    a gap reported the wrong way round would pass.
+    """
+    n, w = 26, 22
+    data = frame([("a", "b", "a")] * w + [("a", "b", "b")] * (n - w))
+    r = bradley_terry(data, n_boot=4000, seed=3, resample=resample)
+
+    k = np.arange(1, n)
+    pmf = stats.binom.pmf(k, n, w / n)
+    cdf = np.cumsum(pmf / pmf.sum())
+    k_low = int(k[np.searchsorted(cdf, 0.025)])
+    k_high = int(k[np.searchsorted(cdf, 0.975)])
+
+    assert r.n_boot_usable / r.n_boot == pytest.approx(
+        1 - stats.binom.pmf(n, n, w / n) - stats.binom.pmf(0, n, w / n),
+        abs=0.005,
+    )
+    row = r.separable_pairs.set_index(["model_a", "model_b"]).loc[("a", "b")]
+    assert row["difference"] == pytest.approx(math.log(w / (n - w)), abs=1e-8)
+    assert row["ci_low"] == pytest.approx(
+        math.log(k_low / (n - k_low)), abs=1e-9
+    )
+    assert row["ci_high"] == pytest.approx(
+        math.log(k_high / (n - k_high)), abs=1e-9
+    )
+
+
+def test_two_model_gap_interval_agrees_with_woolfs_interval():
+    """Woolf's closed-form interval on a log-odds, log(w / l) plus or minus
+    z * sqrt(1/w + 1/l), is what the percentile interval approaches as the
+    comparisons grow.
+
+    At 1000 comparisons with 700 wins Woolf's half-width is 0.135. Over
+    forty seeds at 2000 resamples each end of the bootstrap interval sat
+    within 0.012 of Woolf's, with a spread of 0.004. At 3000 resamples the
+    spread is smaller again, so 0.02 is about six spreads. This is here to
+    catch a wrong scale, a factor like sqrt(2) or a z for the wrong level,
+    which moves an end by 0.05 or more. The binomial test above is the exact
+    one.
+    """
+    n, w = 1000, 700
+    data = frame([("a", "b", "a")] * w + [("a", "b", "b")] * (n - w))
+    r = bradley_terry(data, n_boot=3000, seed=4)
+    row = r.separable_pairs.set_index(["model_a", "model_b"]).loc[("a", "b")]
+
+    centre = math.log(w / (n - w))
+    half = stats.norm.ppf(0.975) * math.sqrt(1 / w + 1 / (n - w))
+    assert row["ci_low"] == pytest.approx(centre - half, abs=0.02)
+    assert row["ci_high"] == pytest.approx(centre + half, abs=0.02)
+
+
+def test_a_pair_whose_rating_intervals_overlap_can_still_separate():
+    """The case the old definition got wrong.
+
+    a and b met 300 times and a took 180 of them. Each met c only eight
+    times. The gap between a and b is measured well, with an interval near
+    0.18 to 0.63. Each rating on its own is measured against the average of
+    the field, and that average moves with c, which is barely measured. So
+    both rating intervals are wide, and they overlap.
+
+    Overlapping rating intervals establish nothing about the gap. Reading
+    them as a pair that cannot be ordered was the old error, and a return to
+    that rule fails here.
+    """
+    data = frame(
+        [("a", "b", "a")] * 180 + [("a", "b", "b")] * 120
+        + [("a", "c", "a")] * 4 + [("a", "c", "c")] * 4
+        + [("b", "c", "b")] * 4 + [("b", "c", "c")] * 4
+    )
+    r = bradley_terry(data, n_boot=1000, seed=0)
+    table = r.ratings.set_index("model")
+    assert table.loc["b", "ci_high"] > table.loc["a", "ci_low"], (
+        "the fixture no longer has overlapping rating intervals for a and b"
+    )
+
+    pairs = r.separable_pairs.set_index(["model_a", "model_b"])
+    assert ("a", "b") in pairs.index
+    row = pairs.loc[("a", "b")]
+    assert 0 < row["ci_low"] < row["difference"] < row["ci_high"]
+
+
+def test_every_separable_pair_carries_a_gap_interval_clear_of_zero():
+    """Higher-rated model first, so every interval in the table sits above
+    zero and brackets the gap it is on."""
+    r = bradley_terry(baseball(), n_boot=600, seed=1)
+    assert not r.separable_pairs.empty
+    for _, row in r.separable_pairs.iterrows():
+        assert 0 < row["ci_low"] <= row["difference"] <= row["ci_high"]
 
 
 def test_separable_pairs_names_the_higher_rated_model_first():
@@ -757,6 +1103,71 @@ def test_a_six_model_leaderboard_reports_how_many_pairs_are_distinguishable():
 def test_summary_says_when_nothing_separates():
     r = bradley_terry(thin_four(), n_boot=400, seed=0)
     assert "0 of 6 pairs" in r.summary()
+
+
+# What separable means, and what not separating means, as the summary puts
+# them. Copied out by hand. The old summary said pairs that did not separate
+# "cannot be ordered", and that a board ranking them reports "an order the
+# data does not carry". Both say the data rules an order out. A gap interval
+# that includes zero rules nothing out. What the data fails to do is
+# establish the order, so the summary says that and says the models are not
+# thereby shown level.
+SEPARABLE_MEANS = (
+    "meaning the interval on the gap between the two ratings excludes zero."
+)
+NOT_SHOWN_LEVEL = "That does not mean the models are level."
+OLD_OVERREACH = ("do not overlap", "cannot be ordered", "does not carry", "noise")
+
+
+def test_summary_says_separable_means_the_gap_interval_excludes_zero():
+    truth = {"a": 0.55, "b": 0.35, "c": 0.15, "d": -0.05, "e": -0.3, "f": -0.7}
+    r = bradley_terry(simulate(truth, n_per_pair=40, seed=12), n_boot=600, seed=0)
+    text = r.summary()
+    assert f"{r.n_separable} of 15 pairs are separable at 95%, {SEPARABLE_MEANS}" in text
+    for phrase in OLD_OVERREACH:
+        assert phrase not in text
+
+
+def test_summary_says_what_the_unseparated_pairs_lack():
+    r = bradley_terry(baseball(), n_boot=600, seed=1)
+    rest = r.n_pairs - r.n_separable
+    assert rest > 1
+    text = r.summary()
+    assert (
+        f"For the other {rest} pairs the interval includes zero, so this data "
+        f"does not establish an order for those pairs in either direction. "
+        f"{NOT_SHOWN_LEVEL} More comparisons could separate them. A "
+        f"leaderboard that puts those models in a line is showing an order "
+        f"this data has not established."
+    ) in text
+    for phrase in OLD_OVERREACH:
+        assert phrase not in text
+
+
+def test_summary_for_one_unseparated_pair_is_singular():
+    """Two wide gaps and one narrow one. The narrow pair is the only one
+    left, and the sentence has to be about that pair."""
+    data = simulate({"a": 2.0, "b": 0.0, "c": -0.05}, n_per_pair=200, seed=3)
+    r = bradley_terry(data, n_boot=600, seed=0)
+    assert r.n_pairs - r.n_separable == 1, "the fixture stopped leaving one pair"
+    assert (
+        "For the other 1 pair the interval includes zero, so this data does "
+        "not establish an order for that pair in either direction."
+    ) in r.summary()
+
+
+def test_summary_when_nothing_separates_does_not_call_the_order_noise():
+    """The old sentence called a ranking on this data "a ranking of noise".
+    The data does not show the order is noise. It fails to establish it."""
+    text = bradley_terry(thin_four(), n_boot=400, seed=0).summary()
+    assert (
+        "0 of 6 pairs are separable at 95%, " + SEPARABLE_MEANS
+        + " This data does not establish an order for any pair. A ranking "
+        "built on it puts the models in a line this data has not established. "
+        + NOT_SHOWN_LEVEL + " More comparisons could separate them."
+    ) in text
+    for phrase in OLD_OVERREACH:
+        assert phrase not in text
 
 
 def test_more_comparisons_separate_more_pairs():
@@ -825,6 +1236,16 @@ def test_changing_the_reference_leaves_separability_alone():
     pd.testing.assert_frame_equal(
         first.separable_pairs, second.separable_pairs, atol=1e-12
     )
+
+
+def test_changing_the_reference_leaves_every_gap_interval_alone():
+    """A gap is a difference of two ratings, so the constant a new reference
+    adds to both cancels on every resample. The interval on it cannot move,
+    for the pairs that separate and for the ones that do not."""
+    first = bradley_terry(baseball(), n_boot=600, seed=1, reference="olmo")
+    second = bradley_terry(baseball(), n_boot=600, seed=1, reference="gpt")
+    assert len(first.pairs) == 21
+    pd.testing.assert_frame_equal(first.pairs, second.pairs, atol=1e-12)
 
 
 def test_changing_the_reference_shifts_the_intervals_by_the_same_constant():
@@ -1269,6 +1690,331 @@ def test_bootstrap_covers_at_the_claimed_rate():
 
 
 # --------------------------------------------------------------------------
+# Resampling items
+#
+# Supplying item_id says which comparisons were made on the same prompt, and
+# judgements of one prompt are correlated. Resampling single comparisons
+# treats them as independent. The default resamples whole items, which is the
+# cluster bootstrap, and the old behaviour is resample="comparisons".
+# --------------------------------------------------------------------------
+
+def spread_over_items(comparisons, n_items):
+    """The same comparisons, dealt round-robin onto ``n_items`` item ids."""
+    out = comparisons.copy()
+    out["item_id"] = [f"p{k % n_items}" for k in range(len(out))]
+    return out
+
+
+def beta_binomial_items(n_items, per_item, icc, rate, seed):
+    """Two models, and every item has its own rate for a beating b.
+
+    Item rates are drawn from a beta with mean ``rate`` and with alpha plus
+    beta equal to 1 / icc - 1, which makes ``icc`` the intraclass correlation
+    between two judgements of the same item. Each item then carries
+    ``per_item`` judgements at its own rate. Returns the frame and a's wins
+    per item.
+    """
+    rng = np.random.default_rng(seed)
+    total = 1.0 / icc - 1.0
+    rates = rng.beta(rate * total, (1 - rate) * total, size=n_items)
+    wins = rng.binomial(per_item, rates)
+    rows = []
+    for k, won in enumerate(wins):
+        rows += [(f"p{k}", "a", "b", "a")] * int(won)
+        rows += [(f"p{k}", "a", "b", "b")] * int(per_item - won)
+    data = pd.DataFrame(rows, columns=["item_id", "model_a", "model_b", "winner"])
+    return data, wins
+
+
+def gap_row(result, top="a", bottom="b"):
+    pairs = result.pairs.set_index(["model_a", "model_b"])
+    assert (top, bottom) in pairs.index, f"{top} is not rated above {bottom}"
+    return pairs.loc[(top, bottom)]
+
+
+def gap_width(result, top="a", bottom="b"):
+    row = gap_row(result, top, bottom)
+    return row["ci_high"] - row["ci_low"]
+
+
+def test_the_default_resamples_items():
+    assert bradley_terry(baseball(), n_boot=0).resample == "items"
+    assert bradley_terry(
+        baseball(), n_boot=0, resample="comparisons"
+    ).resample == "comparisons"
+
+
+def test_unknown_resample_is_refused():
+    with pytest.raises(ValueError, match="resample"):
+        bradley_terry(baseball(), resample="rows", n_boot=0)
+
+
+def test_the_item_interval_widens_by_the_square_root_of_the_design_effect():
+    """How much wider, and why.
+
+    Eighty items with 32 judgements each, which is the shape of MT-Bench's
+    human judgements, and an intraclass correlation of 0.1 between two
+    judgements of the same item. The design effect for a mean over clusters
+    is 1 + (m - 1) * icc, here 1 + 31 * 0.1 = 4.1. Resampling single
+    comparisons treats it as 1. The gap between two models is the logit of
+    their win rate, so its standard error scales with the square root of
+    that factor, and the item interval should come out about
+    sqrt(4.1) = 2.02 times as wide as the comparison interval.
+
+    The design effect this sample realised differs from 4.1 by how the
+    eighty item rates happened to fall. So the test measures it from the
+    data, as the item count times the spread of the item win rates over the
+    binomial variance, and holds the width ratio to within 10% of its square
+    root. Across thirty seeds of this design the ratio over that square root
+    averaged 0.997 with a spread of 0.025, so 10% is four spreads.
+    Weighting rows one at a time instead of by item puts the ratio near 1,
+    and drawing items without replacement gives the item interval width
+    zero.
+    """
+    per_item = 32
+    data, wins = beta_binomial_items(80, per_item, icc=0.1, rate=0.6, seed=1003)
+    items = bradley_terry(data, n_boot=2000, seed=0)
+    single = bradley_terry(data, n_boot=2000, seed=1, resample="comparisons")
+
+    rate = wins.sum() / (len(wins) * per_item)
+    item_rates = wins / per_item
+    design_effect = (
+        per_item * np.mean((item_rates - rate) ** 2) / (rate * (1 - rate))
+    )
+    ratio = gap_width(items) / gap_width(single)
+
+    assert ratio > 1.5
+    assert ratio == pytest.approx(math.sqrt(design_effect), rel=0.10)
+
+
+def test_one_comparison_per_item_gives_the_same_interval_either_way():
+    """With one comparison on every item, resampling items is resampling
+    comparisons, so the two intervals differ by Monte Carlo error alone.
+
+    The two runs take different seeds. Under one seed they would draw the
+    same resamples and the check would say nothing.
+
+    The bounds come from measuring that error. Over fifty data sets of this
+    shape at 3000 resamples, two runs on different seeds put the average
+    relative difference in gap width across the ten pairs at a spread of
+    0.010, never past 0.024, and no single pair differed by more than 0.072.
+    The test allows 0.05 on the average, about five spreads, and 0.12 on any
+    one pair. Drawing items without replacement gives every resample the
+    full data and every interval width zero, a relative difference of 1.
+    """
+    truth = {"a": 1.2, "b": 0.6, "c": 0.0, "d": -0.6, "e": -1.2}
+    data = simulate(truth, n_per_pair=150, seed=41)
+    items = bradley_terry(data, n_boot=3000, seed=10)
+    single = bradley_terry(data, n_boot=3000, seed=11, resample="comparisons")
+
+    def widths(result):
+        table = result.pairs.set_index(["model_a", "model_b"])
+        return (table["ci_high"] - table["ci_low"]).sort_index()
+
+    relative = widths(items) / widths(single) - 1.0
+    assert len(relative) == 10
+    assert abs(relative.mean()) < 0.05
+    assert relative.abs().max() < 0.12
+
+
+def clustered_benchmark(theta, n_items, per_item, tau, seed):
+    """Comparisons where every item shifts each model's strength.
+
+    Each item draws one shift per model from a normal with spread ``tau`` on
+    the log-odds scale, and every comparison made on that item uses those
+    shifts. So comparisons sharing an item are correlated, and more so as
+    ``tau`` grows. The pair for each comparison is drawn uniformly.
+    """
+    rng = np.random.default_rng(seed)
+    m = len(theta)
+    names = np.array([f"m{k}" for k in range(m)])
+    pairs = np.array([(i, j) for i in range(m) for j in range(i + 1, m)])
+    items = np.repeat(np.arange(n_items), per_item)
+    pick = rng.integers(0, len(pairs), n_items * per_item)
+    a, b = pairs[pick, 0], pairs[pick, 1]
+    shift = rng.normal(0.0, tau, size=(n_items, m))
+    strength = theta[a] + shift[items, a] - theta[b] - shift[items, b]
+    a_won = rng.random(len(a)) < 1.0 / (1.0 + np.exp(-strength))
+    return pd.DataFrame({
+        "item_id": [f"p{k}" for k in items],
+        "model_a": names[a],
+        "model_b": names[b],
+        "winner": np.where(a_won, names[a], names[b]),
+    })
+
+
+def fitted_limit_gaps(theta, tau):
+    """Where the fit settles on endless data from ``clustered_benchmark``.
+
+    That is not theta. The chance a beats b on a random item is the logistic
+    of the true gap plus a normal with variance 2 * tau ** 2, averaged over
+    that normal, and the averaging pulls every win rate toward a half. The
+    fit converges to the ratings that reproduce the averaged rates. With
+    every pair equally likely, those are the fit to a credit matrix of the
+    averaged rates, which Gauss-Hermite quadrature computes and
+    ``direct_refit`` fits.
+    """
+    nodes, weights = np.polynomial.hermite_e.hermegauss(80)
+    m = len(theta)
+    credit = np.zeros((m, m))
+    for i in range(m):
+        for j in range(m):
+            if i != j:
+                shift = theta[i] - theta[j] + math.sqrt(2.0) * tau * nodes
+                credit[i, j] = np.sum(
+                    weights / (1.0 + np.exp(-shift))
+                ) / math.sqrt(2.0 * math.pi)
+    r = direct_refit(credit, 0)
+    names = [f"m{k}" for k in range(m)]
+    return {
+        (names[i], names[j]): r[i] - r[j]
+        for i in range(m) for j in range(m) if i != j
+    }
+
+
+def test_item_gap_intervals_cover_at_the_claimed_rate_on_clustered_data():
+    """Simulation, on data where items make comparisons correlated.
+
+    Five models, 60 items, 20 comparisons per item, and every item shifts
+    each model by a normal draw with spread 0.7 on the log-odds scale. The
+    target is ``fitted_limit_gaps``, where the fit settles on endless data
+    from that process.
+
+    Measured over 150 trials on these seeds the item interval covered 0.930,
+    with a standard error of 0.009 clustered on the trial, since the ten
+    gaps in a trial are not independent. A percentile bootstrap on 60
+    clusters runs a little short of 95%, the way the rating coverage test
+    above does on its own design. The band is 0.89 to 0.97, about 4.4 errors
+    either side. On the same data the comparison bootstrap covered 0.848,
+    with intervals about 78% as wide. That shortfall is what the item
+    default exists to fix, and it falls outside the band.
+    """
+    theta = np.array([0.8, 0.4, 0.0, -0.4, -0.8])
+    target = fitted_limit_gaps(theta, 0.7)
+    covered = total = 0
+    for k in range(150):
+        data = clustered_benchmark(theta, 60, 20, 0.7, seed=7000 + k)
+        r = bradley_terry(data, n_boot=200, seed=k)
+        for low, high, a, b in zip(
+            r.pairs["ci_low"], r.pairs["ci_high"],
+            r.pairs["model_a"], r.pairs["model_b"],
+        ):
+            total += 1
+            if low <= target[(a, b)] <= high:
+                covered += 1
+    assert total == 150 * 10
+    assert 0.89 <= covered / total <= 0.97
+
+
+def test_copies_of_one_comparison_add_nothing_when_items_are_resampled():
+    """The limit of within-item correlation, where every judgement of an item
+    is the same judgement.
+
+    Each of 400 items carries nine identical copies of one comparison.
+    Resampling items draws the copies together, so it sees 400 comparisons
+    with weight nine each, and Bradley-Terry does not move when every credit
+    is scaled by the same amount. The item interval on the copies is then the
+    comparison interval on the 400 originals. Both draw 400 indices from the
+    same seed, so they agree as far as the fit resolves.
+
+    Resampling single comparisons treats the 3600 copies as independent and
+    comes out sqrt(9) = 3 times too narrow. Across thirty seeds of this
+    design the ratio averaged 2.99 with a spread of 0.08 and stayed inside
+    2.82 to 3.15, so the test holds it within 10% of 3. Weighting rows one at
+    a time instead of by item makes the item interval the narrow one, a ratio
+    of 1.
+    """
+    won = np.random.default_rng(5).random(400) < 0.62
+    originals = pd.DataFrame({
+        "item_id": [f"p{k}" for k in range(400)],
+        "model_a": "a",
+        "model_b": "b",
+        "winner": np.where(won, "a", "b"),
+    })
+    copies = originals.loc[originals.index.repeat(9)].reset_index(drop=True)
+
+    items = bradley_terry(copies, n_boot=2000, seed=7)
+    once = bradley_terry(originals, n_boot=2000, seed=7, resample="comparisons")
+    single = bradley_terry(copies, n_boot=2000, seed=8, resample="comparisons")
+
+    for column in ("difference", "ci_low", "ci_high"):
+        assert gap_row(items)[column] == pytest.approx(
+            gap_row(once)[column], abs=1e-8
+        )
+    assert gap_width(items) / gap_width(single) == pytest.approx(3.0, rel=0.10)
+
+
+def test_one_item_cannot_carry_an_item_bootstrap():
+    """Every comparison was made on the same prompt. Resampling items would
+    draw that one item every time, every resample would be the full data,
+    and the interval would have width zero. That claims certainty from a
+    design with nothing to resample, so it is refused.
+
+    Without resamples the unit does not matter and the fit goes ahead. Asking
+    for comparisons to be resampled goes ahead too, since that is a choice
+    the caller made with the item id in front of them.
+    """
+    data = baseball().assign(item_id="only-prompt")
+    with pytest.raises(ValueError, match="one item"):
+        bradley_terry(data, n_boot=200, seed=0)
+    assert bradley_terry(data, n_boot=0).has_fit
+    assert bradley_terry(
+        data, n_boot=200, seed=0, resample="comparisons"
+    ).has_interval
+
+
+def test_a_missing_item_id_is_refused_by_the_item_bootstrap():
+    """A row with no item cannot be kept with the rest of its item, so the
+    item bootstrap refuses rather than guess which item it belongs to."""
+    data = baseball()
+    data.loc[3, "item_id"] = None
+    with pytest.raises(ValueError, match="item_id"):
+        bradley_terry(data, n_boot=200, seed=0)
+    assert bradley_terry(data, n_boot=0).has_fit
+    assert bradley_terry(
+        data, n_boot=200, seed=0, resample="comparisons"
+    ).has_interval
+
+
+# The sentence the summary adds when comparisons were resampled one at a time
+# on data where items carry several. Copied out by hand.
+COMPARISONS_RESAMPLED = (
+    "The intervals resample single comparisons, and these 273 comparisons "
+    "share 26 items."
+)
+
+
+def test_summary_says_when_comparisons_were_resampled_over_shared_items():
+    grouped = spread_over_items(baseball(), 26)
+    flagged = bradley_terry(grouped, n_boot=300, seed=0, resample="comparisons")
+    assert COMPARISONS_RESAMPLED in flagged.summary()
+    assert "can run narrow" in flagged.summary()
+
+    by_item = bradley_terry(grouped, n_boot=300, seed=0)
+    assert "resample single comparisons" not in by_item.summary()
+
+    one_each = bradley_terry(baseball(), n_boot=300, seed=0, resample="comparisons")
+    assert "resample single comparisons" not in one_each.summary()
+
+
+def test_summary_says_nothing_about_shared_items_when_there_are_no_item_ids():
+    """With every item id missing there is nothing to say which comparisons
+    share a prompt, and "these 273 comparisons share 0 items" is not a
+    sentence anyone should read."""
+    data = baseball().assign(item_id=None)
+    r = bradley_terry(data, n_boot=300, seed=0, resample="comparisons")
+    assert r.has_interval
+    assert "resample single comparisons" not in r.summary()
+    assert "share 0 items" not in r.summary()
+
+
+def test_to_elo_carries_the_resampling_unit():
+    r = bradley_terry(baseball(), n_boot=0, resample="comparisons")
+    assert to_elo(r).resample == "comparisons"
+    assert to_elo(bradley_terry(baseball(), n_boot=0)).resample == "items"
+
+
+# --------------------------------------------------------------------------
 # Elo
 # --------------------------------------------------------------------------
 
@@ -1337,6 +2083,21 @@ def test_to_elo_rescales_the_pair_gaps():
         r.separable_pairs["difference"], e.separable_pairs["difference"]
     ):
         assert after == pytest.approx(before * 400 / LOG10, abs=1e-9)
+
+
+def test_to_elo_rescales_the_gap_intervals():
+    """The interval on a gap is in the gap's units, so it stretches with it.
+    A positive factor keeps every interval on the side of zero it was on."""
+    r = bradley_terry(baseball(), n_boot=600, seed=1)
+    e = to_elo(r)
+    for table in ("separable_pairs", "pairs"):
+        for column in ("difference", "ci_low", "ci_high"):
+            for before, after in zip(
+                getattr(r, table)[column], getattr(e, table)[column]
+            ):
+                assert after == pytest.approx(before * 400 / LOG10, abs=1e-9)
+    assert (e.separable_pairs["ci_low"] > 0).all()
+    assert list(e.pairs["separable"]) == list(r.pairs["separable"])
 
 
 def test_to_elo_keeps_the_head_to_head_numbers():

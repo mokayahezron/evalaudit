@@ -915,6 +915,26 @@ def test_the_two_reasons_for_no_alpha_read_differently():
     assert "nobody varied" in agreed.summary().lower()
 
 
+def test_the_no_variance_summary_is_in_plain_sentences():
+    """The sentence used to read "That is not perfect agreement, it is a
+    scale nobody varied." That construction is banned in this codebase. The
+    meaning has two halves and both stay: the cause is a scale nobody varied,
+    and the result is not perfect agreement."""
+    agreed = rater_agreement(
+        pd.DataFrame(
+            [(f"u{i}", r, 1.0) for i in range(20) for r in ("r0", "r1")],
+            columns=["item_id", "rater_id", "rating"],
+        ),
+        bootstrap_ci=False,
+    )
+    text = agreed.summary()
+    assert (
+        "This comes from a scale nobody varied. It is not perfect agreement."
+        in text
+    )
+    assert "not perfect agreement, it is" not in text
+
+
 def test_two_overlapping_items_is_the_floor_not_one():
     """Two is where a number starts being reported. Pin both sides of it so
     the threshold cannot drift."""

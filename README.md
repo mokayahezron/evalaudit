@@ -222,17 +222,32 @@ print(bradley_terry(comparisons, seed=0).summary())
 ```
 
 ```
-Bradley-Terry ratings for 6 models from 600 comparisons (ties split). 5 of
-15 pairs are separable at 95%, meaning their intervals do not overlap. The
-other 10 pairs cannot be ordered [...] Ratings are anchored on m1 at 0.
-Only differences between models mean anything [...]
+Bradley-Terry ratings for 6 models from 600 comparisons (ties split). 7 of
+15 pairs are separable at 95%, meaning the interval on the gap between the
+two ratings excludes zero. For the other 8 pairs the interval includes zero,
+so this data does not establish an order for those pairs in either
+direction. [...] Ratings are anchored on m1 at 0. Only differences between
+models mean anything [...]
 ```
 
-Six models make fifteen pairs. Six hundred comparisons separate five of
-them, and every one of those five is a pair containing the weakest model.
-The top five are not told apart from each other at all. A published board
-would still print them in a line, one through six, and readers would take
-that order seriously.
+Six models make fifteen pairs. Six hundred comparisons separate seven of
+them. Five are the weakest model against each of the others, and the other
+two put m1 and m2 above m5. No pair among the top four separates, and the
+fit even rates m4 above m3, the reverse of the strengths the data was drawn
+from. A published board would still print all six in a line, one through
+six, and readers would take that order seriously.
+
+`result.pairs` lists all fifteen pairs with the interval on each gap, so the
+eight that do not separate can be read as well as counted.
+
+The bootstrap behind those intervals resamples items, taking every comparison
+made on one prompt together, because judgements of the same prompt move
+together. Versions before 0.3.0 resampled single comparisons. On simulated
+data shaped like MT-Bench, 2,575 comparisons over 80 prompts, that covered
+88% where 95% was claimed once prompts shifted model strength by a spread of
+0.5 on the log-odds scale, and 80% at a spread of 1.0.
+`examples/pairwise_cluster_study.py` has the full table. Pass
+`resample="comparisons"` to reproduce an older result.
 
 `to_elo` puts the same fit on the 400 point scale people expect and carries
 the intervals across with it. Leaderboards publish Elo without intervals,
@@ -252,23 +267,26 @@ they claim. Generate datasets with a known truth, then confirm the 95%
 interval contains it about 95% of the time. Runs per test range from a
 hundred or so to a thousand, set by what each simulation costs.
 
-The package builds fourteen intervals and eight of them are tested that way.
-Those eight are the Wilson and bootstrap intervals on a single score, the
-Tango, bootstrap and Hodges-Lehmann intervals on a paired difference, and the
-bootstrap intervals on Krippendorff's alpha, on judge-human alpha, and on
-Bradley-Terry ratings.
+The package builds fifteen intervals and nine of them are tested that way.
+Those nine are the Wilson and bootstrap intervals on a single score, the
+Tango, bootstrap and Hodges-Lehmann intervals on a paired difference, the
+bootstrap intervals on Krippendorff's alpha and on judge-human alpha, and the
+Bradley-Terry intervals on each rating and on each gap between two ratings.
+The gap interval is tested on data where comparisons made on the same prompt
+move together, which is the case its item bootstrap is for.
 
-Three more are pinned against a reference instead, which is the sharper test
+Five more are pinned against a reference instead, which is the sharper test
 where one exists. The score interval for two independent proportions is swept
 against its own p-value over every table at two group sizes, since that
 interval is the test inverted and the two must never disagree about zero. The
 Wilson intervals in `position_bias` and both logistic intervals in
-`length_bias` are matched against `statsmodels`.
+`length_bias` are matched against `statsmodels`. The Student-t interval in
+`score_ci` is matched against `scipy`, and Welch's interval in
+`compare_independent` against `statsmodels`.
 
-The last three have nothing pinning their bounds, and this is the place to
-say so rather than leave you to find out. They are the Student-t interval in
-`score_ci`, Welch's interval in `compare_independent`, and the two-sample
-bootstrap beside it.
+The last one has nothing pinning its bounds, and this is the place to say so
+rather than leave you to find out. It is the two-sample bootstrap in
+`compare_independent`.
 
 Those tests run in CI and you can read them in `tests/`.
 

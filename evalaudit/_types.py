@@ -332,8 +332,9 @@ class AgreementResult:
             return (
                 f"Krippendorff's alpha is undefined ({self.level}, "
                 f"{carried}). Every rating that could be compared was "
-                f"identical, so there is no disagreement to divide by. That "
-                f"is not perfect agreement, it is a scale nobody varied."
+                f"identical, so there is no disagreement to divide by. This "
+                f"comes from a scale nobody varied. It is not perfect "
+                f"agreement."
             )
         return (
             f"Krippendorff's alpha is undefined ({self.level}, {carried}). "
@@ -441,24 +442,39 @@ class BTResult:
 
     ``ratings`` carries one row per model with its rating, an interval and
     the number of comparisons behind it. ``win_matrix`` is the modelled
-    probability that the row model beats the column model. ``separable_pairs``
-    lists the pairs whose intervals do not overlap.
+    probability that the row model beats the column model. ``pairs`` has one
+    row per pair of models, higher-rated model first, with the gap between
+    their ratings, a percentile interval on that gap, and whether the pair
+    is separable. ``separable_pairs`` is the separable rows of ``pairs``.
 
+    A pair is separable when the interval on its gap excludes zero.
     ``n_separable`` against ``n_pairs`` is the number worth reporting. A six
     model leaderboard has fifteen pairs, and published boards routinely rank
-    all six off data that orders two or three of them.
+    all six off data that orders a few of them.
+
+    A pair that does not separate is one the data has not established an
+    order for, in either direction. The data does not show those two models
+    level. More comparisons could separate them, and nothing here says how
+    many it would take.
 
     The ratings are differences and nothing else. One model is pinned at zero
     to make the fit identifiable, and which one is a free choice, so the level
-    of a single rating carries no information. Only gaps do. The intervals are
-    on each rating measured against the average of the field, then shifted
-    onto the anchor named in ``reference``. Anchoring the interval on the
-    reference instead would hand the reference an interval of width zero and
-    make ``n_separable`` depend on an arbitrary pick.
+    of a single rating carries no information. Only gaps do. The rating
+    intervals are on each rating measured against the average of the field,
+    then shifted onto the anchor named in ``reference``. Anchoring them on
+    the reference instead would hand the reference an interval of width
+    zero. The gap intervals need no anchor. A constant added to both ratings
+    cancels in the gap, so no choice of reference moves them or changes
+    ``n_separable``.
 
-    Non-overlapping intervals are a conservative test of a difference. Some
-    pair called inseparable here would separate under a direct test of the
-    gap, so read ``n_separable`` as a floor on what the data orders.
+    Before 0.3.0 a pair was called separable when its two rating intervals
+    did not overlap. That test undercounts. Two rating intervals can overlap
+    while the gap between them is well measured, because both ratings carry
+    the error of the field average they are measured against, and that error
+    cancels in the gap.
+
+    ``resample`` records what one bootstrap draw picked up, ``"items"`` or
+    ``"comparisons"``.
 
     ``rating`` is NaN for every model when the fit does not exist. That is
     two situations and they are not the same. ``connected`` is False when the
@@ -487,6 +503,8 @@ class BTResult:
     n_boot_usable: int = 0
     elo_scale: Optional[float] = None
     elo_base: Optional[float] = None
+    resample: str = "items"
+    pairs: Optional[pd.DataFrame] = None
 
     @property
     def has_fit(self) -> bool:
@@ -521,7 +539,12 @@ class BTResult:
             return self._disconnected()
         if not self.has_fit:
             return self._no_maximum()
-        return self._head() + self._separability() + self._reference_sentence()
+        return (
+            self._head()
+            + self._separability()
+            + self._resample_sentence()
+            + self._reference_sentence()
+        )
 
     # -- the two refusals ---------------------------------------------------
 
@@ -593,20 +616,47 @@ class BTResult:
         head = (
             f" {self.n_separable} of {self.n_pairs} pairs "
             f"{'is' if self.n_pairs == 1 else 'are'} separable at {conf}, "
-            f"meaning their intervals do not overlap."
+            f"meaning the interval on the gap between the two ratings "
+            f"excludes zero."
         )
         if self.n_separable == 0:
             return head + (
-                " Not one pair can be ordered from this data. Any ranking "
-                "built on it is a ranking of noise."
+                " This data does not establish an order for any pair. A "
+                "ranking built on it puts the models in a line this data has "
+                "not established. That does not mean the models are level. "
+                "More comparisons could separate them."
             )
         rest = self.n_pairs - self.n_separable
         if rest == 0:
             return head + " Every pair is ordered by this data."
+        which = "that pair" if rest == 1 else "those pairs"
         return head + (
-            f" The other {rest} {_plural('pair', rest)} cannot be ordered, "
-            f"so a leaderboard that puts those models in a line is reporting "
-            f"an order the data does not carry."
+            f" For the other {rest} {_plural('pair', rest)} the interval "
+            f"includes zero, so this data does not establish an order for "
+            f"{which} in either direction. That does not mean the models are "
+            f"level. More comparisons could separate them. A leaderboard that "
+            f"puts those models in a line is showing an order this data has "
+            f"not established."
+        )
+
+    def _resample_sentence(self) -> str:
+        """Said only when comparisons were resampled over shared items.
+
+        With no item ids at all there is nothing to say which comparisons
+        share a prompt, so nothing is said.
+        """
+        if (
+            not self.has_interval
+            or self.resample != "comparisons"
+            or not 0 < self.n_items < self.n_comparisons
+        ):
+            return ""
+        return (
+            f" The intervals resample single comparisons, and these "
+            f"{self.n_comparisons} comparisons share {self.n_items} "
+            f"{_plural('item', self.n_items)}. Judgements of the same item "
+            f"tend to move together, so intervals built this way can run "
+            f"narrow. The default resamples whole items."
         )
 
     def _no_interval_sentence(self) -> str:
@@ -749,8 +799,8 @@ class JudgeValidation:
                 f"Judge and human agreement is undefined ({self.level}, "
                 f"{self.n_items} items). Every label that could be compared "
                 f"was identical, so there is no disagreement to divide by. "
-                f"That is not perfect agreement, it is a rubric with one "
-                f"label in it." + accuracy + dropped
+                f"This comes from a rubric with one label in it. It is not "
+                f"perfect agreement." + accuracy + dropped
             )
 
         if self.has_interval:

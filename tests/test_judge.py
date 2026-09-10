@@ -1077,6 +1077,19 @@ def test_agreement_is_undefined_when_nobody_varied():
     assert "perfect agreement" not in text.replace("not perfect agreement", "")
 
 
+def test_the_nobody_varied_summary_is_in_plain_sentences():
+    """The sentence used to read "That is not perfect agreement, it is a
+    rubric with one label in it." That construction is banned in this
+    codebase. Both halves of the meaning stay: the cause is a rubric with one
+    label in it, and the result is not perfect agreement."""
+    text = judge_validation([1] * 40, [1] * 40, n_boot=200, seed=1).summary()
+    assert (
+        "This comes from a rubric with one label in it. It is not perfect "
+        "agreement." in text
+    )
+    assert "not perfect agreement, it is" not in text
+
+
 # --------------------------------------------------------------------------
 # judge_validation input handling
 # --------------------------------------------------------------------------
