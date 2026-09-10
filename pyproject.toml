@@ -12,7 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "Hezron Mokaya", email = "ondibahezron@gmail.com" }]
 keywords = ["llm", "evaluation", "statistics", "inter-rater-reliability", "krippendorff", "bradley-terry", "llm-as-judge", "annotation-quality"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
