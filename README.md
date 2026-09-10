@@ -153,18 +153,10 @@ Scores, compare and power are the foundation those three stand on.
 
 ## Status
 
-All seven modules are implemented. The examples below are run in CI, so what
-they print here is what they print for you.
-
-| Module | State |
-|---|---|
-| `scores` | Implemented |
-| `compare` | Implemented |
-| `agreement` | Implemented |
-| `judge` | Implemented |
-| `power` | Implemented |
-| `audit` | Implemented |
-| `pairwise` | Implemented |
+All seven modules are implemented. CI runs the suite on Python 3.9, 3.11 and
+3.12, including the checks that pin results against outside implementations.
+The examples below are run there too, so what they print here is what they
+print for you.
 
 ### What `scores` answers
 
@@ -298,6 +290,25 @@ pip install evalaudit
 ```
 
 Python 3.9+, numpy, scipy, pandas. Nothing else.
+
+---
+
+## Who wrote this
+
+I'm Hezron Mokaya, a statistician. I have spent years on the task and
+QA side of expert AI evaluation. I
+graded, and I ran quality control on other people's grading. I did not design
+the benchmarks.
+
+This package is the work I do for clients, published in the open. I audit AI
+evaluations for statistical validity: rater agreement, pairwise comparison,
+judge validation, and whether the numbers in a report support the claim being
+made from them.
+
+If you have an eval you are about to publish, act on, or defend, I take that
+work.
+
+ondibahezron@gmail.com
 
 ---
 
