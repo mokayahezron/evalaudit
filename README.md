@@ -247,7 +247,9 @@ data shaped like MT-Bench, 2,575 comparisons over 80 prompts, that covered
 88% where 95% was claimed once prompts shifted model strength by a spread of
 0.5 on the log-odds scale, and 80% at a spread of 1.0.
 `examples/pairwise_cluster_study.py` has the full table. Pass
-`resample="comparisons"` to reproduce an older result.
+`resample="comparisons"` to get the ratings and rating intervals an older
+version gave on the same data and seed. Separability still follows the rule
+above, so the count of separable pairs can differ.
 
 `to_elo` puts the same fit on the 400 point scale people expect and carries
 the intervals across with it. Leaderboards publish Elo without intervals,
@@ -308,6 +310,11 @@ pip install evalaudit
 ```
 
 Python 3.9+, numpy, scipy, pandas. Nothing else.
+
+Upgrading from an earlier version? The
+[changelog](https://github.com/mokayahezron/evalaudit/blob/main/CHANGELOG.md)
+lists every change a caller can see, with what to do about each breaking one.
+0.3.0 breaks several, so read it before you upgrade.
 
 ---
 
