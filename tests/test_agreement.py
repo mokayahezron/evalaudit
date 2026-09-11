@@ -43,25 +43,22 @@ NOTE_ONE_ITEM = "only one item left with two or more ratings"
 # item got called "essay-r05" is a test failing for the wrong reason.
 NAMES_A_RATER = "Dropping "
 
-# The three sentences that end "so the data cannot distinguish the raters",
-# told apart. That shared tail says no rater was named and does not say why,
-# and the three reasons are different findings. Each constant below runs
-# through the shared tail and occurs once in the package, in one branch of
-# AgreementResult._dropout_sentence, so pointing an assertion at one keeps
-# the old check and adds the branch.
+# The two things the dropout sentence can say. When every leave-one-out
+# alpha is undefined there is nothing to list. Otherwise it lists them and
+# says it judges none of them. It used to name a rater when the largest shift
+# beat half the width of the interval on alpha, and to explain each refusal.
+# That rule named raters on noise, so 0.4.0 withdrew it, and the two
+# sentences that explained a refusal went with it.
 REFUSES_A_RATER_ALL_UNDEFINED = (
-    "Every leave-one-out alpha is undefined, so the data cannot distinguish "
-    "the raters."
+    "Every leave-one-out alpha is undefined, so the data cannot show that any "
+    "one rater is pulling alpha down."
 )
-REFUSES_A_RATER_NO_INTERVAL = (
-    "Without an interval on alpha there is nothing to measure the "
-    "leave-one-out differences against, so the data cannot distinguish the "
-    "raters."
+NO_DROPOUT_VERDICT = (
+    "The package does not judge whether any of these shifts is larger than "
+    "noise, so it names no rater. A rater near the top of this list is a lead "
+    "to check rather than a finding."
 )
-REFUSES_A_RATER_INSIDE_NOISE = (
-    "on alpha, so the data cannot distinguish the raters. Do not read the "
-    "top of the dropout table as an outlier."
-)
+LISTS_THE_DROPOUT = " Leaving one rater out at a time gives alpha of "
 
 
 # --------------------------------------------------------------------------
@@ -1007,7 +1004,8 @@ def test_bootstrap_refuses_when_too_many_resamples_are_undefined():
     text = r.summary().lower()
     assert "no interval" in text
     assert "undefined" in text
-    assert REFUSES_A_RATER_NO_INTERVAL in r.summary()
+    assert NO_DROPOUT_VERDICT in r.summary()
+    assert NAMES_A_RATER not in r.summary()
 
 
 def test_the_undefined_resample_floor_is_ninety_percent():
@@ -1261,7 +1259,12 @@ def test_summary_refuses_when_nothing_was_graded_twice():
     assert "alpha 0." not in text and "alpha of 0." not in text
 
 
-def test_summary_names_an_outlier_when_the_data_can_carry_it():
+def test_summary_lists_a_clear_outlier_first_and_does_not_name_it():
+    """This test used to require the summary to name r3, a rater grading at
+    random beside three who track the truth. The rule behind the name was
+    withdrawn in 0.4.0, since it also named raters on noise. The summary
+    lists alpha with each rater left out instead, and r3 heads that list,
+    where a reader looking for a lead will find it."""
     rng = np.random.default_rng(73)
     truth = rng.choice([1, 2, 3, 4, 5], size=300)
     arr = np.empty((4, 300))
@@ -1273,8 +1276,15 @@ def test_summary_names_an_outlier_when_the_data_can_carry_it():
 
     r = rater_agreement(df, n_boot=500, seed=8)
     assert r.dropout_is_distinguishable
-    assert r.top_dropout_rater == "r3"
-    assert NAMES_A_RATER + "r3" in r.summary()
+    assert r.top_dropout_rater is None
+    assert NAMES_A_RATER not in r.summary()
+    top = r.rater_dropout.iloc[0]
+    assert top["rater_id"] == "r3"
+    assert (
+        f"{LISTS_THE_DROPOUT}{top['alpha_without']:.3f} without r3 "
+        f"({top['delta']:+.3f})"
+    ) in r.summary()
+    assert NO_DROPOUT_VERDICT in r.summary()
 
 
 def test_summary_refuses_to_name_an_outlier_on_thin_data():
@@ -1288,7 +1298,7 @@ def test_summary_refuses_to_name_an_outlier_on_thin_data():
     assert not r.dropout_is_distinguishable
     assert r.top_dropout_rater is None
     assert NAMES_A_RATER not in r.summary()
-    assert REFUSES_A_RATER_INSIDE_NOISE in r.summary()
+    assert NO_DROPOUT_VERDICT in r.summary()
 
 
 def test_the_naming_rule_is_the_shift_against_the_sampling_error():
@@ -1342,7 +1352,7 @@ def test_summary_will_not_name_anyone_without_an_interval():
     assert not r.dropout_is_distinguishable
     assert r.top_dropout_rater is None
     assert NAMES_A_RATER not in r.summary()
-    assert REFUSES_A_RATER_NO_INTERVAL in r.summary()
+    assert NO_DROPOUT_VERDICT in r.summary()
 
 
 def test_summary_will_not_name_anyone_with_only_two_raters():
@@ -1501,6 +1511,81 @@ def test_cohens_kappa_perfect_and_chance():
 def test_cohens_kappa_rejects_mismatched_lengths():
     with pytest.raises(ValueError):
         cohens_kappa([1, 2, 3], [1, 2])
+
+
+def _two_raters(both_zero, both_one, zero_one, one_zero):
+    """Two raters on 0/1, built from the four cells of their 2x2 table."""
+    r1 = [0] * both_zero + [1] * both_one + [0] * zero_one + [1] * one_zero
+    r2 = [0] * both_zero + [1] * both_one + [1] * zero_one + [0] * one_zero
+    return r1, r2
+
+
+def _hand_kappa(both_zero, both_one, zero_one, one_zero):
+    n = both_zero + both_one + zero_one + one_zero
+    observed = (both_zero + both_one) / n
+    r1_zero = (both_zero + zero_one) / n
+    r2_zero = (both_zero + one_zero) / n
+    expected = r1_zero * r2_zero + (1 - r1_zero) * (1 - r2_zero)
+    return (observed - expected) / (1 - expected)
+
+
+def _hand_alpha(both_zero, both_one, zero_one, one_zero):
+    """Nominal alpha for two raters on 0/1, from the coincidence matrix.
+
+    Each item is a unit of two values. A split item puts one count in each
+    off-diagonal cell, so the off-diagonal total is twice the split items.
+    """
+    zeros = 2 * both_zero + zero_one + one_zero
+    ones = 2 * both_one + zero_one + one_zero
+    total = zeros + ones
+    off_diagonal = 2 * (zero_one + one_zero)
+    return 1 - (total - 1) * off_diagonal / (2 * zeros * ones)
+
+
+def test_alpha_has_the_prevalence_problem_kappa_has():
+    """Alpha and kappa fall together when the scale goes lopsided.
+
+    KappaResult.summary() and the cohens_kappa docstring both said
+    Krippendorff's alpha does not have kappa's prevalence problem. The two
+    texts agreed with each other and both were wrong. At 90% raw agreement
+    the statistics sit within 0.003 of each other on a balanced scale and
+    on a 90/10 one, and both fall by about 0.35 between the two.
+
+    The figures are worked by hand here, so the texts have to survive an
+    outside computation rather than agree with each other.
+    """
+    balanced, lopsided = (45, 45, 5, 5), (85, 5, 5, 5)
+    found = {}
+    for name, cells in (("balanced", balanced), ("lopsided", lopsided)):
+        r1, r2 = _two_raters(*cells)
+        kappa = cohens_kappa(r1, r2)
+        alpha = rater_agreement(
+            to_long(np.array([r1, r2])), bootstrap_ci=False
+        ).alpha
+        assert kappa.p_observed == pytest.approx(0.90)
+        assert kappa.kappa == pytest.approx(_hand_kappa(*cells), abs=1e-12)
+        assert alpha == pytest.approx(_hand_alpha(*cells), abs=1e-12)
+        found[name] = (kappa.kappa, alpha)
+
+    (k_bal, a_bal), (k_lop, a_lop) = found["balanced"], found["lopsided"]
+    assert (round(k_bal, 3), round(a_bal, 3)) == (0.800, 0.801)
+    assert (round(k_lop, 3), round(a_lop, 3)) == (0.444, 0.447)
+
+    # The relationship. Alpha falls as far as kappa does.
+    assert k_bal - k_lop > 0.3
+    assert a_bal - a_lop > 0.3
+    assert abs((a_bal - a_lop) - (k_bal - k_lop)) < 0.01
+
+    # The texts. Neither may say alpha escapes the problem, and the figures
+    # the docstring quotes have to be the computed ones.
+    summary = cohens_kappa(*_two_raters(*lopsided)).summary()
+    doc = " ".join(cohens_kappa.__doc__.split())
+    for text in (summary, doc):
+        assert "does not have that problem" not in text
+        assert "Alpha does not have" not in text
+    assert "Krippendorff's alpha moves the same way" in summary
+    assert f"kappa {k_bal:.3f} and alpha {a_bal:.3f}" in doc
+    assert f"kappa {k_lop:.3f} and alpha {a_lop:.3f}" in doc
 
 
 def test_cohens_kappa_rejects_empty():
@@ -1720,3 +1805,115 @@ def test_agreement_is_importable_from_the_package_root():
     assert hasattr(evalaudit, "fleiss_kappa")
     assert hasattr(evalaudit, "AgreementResult")
     assert hasattr(evalaudit, "KappaResult")
+
+
+# --------------------------------------------------------------------------
+# The rater dropout verdict is withdrawn
+#
+# The summary named a rater when the largest leave-one-out shift beat half
+# the width of the interval on alpha. That compares the shift with the
+# sampling error on alpha, and the shift has a sampling error of its own
+# that can be much larger. In 500 simulated evals where the third of three
+# raters graded a fifth of the items, it named r1 or r2, who graded every
+# item, in 32.0% of them. The summary now lists the leave-one-out alphas and
+# names nobody.
+# --------------------------------------------------------------------------
+
+def _unequal_graders(seed):
+    """Three raters who differ only by chance, each wrong 10% of the time.
+
+    r1 and r2 grade all 60 items and r3 grades about a fifth of them. The
+    draws come in the order the CHANGELOG simulation makes them, one for
+    whether the rater graded the item and one for the rating.
+    """
+    rng = np.random.default_rng(10_000 + seed)
+    rows = []
+    for i in range(60):
+        truth = int(rng.integers(0, 2))
+        for rater in ("r1", "r2", "r3"):
+            share = 0.2 if rater == "r3" else 1.0
+            if rng.random() > share:
+                continue
+            value = truth if rng.random() > 0.1 else 1 - truth
+            rows.append({"item_id": f"i{i}", "rater_id": rater, "rating": value})
+    return pd.DataFrame(rows)
+
+
+def test_the_unequal_grading_case_names_nobody():
+    """The case the CHANGELOG quotes. Nothing separates these raters, and
+    the withdrawn rule named r2, who graded every item, with "Dropping r2
+    raises alpha to 0.878, a shift of 0.326 against a sampling error of
+    0.200". The rule still fires on this data. The summary no longer acts
+    on it."""
+    data = _unequal_graders(1)
+    assert data["rater_id"].value_counts().to_dict() == {
+        "r1": 60, "r2": 60, "r3": 16,
+    }
+    r = rater_agreement(data, n_boot=500, seed=1)
+    assert r.dropout_is_distinguishable
+    assert r.top_dropout_rater is None
+    text = r.summary()
+    assert NAMES_A_RATER not in text
+    assert (
+        LISTS_THE_DROPOUT + "0.878 without r2 (+0.326), 0.524 without r3 "
+        "(-0.028), and 0.483 without r1 (-0.069). " + NO_DROPOUT_VERDICT
+    ) in text
+
+
+def test_the_audit_carries_the_list_and_keeps_its_severity():
+    """No audit finding took its severity from the dropout rule. On the
+    unequal case the finding is a warning because the interval on alpha
+    runs both sides of 0.667, before and after the rule was withdrawn."""
+    from evalaudit import audit
+
+    r = audit(ratings=_unequal_graders(1), config={"seed": 1, "n_boot": 500})
+    f = [x for x in r.findings if x.check == "agreement"][0]
+    assert f.severity == "warning"
+    assert f.title == (
+        "The data cannot show that rater agreement clears the working "
+        "threshold"
+    )
+    assert NAMES_A_RATER not in f.detail
+    assert NO_DROPOUT_VERDICT in f.detail
+
+
+def test_an_undefined_leave_one_out_alpha_is_listed_as_undefined():
+    """Dropping a leaves b and c with no item in common."""
+    rows = [
+        ("u0", "a", 1.0), ("u0", "b", 2.0),
+        ("u1", "a", 2.0), ("u1", "b", 2.0),
+        ("u2", "a", 1.0), ("u2", "c", 1.0),
+        ("u3", "a", 2.0), ("u3", "c", 1.0),
+    ]
+    r = rater_agreement(
+        pd.DataFrame(rows, columns=["item_id", "rater_id", "rating"]),
+        bootstrap_ci=False,
+    )
+    table = r.rater_dropout.set_index("rater_id")
+    assert np.isnan(table.loc["a", "alpha_without"])
+    assert np.isfinite(table.loc["b", "alpha_without"])
+    assert ", and undefined without a. " + NO_DROPOUT_VERDICT in r.summary()
+
+
+def test_the_dropout_list_stops_at_five_raters():
+    rng = np.random.default_rng(113)
+    truth = rng.choice([1, 2, 3], size=40)
+    arr = np.empty((8, 40))
+    for i in range(8):
+        noise = rng.random(40) < 0.1
+        arr[i] = np.where(noise, rng.choice([1, 2, 3], size=40), truth)
+    r = rater_agreement(to_long(arr), n_boot=300, seed=12)
+    assert len(r.rater_dropout) == 8
+    text = r.summary()
+    assert text.count(" without r") == 5
+    assert ", with 3 more in rater_dropout." in text
+    assert NO_DROPOUT_VERDICT in text
+
+
+def test_the_withdrawn_rule_is_documented_with_its_figures():
+    doc = " ".join(AgreementResult.dropout_is_distinguishable.__doc__.split())
+    assert "Withdrawn from the summary and the audit in 0.4.0" in doc
+    for figure in ("4.2%", "32.0%", "72.4%"):
+        assert figure in doc
+    top = " ".join(AgreementResult.top_dropout_rater.__doc__.split())
+    assert "Always None" in top

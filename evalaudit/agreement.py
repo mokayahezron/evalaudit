@@ -514,7 +514,12 @@ def cohens_kappa(r1: Sequence, r2: Sequence) -> KappaResult:
     -----
     Kappa moves with how often each category gets used, so two raters score
     lower on a lopsided scale than on a balanced one at the same accuracy.
-    Alpha does not have that problem. This is here for compatibility.
+    Krippendorff's alpha has the same dependence, because it corrects for
+    chance the same way. Two raters who agree on 90 of 100 items score
+    kappa 0.800 and alpha 0.801 when both categories are used equally often,
+    and kappa 0.444 and alpha 0.447 when one category takes 90% of the
+    ratings. What alpha adds is missing ratings, more than two raters and
+    ordered scales. This is here for compatibility.
     """
     a = np.asarray(list(r1))
     b = np.asarray(list(r2))

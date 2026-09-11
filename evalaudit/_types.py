@@ -69,9 +69,14 @@ class ScoreCI:
             )
             span = f"{self.width:.3f}"
 
+        # One score's width says nothing about which differences are
+        # resolved. A difference has its own interval, and a paired one is
+        # often far narrower than either score's.
         tail = (
-            f" The interval spans {span}; treat differences smaller than that "
-            f"as unresolved."
+            f" The interval spans {span}. To compare this score with another, "
+            f"read the interval on the difference, which compare_paired and "
+            f"compare_independent report. Two score intervals that overlap do "
+            f"not show the systems are level."
         )
         if self.n < 30:
             tail += (
@@ -130,8 +135,9 @@ class ComparisonResult:
 
         if self.crosses_zero:
             verdict = (
-                " The interval crosses zero, so the data cannot confirm "
-                "that either system is better."
+                " The interval includes zero, so the data cannot show that "
+                "either system is better. That does not mean the two are "
+                "level."
             )
         else:
             direction = "A" if self.difference > 0 else "B"
@@ -192,8 +198,10 @@ class KappaResult:
         tail = (
             " Kappa moves with how often each category is used, so the same "
             "raters score lower on a lopsided scale than a balanced one. "
-            "Krippendorff's alpha does not have that problem and handles "
-            "missing data, so prefer rater_agreement for anything you report."
+            "Krippendorff's alpha moves the same way, because it also "
+            "corrects for chance using how often each category is used. "
+            "Prefer rater_agreement for anything you report, since alpha "
+            "handles missing ratings, more than two raters and ordered scales."
         )
         return head + tail
 
@@ -213,6 +221,58 @@ _ALPHA_RELIABLE = 0.800
 _ALPHA_FLOOR = 0.667
 
 
+def _band_verdict(low, high, has_interval, subject, below):
+    """Where the interval on alpha sits against Krippendorff's two lines.
+
+    The interval decides, the way it does everywhere else in the package. A
+    band is named only when the whole interval sits inside it. An interval
+    that runs over a line has not shown which side of it the value falls.
+    ``subject`` names what is being measured, and ``below`` is the sentence
+    for an interval wholly under the floor.
+    """
+    floor, bar = f"{_ALPHA_FLOOR:.3f}", f"{_ALPHA_RELIABLE:.3f}"
+    if not has_interval:
+        return (
+            f" Without an interval there is nothing to place {subject} "
+            f"against the conventional lines at {floor} and {bar}, so the "
+            f"data cannot show that it clears either. That does not mean it "
+            f"falls short of them."
+        )
+    if low > _ALPHA_RELIABLE:
+        return (
+            f" The whole interval sits above {bar}, the conventional bar for "
+            f"treating coded data as reliable."
+        )
+    if high < _ALPHA_FLOOR:
+        return (
+            f" The whole interval sits below {floor}, the conventional floor "
+            f"for drawing any conclusion from coded data." + below
+        )
+    if low > _ALPHA_FLOOR and high < _ALPHA_RELIABLE:
+        return (
+            f" The whole interval sits between {floor} and {bar}, which "
+            f"supports tentative conclusions and no firm ones."
+        )
+    if low > _ALPHA_FLOOR:
+        return (
+            f" The interval clears {floor}, which supports tentative "
+            f"conclusions. It runs both sides of {bar}, so the data cannot "
+            f"show that {subject} reaches the bar for reliable coded data. "
+            f"That does not mean it falls short of it."
+        )
+    return (
+        f" The interval runs both sides of {floor}, the conventional floor "
+        f"for drawing any conclusion from coded data, so the data cannot "
+        f"show that {subject} clears it. That does not mean it falls short "
+        f"of it."
+    )
+
+
+# How many leave-one-out alphas the agreement summary lists. The full table
+# is in rater_dropout.
+_DROPOUT_LISTED = 5
+
+
 @dataclass(frozen=True)
 class AgreementResult:
     """Krippendorff's alpha, plus the two tables that say where it came from.
@@ -221,9 +281,10 @@ class AgreementResult:
     them, normalised so an item graded ten times is not punished against one
     graded twice. ``rater_dropout`` recomputes alpha with each rater removed.
 
-    Both tables invite a reader to act on the top row, so ``summary()``
-    refuses to name a rater unless dropping them shifts alpha by more than
-    the sampling error on alpha.
+    Both tables invite a reader to act on the top row. ``summary()`` lists
+    the leave-one-out alphas and names no rater, because the package has no
+    test of whether a shift is larger than noise. The rule it used to apply,
+    and why it was withdrawn, is in ``dropout_is_distinguishable``.
 
     ``alpha`` is NaN when the data cannot carry an estimate: when fewer than
     two items were graded twice, or when every rating that could be compared
@@ -253,16 +314,26 @@ class AgreementResult:
 
     @property
     def dropout_is_distinguishable(self) -> bool:
-        """True when some rater's removal shifts alpha by more than noise.
+        """The withdrawn naming rule, kept so existing callers still work.
 
-        The comparison is the leave-one-out shift against the sampling error
-        on alpha, taken as half the interval width. Comparing the shifted
-        alpha to ``ci_high`` instead looks equivalent and is not: when alpha
-        sits near zero the interval runs far below it and barely above, so
-        ``ci_high`` is a low bar and pure noise clears it.
+        Withdrawn from the summary and the audit in 0.4.0. Nothing in the
+        package reads it now.
 
-        Without an interval there is nothing to measure the differences
-        against, so the answer is False rather than a guess.
+        The rule compares the largest leave-one-out shift with half the width
+        of the interval on alpha. That is the sampling error on alpha, and
+        the shift has a sampling error of its own that can be much larger.
+        In 500 simulated evals with three raters who differ only by chance,
+        each wrong 10% of the time on 60 items, it fired in 4.2% when every
+        rater graded every item. When the third rater graded a fifth of the
+        items it fired in 32.0%, and every time the rater at the top of the
+        table was one of the two who graded everything. Dropping one of them
+        leaves the other two overlapping on few items, so the leave-one-out
+        alpha is noisy and the shift clears the bar by chance. It fired on a
+        rater wrong three times as often as the other two in 72.4%.
+
+        An interval on the shift itself is what the rule needs, and the
+        package does not compute one. Without an interval on alpha the rule
+        answers False.
         """
         if not self.has_interval or self.rater_dropout.empty:
             return False
@@ -271,14 +342,14 @@ class AgreementResult:
 
     @property
     def top_dropout_rater(self) -> Optional[str]:
-        """The rater worth investigating, or None when the data cannot say.
+        """Always None since 0.4.0.
 
-        The dropout table always has a first row. This returns None unless
-        that first row is doing more than sorting noise.
+        It named the first row of the dropout table when
+        ``dropout_is_distinguishable`` held, and that rule named raters on
+        noise. It stays so existing callers keep working. Read
+        ``rater_dropout`` for the leave-one-out figures.
         """
-        if not self.dropout_is_distinguishable:
-            return None
-        return self.rater_dropout.iloc[0]["rater_id"]
+        return None
 
     def summary(self) -> str:
         if self.n_overlapping_items == 0:
@@ -357,56 +428,49 @@ class AgreementResult:
         )
 
     def _verdict(self) -> str:
-        if self.alpha >= _ALPHA_RELIABLE:
-            return (
-                f" That is at or above {_ALPHA_RELIABLE:.3f}, the "
-                f"conventional bar for treating coded data as reliable."
-            )
-        if self.alpha >= _ALPHA_FLOOR:
-            return (
-                f" That sits between {_ALPHA_FLOOR:.3f} and "
-                f"{_ALPHA_RELIABLE:.3f}, which supports tentative "
-                f"conclusions and no firm ones."
-            )
-        return (
-            f" That is below {_ALPHA_FLOOR:.3f}, the conventional floor for "
-            f"drawing any conclusion from coded data. Fix the rubric before "
-            f"reading anything into the scores it produced."
+        return _band_verdict(
+            self.ci_low,
+            self.ci_high,
+            self.has_interval,
+            "rater agreement",
+            " Fix the rubric before reading anything into the scores it "
+            "produced.",
         )
 
     def _dropout_sentence(self) -> str:
-        if self.rater_dropout.empty:
+        """The leave-one-out alphas in words, with no verdict on them.
+
+        The package has no test of whether a shift is larger than noise, so
+        this lists the figures and names nobody. ``dropout_is_distinguishable``
+        holds the rule that used to name a rater here.
+        """
+        table = self.rater_dropout
+        if table.empty:
             return ""
 
-        if self.dropout_is_distinguishable:
-            row = self.rater_dropout.iloc[0]
-            return (
-                f" Dropping {row['rater_id']} raises alpha to "
-                f"{row['alpha_without']:.3f}, a shift of {row['delta']:.3f} "
-                f"against a sampling error of {self.width / 2:.3f}. They "
-                f"graded {int(row['n_ratings'])} items, so weigh that shift "
-                f"against how much of the grading it rests on."
-            )
-
-        if self.rater_dropout["alpha_without"].isna().all():
+        if table["alpha_without"].isna().all():
             return (
                 " Every leave-one-out alpha is undefined, so the data cannot "
-                "distinguish the raters."
+                "show that any one rater is pulling alpha down."
             )
 
-        if not self.has_interval:
-            return (
-                " Without an interval on alpha there is nothing to measure "
-                "the leave-one-out differences against, so the data cannot "
-                "distinguish the raters."
-            )
-
+        shown = table.head(_DROPOUT_LISTED)
+        parts = []
+        for row in shown.itertuples(index=False):
+            if row.alpha_without == row.alpha_without:
+                parts.append(
+                    f"{row.alpha_without:.3f} without {row.rater_id} "
+                    f"({row.delta:+.3f})"
+                )
+            else:
+                parts.append(f"undefined without {row.rater_id}")
+        rest = len(table) - len(shown)
+        more = f", with {rest} more in rater_dropout" if rest else ""
         return (
-            f" The largest leave-one-out shift is "
-            f"{self.rater_dropout['delta'].max():.3f}, inside the sampling "
-            f"error of {self.width / 2:.3f} on alpha, so the data cannot "
-            f"distinguish the raters. Do not read the top of the dropout "
-            f"table as an outlier."
+            f" Leaving one rater out at a time gives alpha of {_join(parts)}"
+            f"{more}. The package does not judge whether any of these shifts "
+            f"is larger than noise, so it names no rater. A rater near the "
+            f"top of this list is a lead to check rather than a finding."
         )
 
     def __str__(self) -> str:  # pragma: no cover
@@ -474,7 +538,8 @@ class BTResult:
     cancels in the gap.
 
     ``resample`` records what one bootstrap draw picked up, ``"items"`` or
-    ``"comparisons"``.
+    ``"comparisons"``. ``n_missing_item_ids`` counts the comparisons that
+    carry no item id, and ``n_items`` counts only the ids that are there.
 
     ``rating`` is NaN for every model when the fit does not exist. That is
     two situations and they are not the same. ``connected`` is False when the
@@ -505,6 +570,7 @@ class BTResult:
     elo_base: Optional[float] = None
     resample: str = "items"
     pairs: Optional[pd.DataFrame] = None
+    n_missing_item_ids: int = 0
 
     @property
     def has_fit(self) -> bool:
@@ -642,21 +708,26 @@ class BTResult:
     def _resample_sentence(self) -> str:
         """Said only when comparisons were resampled over shared items.
 
-        With no item ids at all there is nothing to say which comparisons
-        share a prompt, so nothing is said.
+        Sharing is counted among the comparisons that carry an item id. One
+        with no id cannot be shown to share a prompt with anything, so with
+        every id distinct, or every id missing, nothing is said.
         """
+        labelled = self.n_comparisons - self.n_missing_item_ids
         if (
             not self.has_interval
             or self.resample != "comparisons"
-            or not 0 < self.n_items < self.n_comparisons
+            or not 0 < self.n_items < labelled
         ):
             return ""
+        if self.n_missing_item_ids:
+            which = f"the {labelled} comparisons that carry an item id"
+        else:
+            which = f"these {self.n_comparisons} comparisons"
         return (
-            f" The intervals resample single comparisons, and these "
-            f"{self.n_comparisons} comparisons share {self.n_items} "
-            f"{_plural('item', self.n_items)}. Judgements of the same item "
-            f"tend to move together, so intervals built this way can run "
-            f"narrow. The default resamples whole items."
+            f" The intervals resample single comparisons, and {which} share "
+            f"{self.n_items} {_plural('item', self.n_items)}. Judgements of "
+            f"the same item tend to move together, so intervals built this "
+            f"way can run narrow. The default resamples whole items."
         )
 
     def _no_interval_sentence(self) -> str:
@@ -747,8 +818,7 @@ class JudgeValidation:
     def slice_is_distinguishable(self) -> bool:
         """True when the worst slice clears the overall interval outright.
 
-        The noise guard rater_dropout uses, in the form this statistic
-        takes. Cut a homogeneous population into five slices and one of them
+        A guard against naming a slice on noise. Cut a homogeneous population into five slices and one of them
         is last by sampling noise alone, so a table that always ranks
         somebody first needs a rule about when the first row means anything.
 
@@ -789,19 +859,14 @@ class JudgeValidation:
         accuracy = f" Plain accuracy is {_pct(self.accuracy)}."
         dropped = ""
         if self.n_dropped:
+            verb = "was" if self.n_dropped == 1 else "were"
             dropped = (
-                f" {self.n_dropped} items were set aside because one side "
-                f"had no label."
+                f" {self.n_dropped} {_plural('item', self.n_dropped)} {verb} "
+                f"set aside because one side had no label."
             )
 
         if self.agreement != self.agreement:  # NaN
-            return (
-                f"Judge and human agreement is undefined ({self.level}, "
-                f"{self.n_items} items). Every label that could be compared "
-                f"was identical, so there is no disagreement to divide by. "
-                f"This comes from a rubric with one label in it. It is not "
-                f"perfect agreement." + accuracy + dropped
-            )
+            return self._undefined() + accuracy + dropped
 
         if self.has_interval:
             head = (
@@ -817,24 +882,38 @@ class JudgeValidation:
             )
         return head + accuracy + dropped
 
+    def _undefined(self) -> str:
+        """Why there is no alpha. Two causes, and the item count comes first.
+
+        The same order the slice notes use. One item is too few to measure
+        whatever else is true of it. With two or more items, alpha is
+        undefined only when every label was the same.
+        """
+        if self.n_items < 2:
+            return (
+                f"Judge and human agreement is undefined ({self.level}, "
+                f"{self.n_items} {_plural('item', self.n_items)}). One item "
+                f"cannot carry a reliability estimate, so there is no number "
+                f"to report and no interval around it. Label more items and "
+                f"run this again."
+            )
+        return (
+            f"Judge and human agreement is undefined ({self.level}, "
+            f"{self.n_items} items). Every label that could be compared "
+            f"was identical, so there is no disagreement to divide by. "
+            f"This comes from a rubric with one label in it. It is not "
+            f"perfect agreement."
+        )
+
     def _verdict(self) -> str:
         if self.agreement != self.agreement:
             return ""
-        if self.agreement >= _ALPHA_RELIABLE:
-            return (
-                f" That is at or above {_ALPHA_RELIABLE:.3f}, the "
-                f"conventional bar for treating coded data as reliable."
-            )
-        if self.agreement >= _ALPHA_FLOOR:
-            return (
-                f" That sits between {_ALPHA_FLOOR:.3f} and "
-                f"{_ALPHA_RELIABLE:.3f}, which supports tentative "
-                f"conclusions and no firm ones."
-            )
-        return (
-            f" That is below {_ALPHA_FLOOR:.3f}, the conventional floor for "
-            f"drawing any conclusion from coded data. The judge is not a "
-            f"stand-in for the humans at this level."
+        return _band_verdict(
+            self.ci_low,
+            self.ci_high,
+            self.has_interval,
+            "the judge's agreement with the humans",
+            " The judge is not a stand-in for the humans at this level.",
         )
 
     def _slice_sentence(self) -> str:
@@ -867,23 +946,26 @@ class JudgeValidation:
         if not self.has_interval:
             return (
                 " Without an interval on the overall figure there is nothing "
-                "to place the slices against, so the data cannot single out "
-                "a slice. Do not read the top of the table as a failure."
+                "to place the slices against, so the data cannot show that "
+                "the judge does worse on any one slice. Do not read the top "
+                "of the table as a failure."
             )
 
         row = self.by_slice.iloc[0]
         if not np.isfinite(row["agreement"]) or not np.isfinite(row["ci_high"]):
             return (
                 " No slice carries both an agreement figure and an interval, "
-                "so the data cannot single out a slice. Do not read the top "
-                "of the table as a failure."
+                "so the data cannot show that the judge does worse on any one "
+                "slice. Do not read the top of the table as a failure."
             )
         return (
             f" The lowest slice {str(row['slice'])!r} runs up to "
             f"{row['ci_high']:.3f} against a lower bound of "
-            f"{self.ci_low:.3f} on the overall figure, so the two overlap "
-            f"and the data cannot single out a slice. Something is always "
-            f"last. Do not read the top of the table as a failure."
+            f"{self.ci_low:.3f} on the overall figure. The two overlap, so "
+            f"the data cannot show that the judge does worse on any one "
+            f"slice. That does not mean it does equally well on all of them. "
+            f"Something is always last. Do not read the top of the table as "
+            f"a failure."
         )
 
     def __str__(self) -> str:  # pragma: no cover
@@ -904,6 +986,14 @@ class PositionBias:
     Then the headline is the consistency rate, the share of pairs where the
     judge named the same output both times, and the direction of the pairs
     it flipped on says whether the flipping was position or noise.
+
+    ``position_a_ci_low`` and ``position_a_ci_high`` are the Clopper-Pearson
+    interval on ``position_a_rate``, the exact binomial interval, so they
+    agree about a half with the exact p-value printed beside them. In the
+    randomised design they equal ``ci_low`` and ``ci_high``. In the
+    both-orders design ``ci_low`` and ``ci_high`` are a Wilson interval on
+    the consistency rate, and these are on the share of flips that went to
+    the output shown first. Both designs decide on this interval.
     """
 
     design: str
@@ -921,6 +1011,8 @@ class PositionBias:
     n_both_orders: int
     n_ties: int
     confidence: float = 0.95
+    position_a_ci_low: float = float("nan")
+    position_a_ci_high: float = float("nan")
 
     @property
     def has_position_effect(self) -> bool:
@@ -928,15 +1020,20 @@ class PositionBias:
 
         In the both-orders design this reads the direction of the flips, not
         the consistency rate, because an inconsistent judge and a
-        position-biased one are different problems.
+        position-biased one are different problems. Both designs decide on
+        the interval their summary prints. It is Clopper-Pearson, which
+        inverts the exact binomial test, so the verdict and the p-value
+        printed beside it cannot disagree about a half. A Wilson interval
+        here disagreed with that p-value in 188 of the 20,300 (n, k) cells up
+        to n=200, always on the permissive side.
         """
         if self.design == "both_orders":
-            if self.n_decisive == 0 or self.p_value != self.p_value:
-                return False
-            return bool(self.p_value < 1 - self.confidence)
-        if not (self.ci_low == self.ci_low):
+            low, high = self.position_a_ci_low, self.position_a_ci_high
+        else:
+            low, high = self.ci_low, self.ci_high
+        if not (low == low and high == high):
             return False
-        return not (self.ci_low <= 0.5 <= self.ci_high)
+        return not (low <= 0.5 <= high)
 
     def summary(self) -> str:
         conf = f"{self.confidence * 100:.0f}%"
@@ -960,8 +1057,9 @@ class PositionBias:
             )
         else:
             verdict = (
-                " The interval covers 50%, so the data cannot show that "
-                "position moved the judge."
+                " The interval includes 50%, so the data cannot show that "
+                "position moved the judge. That does not mean the judge "
+                "ignores position."
             )
 
         caveat = (
@@ -996,7 +1094,9 @@ class PositionBias:
         direction = (
             f" Of the {self.n_decisive} pairs it flipped on, {self.n_a_wins} "
             f"went to whichever output was shown first "
-            f"({_pct(self.position_a_rate)}, exact binomial "
+            f"({_pct(self.position_a_rate)}, {conf} CI: "
+            f"{_pct(self.position_a_ci_low)} to "
+            f"{_pct(self.position_a_ci_high)}, exact binomial "
             f"p={self.p_value:.4f})."
         )
 
@@ -1009,10 +1109,11 @@ class PositionBias:
             )
         else:
             verdict = (
-                " The flips split evenly across the two positions, so this "
-                "is an unsteady judge rather than a position-biased one. "
-                "Inconsistency is its own problem and does not become "
-                "position bias without a direction."
+                " That share is not clear of 50% at this many flips, so the "
+                "data cannot show that the flips have a direction. That does "
+                "not mean the judge is free of position bias. Inconsistency "
+                "is its own problem and does not become position bias "
+                "without a direction."
             )
         return head + direction + verdict
 
@@ -1107,8 +1208,9 @@ class LengthBias:
 
         if self.ci_low <= 0 <= self.ci_high:
             return head + (
-                " The interval covers no effect, so the data cannot show "
-                "that length moved the judge."
+                " The interval includes an odds ratio of 1, so the data "
+                "cannot show that length moved the judge. That does not mean "
+                "length plays no part in its choices."
             )
         if self.coefficient > 0:
             return head + (
@@ -1157,8 +1259,10 @@ class LengthBias:
 
         if self.disagreement_ci_low <= 0 <= self.disagreement_ci_high:
             verdict = (
-                " That interval covers no effect, so the judge does not "
-                "depart from the humans in the direction of length."
+                " That interval includes an odds ratio of 1, so the data "
+                "cannot show that the judge breaks with the humans toward "
+                "longer or shorter answers. That does not mean it follows "
+                "them on length."
             )
         elif self.disagreement_coefficient > 0:
             verdict = (
@@ -1302,8 +1406,9 @@ class PowerResult:
         return (
             f" At {_rate(self.power)} power and a {_rate(self.alpha)} "
             f"significance level{against} the smallest difference it could "
-            f"have found is {_points(self.difference)} points, and anything "
-            f"smaller was out of reach before the first item was graded."
+            f"have found is {_points(self.difference)} points. A smaller "
+            f"difference could still reach significance here, with a chance "
+            f"below {_rate(self.power)}."
         )
 
     def _out_of_reach(self) -> str:
@@ -1320,16 +1425,17 @@ class PowerResult:
                 )
             return needed + (
                 f" A difference can never exceed the discordance rate, which "
-                f"here is {_rate(self.discordance_rate)}, so no difference at "
-                f"all was detectable. This eval could not have found "
-                f"anything, whatever the two systems really do."
+                f"here is {_rate(self.discordance_rate)}, so no difference of "
+                f"any size reaches {_rate(self.power)} power here. A null "
+                f"result from this eval says little about the systems."
             )
         return (
             f" A {_rate(self.baseline)} baseline leaves at most a "
             f"{_points(1.0 - self.baseline)} point difference before the pass "
-            f"rate hits 100%, and this many items cannot find even that at "
-            f"{_rate(self.power)} power. So no difference at all was "
-            f"detectable, and this eval could not have found anything."
+            f"rate hits 100%, and even that difference does not reach "
+            f"{_rate(self.power)} power with this many items. So no "
+            f"difference of any size reaches that power here. A null result "
+            f"from this eval says little about the systems."
         )
 
     # ------------------------------------------------------------------
@@ -1391,8 +1497,9 @@ class PowerResult:
 # --------------------------------------------------------------------------
 
 # The three words a finding can carry, in the order a report is read. They
-# are not degrees of one thing. Critical means the conclusion does not hold,
-# warning means it holds and something weakens it, info is context.
+# are not degrees of one thing. Critical means this data cannot support the
+# conclusion as stated, warning means nothing found leaves it unsupported and
+# something weakens it, and info is context.
 _SEVERITIES = ("critical", "warning", "info")
 
 # The line for judge-human agreement. It is the same number as _ALPHA_FLOOR
@@ -1512,15 +1619,16 @@ class AuditReport:
     """Everything the audit found, ranked by what changes the decision.
 
     ``findings`` is sorted by severity first, so the report opens with what
-    undoes the conclusion, and by check order inside a severity. A reader
+    leaves the conclusion unsupported, and by check order inside a severity. A reader
     who stops after the first entry has read the most important one.
 
     ``not_run`` is the other half of the report. A check with no data behind
     it is listed there with the reason, never left out.
 
     A report of nothing but info is a result, not an empty file. It says the
-    eval holds up on everything that could be tested, and it still carries
-    every number, because those numbers are what makes it worth sending.
+    checks that ran did not find a problem in what they could test. That
+    does not show the eval is sound. It still carries every number, because
+    those numbers are what makes it worth sending.
     """
 
     findings: tuple
@@ -1563,22 +1671,37 @@ class AuditReport:
                 f"{criticals} critical {_plural('finding', criticals)}, "
                 f"{warnings} {_plural('warning', warnings)} and "
                 f"{counts['info']} for context. On the critical "
-                f"{_plural('finding', criticals)} the conclusion this data "
-                f"is being asked to support does not hold as stated."
+                f"{_plural('finding', criticals)} this data cannot support "
+                f"the conclusion as stated. That does not mean the "
+                f"conclusion is wrong."
             )
         if warnings:
+            says = "says" if warnings == 1 else "say"
             return (
                 f"No critical findings. {warnings} "
                 f"{_plural('warning', warnings)} and {counts['info']} for "
-                f"context. The result stands and the design weakens it, so "
-                f"report it with what the {_plural('warning', warnings)} "
-                f"say attached."
+                f"context. The checks that ran did not find a problem that "
+                f"leaves the conclusion unsupported. That does not mean the "
+                f"eval is sound. Report the result with what the "
+                f"{_plural('warning', warnings)} {says} attached."
             )
-        ran = len(self.findings)
+        # Checks, not findings. The score check gives one per system.
+        ran = len({finding.check for finding in self.findings})
+        if ran == 0:
+            return "No check could run, so this report has tested nothing."
+        if ran == 1:
+            tested = (
+                "The one check that ran did not find a problem in what it "
+                "could test."
+            )
+        else:
+            tested = (
+                f"The {ran} checks that ran did not find a problem in what "
+                f"they could test."
+            )
         return (
-            f"No critical findings and no warnings. All {ran} "
-            f"{_plural('check', ran)} that ran came back clean, so the eval "
-            f"holds up on everything this report could test."
+            f"No critical findings and no warnings. {tested} That does not "
+            f"mean the eval is sound."
         )
 
     def _coverage(self) -> str:

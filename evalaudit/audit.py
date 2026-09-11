@@ -55,8 +55,8 @@ SEVERITY_ORDER = _SEVERITIES
 #
 # The margin comes first because the margin is the number on the slide. If
 # it does not survive a proper fit, nothing further down changes what the
-# client has to be told. Power sits behind it because it says whether that
-# margin could ever have been found. Then the two checks on whether the
+# client has to be told. Power sits behind it because it says what size of
+# difference the design could find. Then the two checks on whether the
 # labels underneath mean anything, then the two judge biases, then the
 # score intervals, which are context by construction.
 #
@@ -148,6 +148,31 @@ def audit(
     ``config.paired`` is None. Two systems with the same number of items are
     taken as paired, which is how most evals are built and which the finding
     says out loud so it can be corrected.
+
+    When no effect_of_interest is stated, the power check reports the
+    design's reach, the smallest difference the eval could find at the
+    configured power, and makes no claim about the margin it measured. Power
+    computed on an observed margin is a function of the p-value, so it would
+    only repeat the comparison. The finding is a warning, because without a
+    stated effect the audit does not know what size of difference matters.
+
+    With a stated effect, the check answers a different question depending
+    on what the comparison found. When the margin's interval includes zero,
+    or there is no comparison to read, it asks whether the eval could have
+    found the effect at issue at all. That is the question the power module
+    was built for, and an eval that could not is a critical finding. When the
+    interval clears zero the effect has been observed, and a figure computed
+    before the first item was graded cannot overturn it. The finding is then
+    context on what a tighter estimate would cost. It is always info, so it
+    never decides the report's verdict. A null margin whose interval stops
+    short of the stated effect in both directions is info for the same
+    reason, since the data has already answered the question power asks.
+
+    Rater agreement and judge agreement are held to their thresholds by the
+    interval on alpha, the way the margin is held to zero. An interval wholly
+    above the line passes, and one wholly below it is a warning. One running
+    both sides of it, or no interval at all, is a warning that the data
+    cannot show the grades clear the line.
 
     Examples
     --------
@@ -374,8 +399,8 @@ def _compare_finding(comparison, systems: dict, cfg: AuditConfig):
             f"survives the fit."
         )
         action = (
-            "Report the interval alongside the difference. The lower bound "
-            "is the size of the win the data actually supports."
+            "Report the interval alongside the difference. The end of the "
+            "interval nearer zero is the smallest margin this data supports."
         )
 
     if cfg.paired is None and comparison.paired:
@@ -420,9 +445,13 @@ def _no_comparison_reason(systems: dict) -> str:
 # --------------------------------------------------------------------------
 
 def _power_finding(comparison, systems: dict, cfg: AuditConfig):
-    effect, source = _effect_at_issue(comparison, cfg)
-    if effect is None:
-        return source
+    effect = cfg.effect_of_interest
+    if effect is None and comparison is None:
+        return (
+            "No effect of interest was stated and there is no comparison "
+            "whose reach could be reported. Pass effect_of_interest in the "
+            "config, or scores for two systems."
+        )
 
     design = _power_design(comparison, systems, cfg)
     if isinstance(design, str):
@@ -444,9 +473,17 @@ def _power_finding(comparison, systems: dict, cfg: AuditConfig):
         paired=paired,
         discordance_rate=_discordance(systems, paired, cfg),
     )
-    reached = result.attainable and result.difference <= effect
+    if effect is None:
+        return _reach_finding(result)
 
-    lead = f"The effect at issue is {_points(effect)}, {source}."
+    lead = (
+        f"The effect at issue is {_points(effect)}, as supplied in the "
+        f"config."
+    )
+    if comparison is not None and not comparison.crosses_zero:
+        return _established_power_finding(lead, result)
+
+    reached = result.attainable and result.difference <= effect
     if reached:
         return Finding(
             check="power",
@@ -461,38 +498,153 @@ def _power_finding(comparison, systems: dict, cfg: AuditConfig):
             ),
             result=result,
         )
+    if comparison is not None and _rules_out(comparison, effect):
+        return _ruled_out_power_finding(lead, result)
     return Finding(
         check="power",
         severity="critical",
-        title="This eval could not have detected the effect at issue",
+        title=(
+            f"This eval had under {cfg.power * 100:g}% power for the effect "
+            f"at issue"
+        ),
         detail=_detail(
             lead,
             result,
-            "No conclusion about an effect this size can be drawn from this "
-            "data, in either direction. A null result here says the eval was "
-            "too small and says nothing about the systems. Size the next run "
-            "off the figure above before grading anything.",
+            _null_reading(comparison, systems, effect)
+            + " Size the next run off the figure above before grading "
+            "anything.",
         ),
         result=result,
     )
 
 
-def _effect_at_issue(comparison, cfg: AuditConfig):
-    """The difference to size against, and where it came from.
+def _rules_out(comparison, effect: float) -> bool:
+    """True when the margin's interval stops short of the effect both ways."""
+    return -effect < comparison.ci_low and comparison.ci_high < effect
 
-    A stated effect wins, because it is the one the decision turns on. With
-    nothing stated the observed margin stands in, since that is the number
-    being claimed. A margin of exactly zero names no effect at all, and
-    inventing one to check against would be the audit making up the question.
+
+def _null_reading(comparison, systems: dict, effect: float) -> str:
+    """What the margin's interval says about an effect this size.
+
+    Read one side at a time. A margin whose interval includes zero can still
+    rule an effect out in one direction, and a sentence saying nothing can
+    be concluded either way would throw that away.
     """
-    if cfg.effect_of_interest is not None:
-        return cfg.effect_of_interest, "as supplied in the config"
-    if comparison is not None and abs(comparison.difference) > 0:
-        return abs(comparison.difference), "the margin this eval reports"
-    return None, (
-        "Nothing to size the eval against. Pass effect_of_interest in the "
-        "config, or scores for two systems so the observed margin can stand "
-        "in for it."
+    if comparison is None:
+        return (
+            "No margin was measured here, so there is no interval to read "
+            "against an effect this size."
+        )
+    first, second = list(systems)
+    if comparison.ci_high < effect:
+        return (
+            f"The interval on the margin rules out {first} ahead by this "
+            f"much, and it cannot rule out {second} ahead by this much."
+        )
+    if comparison.ci_low > -effect:
+        return (
+            f"The interval on the margin rules out {second} ahead by this "
+            f"much, and it cannot rule out {first} ahead by this much."
+        )
+    return (
+        "The interval on the margin runs past an effect this size in both "
+        "directions, so the data cannot show an effect this size and cannot "
+        "rule one out."
+    )
+
+
+def _ruled_out_power_finding(lead: str, result) -> Finding:
+    """Power beside a null margin whose interval rules the effect out.
+
+    The mirror of :func:`_established_power_finding`. A design figure says
+    what the eval could be expected to find before it ran. Once the interval
+    on the margin stops short of the effect in both directions, the data has
+    answered the question power asks, so the finding is info. Only a stated
+    effect can land here, since an interval always contains the margin it
+    was built around.
+    """
+    return Finding(
+        check="power",
+        severity="info",
+        title="The interval on the margin rules out the effect at issue",
+        detail=_detail(
+            lead + " The interval on the margin stops short of it in both "
+            "directions, so the figures that follow bear on the design "
+            "alone.",
+            result,
+            "Power is a design figure, and it has no bearing on a question "
+            "the interval already answers. The data rules out a difference "
+            "this large in either direction, whatever the design promised.",
+        ),
+        result=result,
+    )
+
+
+def _established_power_finding(lead: str, result) -> Finding:
+    """Power beside a margin whose interval already clears zero.
+
+    The smallest difference an eval reaches at a given power is a design
+    figure. It says what the eval could be expected to find before the first
+    item was graded. Once a margin has been found and its interval clears
+    zero, it has nothing left to say about whether the margin is there. What
+    it still bears on is precision, so this finding is info whatever the
+    figure is, and it is written as the cost of a tighter estimate.
+
+    The branch reads the interval and never the point estimate. A five point
+    margin whose interval includes zero is the null case. A five point
+    margin below the design's reach whose interval clears zero is this one.
+    """
+    return Finding(
+        check="power",
+        severity="info",
+        title=(
+            "The margin is established, and a tighter estimate would take "
+            "more items"
+        ),
+        detail=_detail(
+            lead + " The comparison already clears zero, so the figures that "
+            "follow bear on how precisely that margin is measured.",
+            result,
+            "Nothing here weakens the result. Power is a design figure, and "
+            "it has no bearing on a margin whose interval already clears "
+            "zero. What more items would buy is a narrower interval on that "
+            "margin. The width shrinks with the square root of the item "
+            "count, so halving it takes about four times the items.",
+        ),
+        result=result,
+    )
+
+
+def _reach_finding(result) -> Finding:
+    """Power with no stated effect. The design's reach, and nothing else.
+
+    The audit used to make the observed margin the effect at issue when none
+    was stated. Power computed on an observed effect is a monotone function
+    of the p-value, so on a margin whose interval includes zero it came out
+    short almost every time and repeated the comparison, and on one that
+    clears zero it had nothing to add. So this reports the smallest
+    difference the design could find at the configured power and says
+    nothing about the margin. It is a warning because the question power
+    exists to answer, whether the eval could find the size of difference
+    that matters, has not been asked.
+    """
+    return Finding(
+        check="power",
+        severity="warning",
+        title=(
+            "No effect of interest was stated, so this reports the eval's "
+            "reach"
+        ),
+        detail=_detail(
+            "Without a stated effect the audit does not know what size of "
+            "difference matters. This reports what the design could find and "
+            "makes no claim about the margin it measured.",
+            result,
+            "Set effect_of_interest in the config to the difference the "
+            "decision turns on, and this check will say whether the eval "
+            "could find it.",
+        ),
+        result=result,
     )
 
 
@@ -581,7 +733,29 @@ def _agreement_finding(ratings, cfg: AuditConfig):
         )
 
     alpha = result.alpha
-    if alpha != alpha or alpha < cfg.agreement_threshold:
+    if alpha != alpha:  # NaN
+        return Finding(
+            check="agreement",
+            severity="warning",
+            title="Rater agreement is undefined on this data",
+            detail=_detail(
+                f"The report holds the grades to "
+                f"{cfg.agreement_threshold:.3f}, and this data gives no alpha "
+                f"to hold against it.",
+                result,
+                "Until there is an alpha, the eval has not shown that its "
+                "grades reproduce. Grade a larger sample twice and run this "
+                "again. If every compared rating came out the same, check "
+                "that the rubric leaves graders room to differ.",
+            ),
+            result=result,
+        )
+
+    # The interval decides, the way it does for the margin. Wholly below the
+    # line is the warning, wholly above is the pass, and an interval running
+    # both sides, or none at all, has not shown which.
+    threshold = cfg.agreement_threshold
+    if result.has_interval and result.ci_high < threshold:
         return Finding(
             check="agreement",
             severity="warning",
@@ -595,6 +769,31 @@ def _agreement_finding(ratings, cfg: AuditConfig):
                 "Read the item table for the cases the graders split on, "
                 "since ambiguous wording is the usual cause and it is "
                 "cheaper to fix than more grading.",
+            ),
+            result=result,
+        )
+
+    if not (result.has_interval and result.ci_low > threshold):
+        return Finding(
+            check="agreement",
+            severity="warning",
+            title=(
+                "The data cannot show that rater agreement clears the "
+                "working threshold"
+            ),
+            detail=_detail(
+                f"The report holds the grades to {threshold:.3f}, and "
+                + (
+                    "the interval on alpha runs both sides of it."
+                    if result.has_interval
+                    else "without an interval on alpha nothing places the "
+                    "estimate against it."
+                ),
+                result,
+                "The eval has not shown that its grades reproduce at the "
+                "level this report holds them to. That does not mean they "
+                "fall short of it. Grading more items twice narrows the "
+                "interval.",
             ),
             result=result,
         )
@@ -655,7 +854,27 @@ def _judge_finding(judge_data: dict, cfg: AuditConfig):
         )
 
     agreement = result.agreement
-    if agreement != agreement or agreement < cfg.judge_threshold:
+    if agreement != agreement:  # NaN
+        return Finding(
+            check="judge",
+            severity="warning",
+            title="Judge-human agreement is undefined on this data",
+            detail=_detail(
+                f"The report holds the judge to {cfg.judge_threshold:.3f}, "
+                f"and this data gives no alpha to hold against it.",
+                result,
+                "Until there is an alpha, the eval has not shown that the "
+                "judge tracks the humans. Label more items by hand and run "
+                "this again. If every compared label came out the same, "
+                "check that the rubric leaves the judge and the humans room "
+                "to differ.",
+            ),
+            result=result,
+        )
+
+    # The same rule as agreement. The interval decides.
+    threshold = cfg.judge_threshold
+    if result.has_interval and result.ci_high < threshold:
         return Finding(
             check="judge",
             severity="warning",
@@ -669,6 +888,33 @@ def _judge_finding(judge_data: dict, cfg: AuditConfig):
                 "line, so the question is whether this level of agreement "
                 "is good enough for the decision being made. Say which "
                 "decision, and set judge_threshold from it.",
+            ),
+            result=result,
+        )
+
+    if not (result.has_interval and result.ci_low > threshold):
+        return Finding(
+            check="judge",
+            severity="warning",
+            title=(
+                "The data cannot show that the judge clears the working "
+                "threshold"
+            ),
+            detail=_detail(
+                f"The report holds the judge to {threshold:.3f}, and "
+                + (
+                    "the interval on its agreement with the humans runs both "
+                    "sides of it."
+                    if result.has_interval
+                    else "without an interval on its agreement with the "
+                    "humans nothing places the estimate against it."
+                ),
+                result,
+                "The eval has not shown that the judge tracks the humans at "
+                "the level this report holds it to. That does not mean it "
+                "falls short of it. Labelling more items by hand narrows the "
+                "interval, and the threshold is a convention, so set "
+                "judge_threshold from the decision being made.",
             ),
             result=result,
         )
@@ -723,14 +969,15 @@ def _position_finding(comparisons, cfg: AuditConfig):
     return Finding(
         check="position",
         severity="info",
-        title="No position effect in the pairwise judgements",
+        title="The data cannot show a position effect in the pairwise "
+        "judgements",
         detail=_detail(
             "This asks whether the judge is reading position rather than "
             "quality.",
             result,
-            "Nothing to do here. Keep the order shuffled in the next round, "
-            "since this is a property of the setup rather than of the "
-            "model.",
+            "The data has not cleared the judge of position bias. Keep the "
+            "order shuffled in the next round, since this is a property of "
+            "the setup rather than of the model.",
         ),
         result=result,
     )
@@ -781,12 +1028,12 @@ def _length_finding(judge_data: dict, cfg: AuditConfig):
     return Finding(
         check="length",
         severity="info",
-        title="No length effect in the judge's choices",
+        title="The data cannot show a length effect in the judge's choices",
         detail=_detail(
             "This asks whether the judge is rewarding length rather than "
             "quality.",
             result,
-            "Nothing to do here.",
+            "The data has not cleared the judge of rewarding length.",
         ),
         result=result,
     )
@@ -834,9 +1081,10 @@ def _length_lead(result, toward_long: bool) -> str:
 def _fits_disagree(result) -> bool:
     """True when the verdict runs on the disagreement fit and they differ.
 
-    Both conditions matter. Two fits that sign differently are only worth
-    warning about when the one the reader is being handed is not the one
-    the raw preference number will suggest.
+    Two fits that sign differently are only worth warning about when the
+    one the reader is being handed is not the one the raw preference number
+    will suggest, and when the preference fit's own interval clears zero.
+    Otherwise the lead would state a preference the data has not shown.
     """
     if not _uses_disagreement_fit(result):
         return False
@@ -844,6 +1092,11 @@ def _fits_disagree(result) -> bool:
         np.isfinite(result.coefficient)
         and np.isfinite(result.disagreement_coefficient)
     ):
+        return False
+    if result.ci_low <= 0.0 <= result.ci_high:
+        # The lead says which answer the judge picks more often, a claim
+        # about the preference fit. With that fit's interval running over
+        # zero the claim has not been shown, so the plain lead runs.
         return False
     return (result.coefficient > 0) != (result.disagreement_coefficient > 0)
 

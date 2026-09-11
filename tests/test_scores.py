@@ -374,7 +374,9 @@ def test_continuous_summary_is_the_whole_sentence():
     r = score_ci(continuous_scores(30), method="t")
     assert r.summary() == (
         "Mean score 0.466 (95% CI: 0.438-0.494, n=30). The interval spans "
-        "0.057; treat differences smaller than that as unresolved."
+        "0.057. To compare this score with another, read the interval on the "
+        "difference, which compare_paired and compare_independent report. Two "
+        "score intervals that overlap do not show the systems are level."
     )
 
 
@@ -382,9 +384,24 @@ def test_continuous_summary_below_thirty_items_carries_the_warning():
     r = score_ci(continuous_scores(29), method="t")
     assert r.summary() == (
         "Mean score 0.464 (95% CI: 0.435-0.493, n=29). The interval spans "
-        "0.058; treat differences smaller than that as unresolved. With only "
-        "29 observations this estimate is weak regardless of the point value."
+        "0.058. To compare this score with another, read the interval on the "
+        "difference, which compare_paired and compare_independent report. Two "
+        "score intervals that overlap do not show the systems are level. With "
+        "only 29 observations this estimate is weak regardless of the point "
+        "value."
     )
+
+
+def test_the_summary_does_not_read_a_difference_off_one_interval():
+    """A paired comparison resolves differences far smaller than either
+    score's own interval, so the width of one interval says nothing about
+    which differences are resolved. The old sentence told the reader to
+    treat every difference under the width as unresolved."""
+    for r in (score_ci([1] * 58 + [0] * 42), score_ci(continuous_scores(30))):
+        text = r.summary()
+        assert "treat differences smaller" not in text
+        assert "unresolved" not in text
+        assert "read the interval on the difference" in text
 
 
 # --------------------------------------------------------------------------

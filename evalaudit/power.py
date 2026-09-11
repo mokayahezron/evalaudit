@@ -120,9 +120,9 @@ def detectable_effect(
     corrected chi-square above 25 discordant pairs and the exact binomial
     below it, and both are a little conservative. Measured over 200,000
     simulated evals the shipped test delivers about 0.784 where this
-    formula promises 0.800. So the difference reported here is a floor. An
-    eval could not have found anything smaller, and in practice it needs a
-    little more.
+    formula promises 0.800. So the difference reported here is a floor. No
+    smaller difference reaches the requested power, and in practice the
+    shipped test needs a little more than this one to reach it.
 
     Examples
     --------

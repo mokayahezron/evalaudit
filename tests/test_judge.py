@@ -42,7 +42,7 @@ NAMES_A_SLICE = "Worst slice "
 # What the summary says instead when the worst slice sits inside the overall
 # interval. Spelled out here rather than imported, so a test cannot pass by
 # agreeing with whatever the implementation happens to say.
-REFUSES_A_SLICE = "cannot single out a slice"
+REFUSES_A_SLICE = "cannot show that the judge does worse on any one slice"
 
 # The three sentences that carry REFUSES_A_SLICE, told apart. The phrase above
 # is in all of them, so on its own it says a slice was refused and not why.
@@ -53,15 +53,17 @@ REFUSES_A_SLICE = "cannot single out a slice"
 # at one keeps the old check and adds the branch.
 REFUSES_FOR_NO_INTERVAL = (
     "Without an interval on the overall figure there is nothing to place the "
-    "slices against, so the data cannot single out a slice."
+    "slices against, so the data cannot show that the judge does worse on "
+    "any one slice."
 )
 REFUSES_FOR_NO_FIGURE = (
     "No slice carries both an agreement figure and an interval, so the data "
-    "cannot single out a slice."
+    "cannot show that the judge does worse on any one slice."
 )
 REFUSES_FOR_OVERLAP = (
-    "on the overall figure, so the two overlap and the data cannot single "
-    "out a slice."
+    "on the overall figure. The two overlap, so the data cannot show that the "
+    "judge does worse on any one slice. That does not mean it does equally "
+    "well on all of them."
 )
 
 # The clauses that tell the two position_bias verdicts apart, copied out by
@@ -77,18 +79,22 @@ CALLS_IT_POSITION_BIAS = (
     "The flips have a direction, so this is position bias rather than an "
     "unsteady judge. It reaches for whatever it sees first."
 )
-CALLS_IT_AN_UNSTEADY_JUDGE = (
-    "The flips split evenly across the two positions, so this is an unsteady "
-    "judge rather than a position-biased one."
+# The flips lean no clearer than chance. This used to say the flips "split
+# evenly" and called the judge unsteady rather than position-biased, and it
+# said so at 7 flips of 9. Nine flips cannot rule a lean out.
+CANNOT_SHOW_A_DIRECTION = (
+    "That share is not clear of 50% at this many flips, so the data cannot "
+    "show that the flips have a direction. That does not mean the judge is "
+    "free of position bias."
 )
 # The randomised branch's own pair. Same reasoning.
 RANDOMISED_CLEARS_A_HALF = (
     "The interval clears 50%, so the judge favours whichever output it sees "
     "first."
 )
-RANDOMISED_COVERS_A_HALF = (
-    "The interval covers 50%, so the data cannot show that position moved "
-    "the judge."
+RANDOMISED_INCLUDES_A_HALF = (
+    "The interval includes 50%, so the data cannot show that position moved "
+    "the judge. That does not mean the judge ignores position."
 )
 
 # The per-slice notes, same reasoning as the dropout notes in
@@ -1090,6 +1096,40 @@ def test_the_nobody_varied_summary_is_in_plain_sentences():
     assert "not perfect agreement, it is" not in text
 
 
+def test_one_item_is_not_called_a_rubric_nobody_varied():
+    """One item, the labels differ, accuracy 0.0%.
+
+    The summary said every label that could be compared was identical, which
+    the accuracy printed after it contradicts, and it said "1 items". Alpha
+    is undefined here because one item cannot carry an estimate.
+    """
+    r = judge_validation(["a"], ["b"], n_boot=0)
+    assert np.isnan(r.agreement)
+    assert r.accuracy == 0.0
+    assert r.summary() == (
+        "Judge and human agreement is undefined (nominal, 1 item). One item "
+        "cannot carry a reliability estimate, so there is no number to report "
+        "and no interval around it. Label more items and run this again. "
+        "Plain accuracy is 0.0%."
+    )
+
+
+def test_one_item_is_too_few_whatever_its_labels():
+    """The item count is checked before the variance, the order the slice
+    notes use. One item is too small to measure whatever else is true."""
+    text = judge_validation(["a"], ["a"], n_boot=0).summary()
+    assert "One item cannot carry a reliability estimate" in text
+    assert "identical" not in text
+    assert "1 items" not in text
+
+
+def test_one_set_aside_item_is_singular():
+    r = judge_validation(["a", "b", None], ["a", "a", "b"], n_boot=0)
+    assert r.n_dropped == 1
+    assert " 1 item was set aside because one side had no label." in r.summary()
+    assert "1 items" not in r.summary()
+
+
 # --------------------------------------------------------------------------
 # judge_validation input handling
 # --------------------------------------------------------------------------
@@ -1273,11 +1313,14 @@ def test_binomial_p_value_matches_a_hand_written_exact_test():
         assert r.p_value == pytest.approx(exact_two_sided_p(wins, n), abs=1e-12)
 
 
-def test_interval_matches_statsmodels_wilson():
+def test_interval_matches_statsmodels_clopper_pearson():
+    """The randomised interval is Clopper-Pearson, the exact binomial
+    interval, since the exact binomial p-value is printed beside it. It was
+    Wilson, matched against statsmodels' Wilson at the same tolerance."""
     rng = np.random.default_rng(50)
     frame = randomised_frame(180, 0.6, rng)
     wins = int((frame["winner"] == frame["option_a"]).sum())
-    lo, hi = proportion_confint(wins, 180, alpha=0.05, method="wilson")
+    lo, hi = proportion_confint(wins, 180, alpha=0.05, method="beta")
 
     r = position_bias(frame)
 
@@ -1316,7 +1359,7 @@ def test_a_first_position_judge_is_caught():
     assert r.ci_low > 0.5
     assert r.has_position_effect
     assert RANDOMISED_CLEARS_A_HALF in r.summary()
-    assert RANDOMISED_COVERS_A_HALF not in r.summary()
+    assert RANDOMISED_INCLUDES_A_HALF not in r.summary()
 
 
 def test_the_randomised_branch_states_what_it_assumes():
@@ -1395,7 +1438,7 @@ def test_a_judge_that_always_picks_the_first_output_scores_zero():
     # design can produce and the report has to name it as one.
     assert r.has_position_effect
     assert CALLS_IT_POSITION_BIAS in r.summary()
-    assert CALLS_IT_AN_UNSTEADY_JUDGE not in r.summary()
+    assert CANNOT_SHOW_A_DIRECTION not in r.summary()
 
 
 def test_flips_that_are_noise_split_evenly_across_positions():
@@ -1427,7 +1470,7 @@ def test_flips_that_are_noise_split_evenly_across_positions():
     # the two branches collapsing into whichever one the fixture happens to
     # reach.
     assert not r.has_position_effect
-    assert CALLS_IT_AN_UNSTEADY_JUDGE in r.summary()
+    assert CANNOT_SHOW_A_DIRECTION in r.summary()
     assert CALLS_IT_POSITION_BIAS not in r.summary()
 
 
@@ -1503,8 +1546,9 @@ def test_position_bias_rejects_an_empty_frame():
 
 
 def test_position_bias_ignores_the_seed():
-    """Both intervals here are Wilson, so nothing is drawn. The argument
-    exists to match the rest of the package and must not change an answer.
+    """Neither interval here is drawn by resampling, so nothing is random.
+    The argument exists to match the rest of the package and must not change
+    an answer.
     """
     rng = np.random.default_rng(64)
     frame = randomised_frame(120, 0.6, rng)
@@ -2393,3 +2437,152 @@ def test_every_result_has_a_summary():
         assert isinstance(r.summary(), str)
         assert len(r.summary()) > 40
         assert str(r) == r.summary()
+
+
+# --------------------------------------------------------------------------
+# The both-orders design prints the interval on the flip share, and decides
+# on it
+#
+# The interval on the flip share was computed and thrown away, and the
+# summary printed the share with a bare p-value. It is printed now in the
+# form the randomised design uses, and the verdict reads it. It is
+# Clopper-Pearson, which inverts the exact test, so the verdict and the
+# p-value cannot disagree about 50%.
+# --------------------------------------------------------------------------
+
+def flips_frame(first, flipped, consistent):
+    """Pairs run both ways. ``first`` of the ``flipped`` pairs went to the
+    output shown first, and ``consistent`` more pairs never flipped."""
+    rows = []
+    for p in range(flipped):
+        toward_first = p < first
+        rows += [
+            (p, "x", "y", "x" if toward_first else "y"),
+            (p, "y", "x", "y" if toward_first else "x"),
+        ]
+    for p in range(flipped, flipped + consistent):
+        rows += [(p, "x", "y", "x"), (p, "y", "x", "x")]
+    return pd.DataFrame(rows, columns=COMPARISON_COLUMNS)
+
+
+def test_both_orders_prints_the_interval_on_the_flip_share():
+    r = position_bias(flips_frame(7, 9, 21))
+    lo, hi = proportion_confint(7, 9, method="beta")
+    assert r.position_a_ci_low == pytest.approx(lo, abs=1e-12)
+    assert r.position_a_ci_high == pytest.approx(hi, abs=1e-12)
+    assert (
+        " Of the 9 pairs it flipped on, 7 went to whichever output was shown "
+        "first (77.8%, 95% CI: 40.0% to 97.2%, exact binomial p=0.1797)."
+    ) in r.summary()
+    assert "(77.8%, exact binomial" not in r.summary()
+
+
+def test_both_orders_decides_on_the_interval_it_prints():
+    """11 of 14 flips toward the first answer, exact binomial p=0.0574.
+
+    Written for the Wilson interval, 52.4% to 92.4%, which cleared 50% and
+    called position bias beside that p-value. The interval is
+    Clopper-Pearson now, 49.2% to 95.3%, which inverts the exact test and so
+    includes 50% whenever p is above 0.05. The verdict flips back to what
+    0.3.0 said, and now the interval printed beside it agrees.
+    """
+    r = position_bias(flips_frame(11, 14, 16))
+    assert r.p_value > 0.05
+    assert r.position_a_ci_low < 0.5 < r.position_a_ci_high
+    assert not r.has_position_effect
+    assert CANNOT_SHOW_A_DIRECTION in r.summary()
+    assert CALLS_IT_POSITION_BIAS not in r.summary()
+    assert (
+        "(78.6%, 95% CI: 49.2% to 95.3%, exact binomial p=0.0574)."
+    ) in r.summary()
+
+
+def test_the_both_orders_verdict_always_agrees_with_its_interval():
+    for flipped in range(1, 17):
+        for first in range(flipped + 1):
+            r = position_bias(flips_frame(first, flipped, 4))
+            clears = not (r.position_a_ci_low <= 0.5 <= r.position_a_ci_high)
+            assert r.has_position_effect == clears, (first, flipped)
+            assert (CANNOT_SHOW_A_DIRECTION in r.summary()) is (not clears), (
+                first, flipped
+            )
+
+
+def test_the_randomised_design_carries_the_same_interval_fields():
+    r = position_bias(randomised_frame(200, 0.5, np.random.default_rng(3)))
+    assert r.design == "randomised"
+    assert (r.position_a_ci_low, r.position_a_ci_high) == (r.ci_low, r.ci_high)
+
+
+def test_no_flips_leaves_no_interval_on_the_share():
+    r = position_bias(flips_frame(0, 0, 10))
+    assert r.design == "both_orders"
+    assert np.isnan(r.position_a_ci_low)
+    assert np.isnan(r.position_a_ci_high)
+    assert not r.has_position_effect
+
+
+
+# --------------------------------------------------------------------------
+# Clopper-Pearson where an exact p is printed
+#
+# The rate tested against a half now gets the Clopper-Pearson interval,
+# which inverts the exact binomial test whose p-value is printed beside it.
+# Wilson and that test disagree at a half in 188 of the 20,300 (n, k) cells
+# up to n=200, with Wilson on the permissive side every time.
+# --------------------------------------------------------------------------
+
+def exact_randomised_frame(k, n):
+    """n singly judged pairs, k of them won by the output shown first."""
+    return pd.DataFrame(
+        [(f"p{i}", "x", "y", "x" if i < k else "y") for i in range(n)],
+        columns=COMPARISON_COLUMNS,
+    )
+
+
+def test_the_verdict_and_the_p_value_never_disagree_about_a_half():
+    """Every k <= n <= 30, in both designs. The interval matches scipy's
+    exact interval, and the verdict read off it matches the p-value printed
+    beside it. That holds by construction, since the interval inverts the
+    test, so this pins the construction."""
+    from scipy import stats as sp_stats
+
+    for n in range(1, 31):
+        for k in range(n + 1):
+            exact = sp_stats.binomtest(k, n, 0.5)
+            ci = exact.proportion_ci(confidence_level=0.95, method="exact")
+            for r in (
+                position_bias(exact_randomised_frame(k, n)),
+                position_bias(flips_frame(k, n, 2)),
+            ):
+                where = (r.design, k, n)
+                assert r.position_a_ci_low == pytest.approx(ci.low, abs=1e-12), where
+                assert r.position_a_ci_high == pytest.approx(ci.high, abs=1e-12), where
+                assert r.p_value == pytest.approx(exact.pvalue, abs=1e-12), where
+                assert r.has_position_effect is (r.p_value < 0.05), where
+
+
+def test_the_randomised_eleven_of_fourteen_flips_to_no_direction():
+    """11 of 14 position-A wins, exact binomial p=0.0574. The Wilson
+    interval, 52.4% to 92.4%, cleared 50%, so 0.3.0 said the judge favours
+    the first output beside that p-value. Clopper-Pearson runs from 49.2% to
+    95.3% and includes 50%."""
+    r = position_bias(exact_randomised_frame(11, 14))
+    assert r.design == "randomised"
+    assert r.p_value > 0.05
+    assert r.ci_low < 0.5 < r.ci_high
+    assert not r.has_position_effect
+    assert (
+        "Position A won 78.6% of 14 judgements (95% CI: 49.2% to 95.3%, "
+        "exact binomial p=0.0574)."
+    ) in r.summary()
+    assert RANDOMISED_INCLUDES_A_HALF in r.summary()
+    assert RANDOMISED_CLEARS_A_HALF not in r.summary()
+
+
+def test_the_consistency_interval_stays_wilson():
+    """No test sits beside the consistency rate, so it keeps Wilson."""
+    r = position_bias(flips_frame(7, 9, 21))
+    lo, hi = proportion_confint(21, 30, method="wilson")
+    assert r.ci_low == pytest.approx(lo, abs=1e-12)
+    assert r.ci_high == pytest.approx(hi, abs=1e-12)

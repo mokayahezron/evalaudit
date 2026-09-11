@@ -43,10 +43,10 @@ print(report.to_markdown())
 ```
 # Eval audit
 
-Claim under audit: the new model is better. 2 critical findings, 1 warning
-and 2 for context. On the critical findings the conclusion this data is
-being asked to support does not hold as stated. 3 checks could not run for
-lack of data. They are listed at the end.
+Claim under audit: the new model is better. 1 critical finding, 2 warnings
+and 2 for context. On the critical finding this data cannot support the
+conclusion as stated. That does not mean the conclusion is wrong. 3 checks
+could not run for lack of data. They are listed at the end.
 
 ## Findings
 
@@ -54,25 +54,26 @@ lack of data. They are listed at the end.
 
 This is the margin between new and old, which is the number the claim rests
 on. Difference 2.5% (95% CI: -11.6% to 16.5%, paired, n=120). The interval
-crosses zero, so the data cannot confirm that either system is better. 75 of
-120 items changed between systems. Do not report a direction from this data.
-[...]
+includes zero, so the data cannot show that either system is better. That
+does not mean the two are level. 75 of 120 items changed between systems. Do
+not report a direction from this data. [...]
 
-### 2. [critical] This eval could not have detected the effect at issue
+### 2. [warning] No effect of interest was stated, so this reports the eval's reach
 
-The effect at issue is 2.5 points, the margin this eval reports. This eval
-ran 120 paired comparisons. At 80% power and a 5% significance level the
-smallest difference it could have found is 20 points [...] No conclusion
-about an effect this size can be drawn from this data, in either direction.
-A null result here says the eval was too small and says nothing about the
-systems. [...]
+Without a stated effect the audit does not know what size of difference
+matters. This reports what the design could find and makes no claim about
+the margin it measured. This eval ran 120 paired comparisons. At 80% power
+and a 5% significance level the smallest difference it could have found is
+20 points [...] Set effect_of_interest in the config to the difference the
+decision turns on, and this check will say whether the eval could find it.
 
 ### 3. [warning] Rater agreement is below the working threshold
 
 The grades under this eval reproduce less well than the 0.667 the report is
 holding them to. Krippendorff's alpha -0.235 (95% CI: -0.539 to 0.057,
-nominal, 40 of 40 items graded more than once). That is below 0.667, the
-conventional floor for drawing any conclusion from coded data. [...]
+nominal, 40 of 40 items graded more than once). The whole interval sits
+below 0.667, the conventional floor for drawing any conclusion from coded
+data. [...]
 
 ### 4. [info] Score interval for new
 
@@ -95,8 +96,10 @@ The headline number for old, with the interval around it. 47.5% pass rate
 ```
 
 Two systems, a 2.5 point margin, and forty items graded twice. The margin
-does not survive the fit, the eval was never large enough to find a margin
-that size, and the graders underneath it did not agree with each other. The
+does not survive the fit, the eval could find differences of about 20 points
+at 80% power and not reliably less, and the graders underneath it did not
+agree with each other. No `effect_of_interest` was set, so the power check
+reports what the design could find and says nothing about the margin. The
 report opens with whichever of those changes the decision, and it says out
 loud which checks it could not run.
 
@@ -169,7 +172,9 @@ print(score_ci(wins).summary())
 
 ```
 58.0% pass rate (95% CI: 48.2%-67.2%, n=100). The interval spans
-19 points; treat differences smaller than that as unresolved.
+19 points. To compare this score with another, read the interval on the
+difference, which compare_paired and compare_independent report. Two score
+intervals that overlap do not show the systems are level.
 ```
 
 The interval crosses 50%. On this data the new model might be worse than the
@@ -281,8 +286,11 @@ Five more are pinned against a reference instead, which is the sharper test
 where one exists. The score interval for two independent proportions is swept
 against its own p-value over every table at two group sizes, since that
 interval is the test inverted and the two must never disagree about zero. The
-Wilson intervals in `position_bias` and both logistic intervals in
-`length_bias` are matched against `statsmodels`. The Student-t interval in
+Clopper-Pearson and Wilson intervals in `position_bias` and both logistic
+intervals in `length_bias` are matched against `statsmodels`. The
+Clopper-Pearson interval is also swept against its exact binomial p-value
+over every count up to 30, since it is that test inverted and the two must
+never disagree about a half. The Student-t interval in
 `score_ci` is matched against `scipy`, and Welch's interval in
 `compare_independent` against `statsmodels`.
 

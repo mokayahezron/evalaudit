@@ -278,9 +278,12 @@ def position_bias(
         Leave it missing to record a tie.
     seed
         Accepted so the signature matches the rest of the package. Nothing
-        here is resampled. Both intervals are Wilson score intervals, which
-        beat the bootstrap near the boundaries, and consistency rates live
-        near one.
+        here is resampled. The rate tested against a half gets the
+        Clopper-Pearson interval, which inverts the exact binomial test whose
+        p-value is printed beside it, so the two cannot disagree about a
+        half. The consistency rate has no test beside it and gets a Wilson
+        interval, which beats the bootstrap near the boundaries, where
+        consistency rates live.
 
     Returns
     -------
@@ -430,6 +433,8 @@ def _randomised_result(data: pd.DataFrame, n_both_orders: int) -> PositionBias:
         n_judgements=int(len(data)),
         n_both_orders=n_both_orders,
         n_ties=int(len(data) - n_decisive),
+        position_a_ci_low=lo,
+        position_a_ci_high=hi,
     )
 
 
@@ -469,8 +474,8 @@ def _both_orders_result(data: pd.DataFrame, n_both_orders: int) -> PositionBias:
         if bool((couple["winner"] == couple["option_a"]).all()):
             n_first += 1
 
-    consistency, c_lo, c_hi, _ = _proportion(n_consistent, n_scored)
-    rate, _, _, p = _proportion(n_first, n_flipped)
+    consistency, c_lo, c_hi = _consistency(n_consistent, n_scored)
+    rate, rate_lo, rate_hi, p = _proportion(n_first, n_flipped)
 
     return PositionBias(
         design="both_orders",
@@ -487,17 +492,51 @@ def _both_orders_result(data: pd.DataFrame, n_both_orders: int) -> PositionBias:
         n_judgements=int(len(data)),
         n_both_orders=n_both_orders,
         n_ties=int(data["winner"].isna().sum()),
+        position_a_ci_low=rate_lo,
+        position_a_ci_high=rate_hi,
     )
 
 
 def _proportion(k: int, n: int):
-    """Rate, Wilson interval, and the exact binomial p-value against a half."""
+    """Rate, Clopper-Pearson interval, and the exact binomial p-value
+    against a half.
+
+    The interval inverts that test, so it excludes a half exactly when the
+    p-value is below 0.05. Wilson is shorter and sits on the permissive side
+    of the test near the line, so a Wilson verdict could contradict the
+    p-value printed beside it.
+    """
     if n == 0:
         nan = float("nan")
         return nan, nan, nan, nan
-    lo, hi = _wilson(k, n, 0.95)
+    lo, hi = _exact_interval(k, n, 0.95)
     p = float(_stats.binomtest(k, n, 0.5).pvalue)
     return k / n, lo, hi, p
+
+
+def _exact_interval(k: int, n: int, confidence: float):
+    """Clopper-Pearson interval on k of n, from beta quantiles.
+
+    Each bound is the rate at which the exact binomial test would just
+    reject on its own side, so each side gets half the leftover probability.
+    """
+    tail = (1 - confidence) / 2
+    lo = 0.0 if k == 0 else float(_stats.beta.ppf(tail, k, n - k + 1))
+    hi = 1.0 if k == n else float(_stats.beta.isf(tail, k + 1, n - k))
+    return lo, hi
+
+
+def _consistency(k: int, n: int):
+    """Rate and Wilson interval for the consistency rate.
+
+    Nothing is tested against the consistency rate, so no p-value sits
+    beside it, and Wilson, which beats the bootstrap near one, stays.
+    """
+    if n == 0:
+        nan = float("nan")
+        return nan, nan, nan
+    lo, hi = _wilson(k, n, 0.95)
+    return k / n, lo, hi
 
 
 # --------------------------------------------------------------------------

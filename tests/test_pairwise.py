@@ -2008,6 +2008,42 @@ def test_summary_says_nothing_about_shared_items_when_there_are_no_item_ids():
     assert "share 0 items" not in r.summary()
 
 
+def test_summary_claims_no_shared_items_when_one_item_id_is_missing():
+    """Every labelled comparison has an item of its own, and one has no id.
+
+    No two comparisons share anything here. Counting ids against rows gave
+    272 items for 273 comparisons, and the summary said "these 273
+    comparisons share 272 items".
+    """
+    data = baseball()
+    data.loc[3, "item_id"] = None
+    r = bradley_terry(data, n_boot=300, seed=0, resample="comparisons")
+    assert r.has_interval
+    assert r.n_missing_item_ids == 1
+    assert r.n_items == r.n_comparisons - 1
+    assert "resample single comparisons" not in r.summary()
+    assert "comparisons share" not in r.summary()
+
+
+def test_summary_counts_only_labelled_comparisons_as_sharing_items():
+    grouped = spread_over_items(baseball(), 26)
+    grouped.loc[3, "item_id"] = None
+    r = bradley_terry(grouped, n_boot=300, seed=0, resample="comparisons")
+    assert r.n_missing_item_ids == 1
+    assert (
+        "The intervals resample single comparisons, and the 272 comparisons "
+        "that carry an item id share 26 items."
+    ) in r.summary()
+
+
+def test_to_elo_carries_the_missing_item_id_count():
+    data = baseball()
+    data.loc[3, "item_id"] = None
+    r = bradley_terry(data, n_boot=0, resample="comparisons")
+    assert r.n_missing_item_ids == 1
+    assert to_elo(r).n_missing_item_ids == 1
+
+
 def test_to_elo_carries_the_resampling_unit():
     r = bradley_terry(baseball(), n_boot=0, resample="comparisons")
     assert to_elo(r).resample == "comparisons"

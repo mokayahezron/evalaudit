@@ -713,7 +713,7 @@ def test_paired_difference_above_the_discordance_rate_is_unattainable():
 
     220 pairs at a 2.4% discordance rate would need a difference of about
     2.9 points to reach 80% power, and 2.4 points is the arithmetic ceiling.
-    So the eval could not have found any difference at all.
+    So no difference of any size reaches 80% power at this size.
     """
     r = detectable_effect(220, discordance_rate=0.024)
     assert r.difference > 0.024
@@ -743,6 +743,44 @@ def test_unattainable_results_still_summarise():
     ):
         assert isinstance(r.summary(), str)
         assert len(r.summary()) > 40
+
+
+# The two sentences the audit prints beside a margin the eval did find. The
+# old ones said a smaller difference "was out of reach before the first item
+# was graded", and that an eval short of the requested power "could not have
+# found anything". Both turn "below the requested power" into "impossible".
+# A difference below the reach can still reach significance, less often.
+STILL_REACHABLE = (
+    "A smaller difference could still reach significance here, with a chance "
+    "below 80%."
+)
+NULL_SAYS_LITTLE = "A null result from this eval says little about the systems."
+
+
+def test_a_difference_below_the_reach_is_not_called_unreachable():
+    r = detectable_effect(400, discordance_rate=0.16)
+    assert r.attainable
+    text = r.summary()
+    assert "out of reach" not in text
+    assert STILL_REACHABLE in text
+
+
+def test_an_eval_short_of_the_power_is_not_said_to_find_nothing():
+    for r in (
+        detectable_effect(220, discordance_rate=0.024),
+        detectable_effect(40, baseline=0.95, paired=False),
+    ):
+        assert r.attainable is False
+        text = r.summary()
+        assert "could not have found anything" not in text
+        assert "no difference at all was detectable" not in text
+        assert NULL_SAYS_LITTLE in text
+
+
+def test_the_docstring_does_not_call_a_smaller_difference_unfindable():
+    doc = " ".join(detectable_effect.__doc__.split())
+    assert "could not have found anything smaller" not in doc
+    assert "No smaller difference reaches the requested power" in doc
 
 
 def test_min_sample_size_refuses_a_difference_above_the_discordance_rate():

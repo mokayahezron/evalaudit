@@ -198,7 +198,7 @@ def test_summary_states_crosses_zero():
     a = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
     b = [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]
     r = compare_paired(a, b, method="mcnemar")
-    assert "crosses zero" in r.summary()
+    assert "includes zero" in r.summary()
 
 
 def test_summary_states_direction_when_clear():
@@ -207,7 +207,7 @@ def test_summary_states_direction_when_clear():
     b = rng.normal(3.0, 0.5, 200)
     r = compare_paired(a, b, method="bootstrap", seed=1)
     s = r.summary()
-    assert "crosses zero" not in s
+    assert "includes zero" not in s
     assert "System A" in s
 
 
