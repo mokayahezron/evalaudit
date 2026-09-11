@@ -3,20 +3,22 @@
 Every change to evalaudit that a caller can see is recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version numbers follow [semantic versioning](https://semver.org/). Before 1.0
-a minor version can break things, and 0.3.0 does.
+a minor version can break things, and 0.3.0 and 0.4.0 both do.
 
 An entry marked **Breaking** changes what a call that worked on the previous
 release returns, raises or prints. The mark goes on the entry wherever it
 sits, under Changed, Fixed or Removed.
 
-0.3.0 is the first release with a tag. The entries below it were
-reconstructed after the fact. Their dates are PyPI's upload dates, and their
-contents were checked against the published wheels and the commit each wheel
-matches.
+Every release is dated by the day PyPI received its upload, in UTC. 0.3.0 is
+the first release with a tag, and 0.4.0 has one too. The entries below 0.3.0
+were reconstructed after the fact, and their contents were checked against
+the published wheels and the commit each wheel matches.
 
 ## [Unreleased]
 
-Everything here is headed for 0.4.0, and nearly all of it changes what a
+## [0.4.0] - 2026-09-11
+
+Nearly everything in 0.4.0 changes what a
 summary or a report prints. One rule is behind it. A result that does not
 clear its threshold has failed to show something, and it has not shown the
 opposite. Summaries that described such a result as if the opposite were
@@ -24,7 +26,8 @@ shown, and verdicts decided on a point estimate where an interval existed,
 now say what the data did and did not show. Several `audit` findings change
 severity on data you have already run. Each breaking entry says what it
 was, what it is now and what to do about it. Every entry was checked by
-running the same calls against 0.3.0 from PyPI and against this tree.
+running the same calls against 0.3.0 from PyPI and against the code
+released as 0.4.0.
 
 ### Changed
 
@@ -328,8 +331,8 @@ running the same calls against 0.3.0 from PyPI and against this tree.
 ### Known limitations
 
 This rule is unchanged since 0.3.0 and is not fixed in this release. The
-figures come from simulations run against 0.3.0 and against this tree, which
-give the same results.
+figures come from simulations run against 0.3.0 and against the code released
+as 0.4.0, which give the same results.
 
 - `JudgeValidation` names a slice, and `audit` raises a critical finding on
   it, only when the slice's own interval sits wholly below the interval on
@@ -629,7 +632,8 @@ hour after the upload. It reported `__version__` as 0.1.0.
 
 - Nothing.
 
-[Unreleased]: https://github.com/mokayahezron/evalaudit/compare/v0.3.0...main
+[Unreleased]: https://github.com/mokayahezron/evalaudit/compare/v0.4.0...main
+[0.4.0]: https://github.com/mokayahezron/evalaudit/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mokayahezron/evalaudit/compare/809a650...v0.3.0
 [0.2.1]: https://github.com/mokayahezron/evalaudit/compare/242e354...809a650
 [0.2.0]: https://github.com/mokayahezron/evalaudit/compare/c1230f1...242e354
