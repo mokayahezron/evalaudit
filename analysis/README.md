@@ -1,8 +1,20 @@
 # analysis
 
-Scripts that answer four questions about evalaudit 0.4.0 on the
-lmsys/mt_bench_human_judgments dataset. Each script runs on its own, sets its
-own seed and prints its own numbers.
+Scripts behind the write-up in [mt-bench.md](mt-bench.md). They cover
+evalaudit 0.4.0 on the lmsys/mt_bench_human_judgments dataset: the leaderboard,
+human agreement, alignment between the GPT-4 judge and the humans, and the
+judge measured against the human baseline. Each script runs on its own, prints
+its own numbers, and sets its own seed where one applies.
+
+## Files
+
+- `mt-bench.md`, the write-up.
+- `q1_leaderboard.py` and `q1_check_v021.py`, the leaderboard.
+- `q2_human_agreement.py`, human agreement.
+- `q3_alignment.py`, alignment.
+- `q5_judge_against_human_baseline.py`, the judge baseline.
+- `output/q1_comparisons_ratings.csv`, written by `q1_leaderboard.py` and read
+  by `q1_check_v021.py`.
 
 ## Environment
 
@@ -13,7 +25,7 @@ reports 0.2.1, so it fails that check.
 
 `q1_check_v021.py` needs a second environment with evalaudit 0.2.1 from PyPI.
 
-Reference packages: `krippendorff` for alpha, `choix` for Bradley-Terry,
+Reference packages: `krippendorff` for alpha, `choix` for Bradley-Terry, and
 `scikit-learn` for Cohen's kappa. `pyarrow` reads the parquet files.
 
 ```bash
@@ -48,18 +60,26 @@ revision `f7d2896d2cc5d80f8b55c2bbc722613555233c25`, files
 
 ## Scripts
 
-| Script | Question | What it prints | Time |
+| Script | What it answers | What it prints | Time |
 | --- | --- | --- | --- |
-| `q1_leaderboard.py` | 1 | Bradley-Terry ratings and the full pairs frame for three bootstraps: clustered on `question_id`, clustered on `(question_id, turn)`, and `resample="comparisons"`. Width ratio and design effect. Separable counts under the 0.2.1 and 0.3.0 rules. A choix check, a 20-seed check and a check with ties kept. Writes `output/q1_comparisons_ratings.csv`. | about 30 s |
-| `q1_check_v021.py` | 1 | Fits the same votes with evalaudit 0.2.1 and compares its rating intervals with the 0.4.0 comparison bootstrap. Prints the pairs 0.2.1 separates. | a few s |
-| `q2_human_agreement.py` | 2 | Units with two or more human judges, Krippendorff's alpha from evalaudit and from the krippendorff package with the same bootstrap resamples, raw pairwise human agreement, the judge on the same units, and a check that pools both model orders. | about 20 s |
-| `q3_alignment.py` | 3 | The funnel from 3,355 human rows, and judge-human agreement, Cohen's kappa and alpha for individual and aggregated human labels, each under three label codings. | about 10 s |
+| `q1_leaderboard.py` | Leaderboard | Bradley-Terry ratings and the full pairs frame for three bootstraps: clustered on `question_id`, clustered on `(question_id, turn)`, and `resample="comparisons"`. Width ratio and design effect. Separable counts under the 0.2.1 and 0.3.0 rules. A choix check, a 20-seed check and a check with ties kept. Writes `output/q1_comparisons_ratings.csv`. | about 30 s |
+| `q1_check_v021.py` | Leaderboard | Fits the same votes with evalaudit 0.2.1 and compares its rating intervals with the 0.4.0 comparison bootstrap. Prints the pairs 0.2.1 separates. | a few s |
+| `q2_human_agreement.py` | Human agreement | Units with two or more human judges, Krippendorff's alpha from evalaudit and from the krippendorff package with the same bootstrap resamples, raw pairwise human agreement, the judge on the same units, and a check that pools both model orders. | about 20 s |
+| `q3_alignment.py` | Alignment | The funnel from 3,355 human rows, and judge-human agreement, Cohen's kappa and alpha for individual and aggregated human labels, each under three label codings. | about 10 s |
+| `q5_judge_against_human_baseline.py` | Judge baseline | Human-human alpha beside judge-human alpha on the same units, with a percentile interval on the difference from the same resamples. Ordered units, pooled orders, and ties as a third category. Alpha by unit set, a weighting check and a 10-seed check. | about 10 s |
 
 Settings shared by the scripts: seed 0, 2,000 bootstrap resamples, 95%
-percentile intervals. Ties are set aside as no label in questions 2 and 3.
-Labels in questions 2 and 3 are coded by the winner's alphabetical position
-in the pair, with model-name and gpt4_pair-position codings printed beside
-it.
+percentile intervals. `q5_judge_against_human_baseline.py` uses 5,000 instead,
+because it estimates a difference of two reliability coefficients and that
+difference needs more resamples to settle than either coefficient on its own.
+
+Ties are set aside as no label in human agreement, alignment and the judge
+baseline. The last section of the judge baseline keeps them as a third nominal
+category on both sides.
+
+Labels in human agreement, alignment and the judge baseline are coded by the
+winner's alphabetical position in the pair, with model-name and
+gpt4_pair-position codings printed beside it.
 
 ## Running
 
@@ -79,6 +99,10 @@ venv040/Scripts/python analysis/q2_human_agreement.py
 
 ```bash
 venv040/Scripts/python analysis/q3_alignment.py
+```
+
+```bash
+venv040/Scripts/python analysis/q5_judge_against_human_baseline.py
 ```
 
 `q1_check_v021.py` reads the file `q1_leaderboard.py` writes, so it runs

@@ -324,6 +324,11 @@ Upgrading from an earlier version? The
 lists every change a caller can see, with what to do about each breaking one.
 0.3.0 breaks several, so read it before you upgrade.
 
+[What MT-Bench establishes, and what it does not](analysis/mt-bench.md)
+runs these checks over the public MT-Bench human judgements, on the
+leaderboard and on the GPT-4 judge against the humans it stands in for.
+The scripts behind every number in it are in [`analysis/`](analysis/).
+
 ---
 
 ## Who wrote this
