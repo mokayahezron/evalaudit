@@ -1,0 +1,2401 @@
+question_id,model_a,model_b,winner,judge,turn
+81,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+81,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+81,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+81,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+81,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+81,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+81,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+81,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+81,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+81,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+81,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+81,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+81,gpt-4,claude-v1,model_a,gpt4_pair,1
+81,gpt-4,claude-v1,model_a,gpt4_pair,2
+81,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+81,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+81,llama-13b,claude-v1,model_b,gpt4_pair,1
+81,llama-13b,claude-v1,model_b,gpt4_pair,2
+81,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+81,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+81,llama-13b,gpt-4,model_b,gpt4_pair,1
+81,llama-13b,gpt-4,model_b,gpt4_pair,2
+81,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+81,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+81,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+81,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+81,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+81,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+81,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+81,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+82,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+82,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+82,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+82,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+82,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+82,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+82,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+82,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+82,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+82,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+82,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+82,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+82,gpt-4,claude-v1,model_a,gpt4_pair,1
+82,gpt-4,claude-v1,model_a,gpt4_pair,2
+82,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+82,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+82,llama-13b,claude-v1,model_b,gpt4_pair,1
+82,llama-13b,claude-v1,model_b,gpt4_pair,2
+82,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+82,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+82,llama-13b,gpt-4,model_b,gpt4_pair,1
+82,llama-13b,gpt-4,model_b,gpt4_pair,2
+82,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+82,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+82,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+82,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+82,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+82,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+82,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+82,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+83,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+83,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+83,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+83,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+83,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+83,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+83,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+83,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,2
+83,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+83,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+83,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+83,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+83,gpt-4,claude-v1,model_a,gpt4_pair,1
+83,gpt-4,claude-v1,model_b,gpt4_pair,2
+83,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+83,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+83,llama-13b,claude-v1,model_b,gpt4_pair,1
+83,llama-13b,claude-v1,model_b,gpt4_pair,2
+83,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+83,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+83,llama-13b,gpt-4,model_b,gpt4_pair,1
+83,llama-13b,gpt-4,model_b,gpt4_pair,2
+83,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+83,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+83,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+83,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+83,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+83,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+83,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+83,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+84,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+84,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+84,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+84,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+84,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+84,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+84,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+84,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+84,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+84,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+84,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+84,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+84,gpt-4,claude-v1,model_a,gpt4_pair,1
+84,gpt-4,claude-v1,model_a,gpt4_pair,2
+84,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+84,llama-13b,alpaca-13b,model_a,gpt4_pair,2
+84,llama-13b,claude-v1,model_b,gpt4_pair,1
+84,llama-13b,claude-v1,model_b,gpt4_pair,2
+84,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+84,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+84,llama-13b,gpt-4,model_b,gpt4_pair,1
+84,llama-13b,gpt-4,model_b,gpt4_pair,2
+84,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+84,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+84,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+84,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+84,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+84,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+84,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+84,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+85,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+85,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+85,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+85,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+85,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+85,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+85,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+85,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+85,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+85,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+85,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+85,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,2
+85,gpt-4,claude-v1,model_a,gpt4_pair,1
+85,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+85,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+85,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+85,llama-13b,claude-v1,model_b,gpt4_pair,1
+85,llama-13b,claude-v1,model_b,gpt4_pair,2
+85,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+85,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+85,llama-13b,gpt-4,model_b,gpt4_pair,1
+85,llama-13b,gpt-4,model_b,gpt4_pair,2
+85,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+85,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+85,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+85,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+85,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+85,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+85,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+85,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+86,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+86,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+86,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+86,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+86,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+86,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+86,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+86,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+86,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+86,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+86,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+86,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+86,gpt-4,claude-v1,model_a,gpt4_pair,1
+86,gpt-4,claude-v1,model_b,gpt4_pair,2
+86,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+86,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+86,llama-13b,claude-v1,model_b,gpt4_pair,1
+86,llama-13b,claude-v1,model_b,gpt4_pair,2
+86,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+86,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+86,llama-13b,gpt-4,model_b,gpt4_pair,1
+86,llama-13b,gpt-4,model_b,gpt4_pair,2
+86,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+86,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+86,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+86,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+86,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+86,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+86,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+86,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+87,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+87,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+87,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+87,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+87,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+87,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+87,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+87,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+87,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+87,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+87,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+87,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+87,gpt-4,claude-v1,model_a,gpt4_pair,1
+87,gpt-4,claude-v1,model_a,gpt4_pair,2
+87,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+87,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+87,llama-13b,claude-v1,model_b,gpt4_pair,1
+87,llama-13b,claude-v1,model_b,gpt4_pair,2
+87,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+87,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+87,llama-13b,gpt-4,model_b,gpt4_pair,1
+87,llama-13b,gpt-4,model_b,gpt4_pair,2
+87,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+87,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+87,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+87,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+87,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+87,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+87,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+87,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+88,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+88,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+88,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+88,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+88,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+88,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+88,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,1
+88,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,2
+88,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+88,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+88,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+88,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+88,gpt-4,claude-v1,model_b,gpt4_pair,1
+88,gpt-4,claude-v1,model_a,gpt4_pair,2
+88,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+88,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+88,llama-13b,claude-v1,model_b,gpt4_pair,1
+88,llama-13b,claude-v1,model_b,gpt4_pair,2
+88,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+88,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+88,llama-13b,gpt-4,model_b,gpt4_pair,1
+88,llama-13b,gpt-4,model_b,gpt4_pair,2
+88,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+88,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+88,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+88,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+88,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+88,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+88,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+88,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,2
+89,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+89,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+89,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+89,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+89,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+89,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+89,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+89,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+89,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+89,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+89,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+89,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+89,gpt-4,claude-v1,model_b,gpt4_pair,1
+89,gpt-4,claude-v1,model_b,gpt4_pair,2
+89,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+89,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+89,llama-13b,claude-v1,model_b,gpt4_pair,1
+89,llama-13b,claude-v1,model_b,gpt4_pair,2
+89,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+89,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+89,llama-13b,gpt-4,model_b,gpt4_pair,1
+89,llama-13b,gpt-4,model_b,gpt4_pair,2
+89,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+89,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+89,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+89,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+89,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+89,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+89,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+89,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+90,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+90,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+90,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+90,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+90,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+90,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+90,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+90,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+90,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+90,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+90,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+90,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+90,gpt-4,claude-v1,model_a,gpt4_pair,1
+90,gpt-4,claude-v1,model_a,gpt4_pair,2
+90,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+90,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+90,llama-13b,claude-v1,model_b,gpt4_pair,1
+90,llama-13b,claude-v1,model_b,gpt4_pair,2
+90,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+90,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+90,llama-13b,gpt-4,model_b,gpt4_pair,1
+90,llama-13b,gpt-4,model_b,gpt4_pair,2
+90,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+90,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+90,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+90,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+90,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+90,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+90,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+90,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+91,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+91,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+91,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+91,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+91,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+91,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+91,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+91,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+91,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+91,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+91,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+91,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+91,gpt-4,claude-v1,model_b,gpt4_pair,1
+91,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+91,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+91,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+91,llama-13b,claude-v1,model_b,gpt4_pair,1
+91,llama-13b,claude-v1,model_b,gpt4_pair,2
+91,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+91,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+91,llama-13b,gpt-4,model_b,gpt4_pair,1
+91,llama-13b,gpt-4,model_b,gpt4_pair,2
+91,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+91,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+91,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+91,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+91,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+91,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+91,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,1
+91,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+92,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+92,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+92,alpaca-13b,gpt-3.5-turbo,model_a,gpt4_pair,1
+92,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+92,alpaca-13b,gpt-4,tie (inconsistent),gpt4_pair,1
+92,alpaca-13b,gpt-4,model_a,gpt4_pair,2
+92,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+92,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+92,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+92,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+92,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+92,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+92,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+92,gpt-4,claude-v1,model_b,gpt4_pair,2
+92,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+92,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+92,llama-13b,claude-v1,model_b,gpt4_pair,1
+92,llama-13b,claude-v1,model_b,gpt4_pair,2
+92,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+92,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+92,llama-13b,gpt-4,model_b,gpt4_pair,1
+92,llama-13b,gpt-4,model_b,gpt4_pair,2
+92,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+92,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+92,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+92,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+92,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+92,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,2
+92,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+92,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,2
+93,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+93,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+93,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+93,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+93,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+93,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+93,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+93,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+93,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+93,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+93,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+93,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+93,gpt-4,claude-v1,model_b,gpt4_pair,1
+93,gpt-4,claude-v1,model_b,gpt4_pair,2
+93,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+93,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+93,llama-13b,claude-v1,model_b,gpt4_pair,1
+93,llama-13b,claude-v1,model_b,gpt4_pair,2
+93,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+93,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+93,llama-13b,gpt-4,model_b,gpt4_pair,1
+93,llama-13b,gpt-4,model_b,gpt4_pair,2
+93,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+93,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+93,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+93,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+93,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+93,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+93,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+93,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+94,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+94,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+94,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+94,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+94,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+94,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+94,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,1
+94,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+94,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+94,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+94,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+94,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+94,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+94,gpt-4,claude-v1,model_b,gpt4_pair,2
+94,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+94,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+94,llama-13b,claude-v1,model_b,gpt4_pair,1
+94,llama-13b,claude-v1,model_b,gpt4_pair,2
+94,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+94,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+94,llama-13b,gpt-4,model_b,gpt4_pair,1
+94,llama-13b,gpt-4,model_b,gpt4_pair,2
+94,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+94,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+94,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+94,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+94,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+94,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+94,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+94,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+95,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+95,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+95,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+95,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+95,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+95,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+95,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+95,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+95,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+95,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+95,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,1
+95,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+95,gpt-4,claude-v1,model_b,gpt4_pair,1
+95,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+95,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+95,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+95,llama-13b,claude-v1,model_b,gpt4_pair,1
+95,llama-13b,claude-v1,model_b,gpt4_pair,2
+95,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+95,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+95,llama-13b,gpt-4,model_b,gpt4_pair,1
+95,llama-13b,gpt-4,model_b,gpt4_pair,2
+95,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+95,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+95,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+95,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+95,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+95,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+95,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+95,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+96,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+96,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+96,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+96,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+96,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+96,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+96,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+96,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+96,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+96,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+96,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+96,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+96,gpt-4,claude-v1,model_b,gpt4_pair,1
+96,gpt-4,claude-v1,model_b,gpt4_pair,2
+96,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+96,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+96,llama-13b,claude-v1,model_b,gpt4_pair,1
+96,llama-13b,claude-v1,model_b,gpt4_pair,2
+96,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+96,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+96,llama-13b,gpt-4,model_b,gpt4_pair,1
+96,llama-13b,gpt-4,model_b,gpt4_pair,2
+96,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+96,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+96,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+96,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+96,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+96,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,2
+96,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+96,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,2
+97,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+97,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+97,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+97,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+97,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+97,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+97,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+97,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+97,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+97,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+97,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+97,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+97,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+97,gpt-4,claude-v1,model_a,gpt4_pair,2
+97,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+97,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+97,llama-13b,claude-v1,model_b,gpt4_pair,1
+97,llama-13b,claude-v1,model_b,gpt4_pair,2
+97,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+97,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+97,llama-13b,gpt-4,model_b,gpt4_pair,1
+97,llama-13b,gpt-4,model_b,gpt4_pair,2
+97,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+97,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+97,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+97,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+97,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+97,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+97,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+97,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+98,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+98,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+98,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+98,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+98,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+98,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+98,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+98,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+98,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+98,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+98,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+98,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+98,gpt-4,claude-v1,model_b,gpt4_pair,1
+98,gpt-4,claude-v1,model_a,gpt4_pair,2
+98,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+98,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+98,llama-13b,claude-v1,model_b,gpt4_pair,1
+98,llama-13b,claude-v1,model_b,gpt4_pair,2
+98,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+98,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+98,llama-13b,gpt-4,model_b,gpt4_pair,1
+98,llama-13b,gpt-4,model_b,gpt4_pair,2
+98,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+98,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+98,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+98,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+98,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+98,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,2
+98,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,1
+98,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+99,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+99,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+99,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+99,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+99,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+99,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+99,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+99,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+99,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+99,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+99,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+99,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+99,gpt-4,claude-v1,model_a,gpt4_pair,1
+99,gpt-4,claude-v1,model_a,gpt4_pair,2
+99,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+99,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+99,llama-13b,claude-v1,model_b,gpt4_pair,1
+99,llama-13b,claude-v1,model_b,gpt4_pair,2
+99,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+99,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+99,llama-13b,gpt-4,model_b,gpt4_pair,1
+99,llama-13b,gpt-4,model_b,gpt4_pair,2
+99,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+99,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+99,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+99,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+99,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+99,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+99,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+99,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+100,alpaca-13b,claude-v1,model_a,gpt4_pair,1
+100,alpaca-13b,claude-v1,model_a,gpt4_pair,2
+100,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+100,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+100,alpaca-13b,gpt-4,model_a,gpt4_pair,1
+100,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+100,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,1
+100,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+100,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+100,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+100,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,1
+100,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+100,gpt-4,claude-v1,model_a,gpt4_pair,1
+100,gpt-4,claude-v1,model_a,gpt4_pair,2
+100,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+100,llama-13b,alpaca-13b,model_a,gpt4_pair,2
+100,llama-13b,claude-v1,model_b,gpt4_pair,1
+100,llama-13b,claude-v1,model_a,gpt4_pair,2
+100,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+100,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+100,llama-13b,gpt-4,model_b,gpt4_pair,1
+100,llama-13b,gpt-4,model_b,gpt4_pair,2
+100,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+100,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+100,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+100,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,2
+100,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+100,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+100,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+100,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+101,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+101,alpaca-13b,claude-v1,tie,gpt4_pair,2
+101,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+101,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+101,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+101,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+101,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+101,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+101,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+101,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+101,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+101,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+101,gpt-4,claude-v1,tie,gpt4_pair,1
+101,gpt-4,claude-v1,model_a,gpt4_pair,2
+101,llama-13b,alpaca-13b,tie,gpt4_pair,1
+101,llama-13b,alpaca-13b,tie,gpt4_pair,2
+101,llama-13b,claude-v1,model_b,gpt4_pair,1
+101,llama-13b,claude-v1,tie,gpt4_pair,2
+101,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+101,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+101,llama-13b,gpt-4,model_b,gpt4_pair,1
+101,llama-13b,gpt-4,model_b,gpt4_pair,2
+101,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+101,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+101,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+101,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,2
+101,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+101,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+101,vicuna-13b-v1.2,gpt-4,tie,gpt4_pair,1
+101,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+102,alpaca-13b,claude-v1,tie,gpt4_pair,1
+102,alpaca-13b,claude-v1,tie,gpt4_pair,2
+102,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+102,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+102,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+102,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+102,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+102,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+102,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+102,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+102,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+102,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+102,gpt-4,claude-v1,model_a,gpt4_pair,1
+102,gpt-4,claude-v1,model_a,gpt4_pair,2
+102,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+102,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+102,llama-13b,claude-v1,model_a,gpt4_pair,1
+102,llama-13b,claude-v1,model_b,gpt4_pair,2
+102,llama-13b,gpt-3.5-turbo,model_a,gpt4_pair,1
+102,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+102,llama-13b,gpt-4,tie,gpt4_pair,1
+102,llama-13b,gpt-4,model_b,gpt4_pair,2
+102,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+102,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+102,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+102,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+102,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+102,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+102,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,1
+102,vicuna-13b-v1.2,gpt-4,tie,gpt4_pair,2
+103,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+103,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+103,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+103,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+103,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+103,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+103,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+103,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+103,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+103,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+103,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+103,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+103,gpt-4,claude-v1,model_b,gpt4_pair,1
+103,gpt-4,claude-v1,tie,gpt4_pair,2
+103,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+103,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+103,llama-13b,claude-v1,model_b,gpt4_pair,1
+103,llama-13b,claude-v1,model_b,gpt4_pair,2
+103,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+103,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+103,llama-13b,gpt-4,model_b,gpt4_pair,1
+103,llama-13b,gpt-4,model_b,gpt4_pair,2
+103,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+103,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+103,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+103,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+103,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+103,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+103,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+103,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+104,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+104,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+104,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+104,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+104,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+104,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+104,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+104,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+104,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+104,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+104,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+104,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+104,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+104,gpt-4,claude-v1,model_a,gpt4_pair,2
+104,llama-13b,alpaca-13b,tie,gpt4_pair,1
+104,llama-13b,alpaca-13b,tie,gpt4_pair,2
+104,llama-13b,claude-v1,model_b,gpt4_pair,1
+104,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+104,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+104,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+104,llama-13b,gpt-4,model_b,gpt4_pair,1
+104,llama-13b,gpt-4,model_b,gpt4_pair,2
+104,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+104,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+104,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+104,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+104,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+104,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+104,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+104,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+105,alpaca-13b,claude-v1,model_a,gpt4_pair,1
+105,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+105,alpaca-13b,gpt-3.5-turbo,model_a,gpt4_pair,1
+105,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+105,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+105,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+105,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,1
+105,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+105,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+105,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+105,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+105,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+105,gpt-4,claude-v1,model_a,gpt4_pair,1
+105,gpt-4,claude-v1,model_a,gpt4_pair,2
+105,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+105,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+105,llama-13b,claude-v1,tie,gpt4_pair,1
+105,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+105,llama-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+105,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+105,llama-13b,gpt-4,model_b,gpt4_pair,1
+105,llama-13b,gpt-4,model_b,gpt4_pair,2
+105,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+105,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+105,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+105,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+105,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+105,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+105,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+105,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+106,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+106,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+106,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+106,alpaca-13b,gpt-3.5-turbo,tie,gpt4_pair,2
+106,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+106,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+106,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+106,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,2
+106,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+106,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+106,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+106,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+106,gpt-4,claude-v1,model_b,gpt4_pair,1
+106,gpt-4,claude-v1,tie,gpt4_pair,2
+106,llama-13b,alpaca-13b,tie,gpt4_pair,1
+106,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+106,llama-13b,claude-v1,model_b,gpt4_pair,1
+106,llama-13b,claude-v1,model_b,gpt4_pair,2
+106,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+106,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+106,llama-13b,gpt-4,model_b,gpt4_pair,1
+106,llama-13b,gpt-4,model_b,gpt4_pair,2
+106,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+106,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+106,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+106,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+106,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+106,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+106,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+106,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+107,alpaca-13b,claude-v1,tie,gpt4_pair,1
+107,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+107,alpaca-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+107,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+107,alpaca-13b,gpt-4,tie,gpt4_pair,1
+107,alpaca-13b,gpt-4,tie (inconsistent),gpt4_pair,2
+107,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+107,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+107,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+107,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+107,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+107,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+107,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+107,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+107,llama-13b,alpaca-13b,tie,gpt4_pair,1
+107,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+107,llama-13b,claude-v1,tie,gpt4_pair,1
+107,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+107,llama-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+107,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+107,llama-13b,gpt-4,tie,gpt4_pair,1
+107,llama-13b,gpt-4,model_b,gpt4_pair,2
+107,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+107,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+107,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+107,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+107,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+107,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+107,vicuna-13b-v1.2,gpt-4,tie,gpt4_pair,1
+107,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,2
+108,alpaca-13b,claude-v1,tie,gpt4_pair,1
+108,alpaca-13b,claude-v1,tie,gpt4_pair,2
+108,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+108,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+108,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+108,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+108,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+108,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+108,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+108,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+108,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+108,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+108,gpt-4,claude-v1,model_a,gpt4_pair,1
+108,gpt-4,claude-v1,model_a,gpt4_pair,2
+108,llama-13b,alpaca-13b,tie,gpt4_pair,1
+108,llama-13b,alpaca-13b,tie,gpt4_pair,2
+108,llama-13b,claude-v1,tie,gpt4_pair,1
+108,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+108,llama-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+108,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+108,llama-13b,gpt-4,model_b,gpt4_pair,1
+108,llama-13b,gpt-4,model_b,gpt4_pair,2
+108,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+108,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+108,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+108,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,2
+108,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+108,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+108,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+108,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+109,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+109,alpaca-13b,claude-v1,tie,gpt4_pair,2
+109,alpaca-13b,gpt-3.5-turbo,model_a,gpt4_pair,1
+109,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+109,alpaca-13b,gpt-4,tie (inconsistent),gpt4_pair,1
+109,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+109,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+109,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+109,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+109,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+109,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+109,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+109,gpt-4,claude-v1,model_a,gpt4_pair,1
+109,gpt-4,claude-v1,model_a,gpt4_pair,2
+109,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+109,llama-13b,alpaca-13b,tie,gpt4_pair,2
+109,llama-13b,claude-v1,tie,gpt4_pair,1
+109,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+109,llama-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+109,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+109,llama-13b,gpt-4,model_b,gpt4_pair,1
+109,llama-13b,gpt-4,model_b,gpt4_pair,2
+109,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+109,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+109,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+109,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+109,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+109,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+109,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+109,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+110,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+110,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+110,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+110,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+110,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+110,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+110,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+110,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+110,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+110,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+110,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,1
+110,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+110,gpt-4,claude-v1,model_b,gpt4_pair,1
+110,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+110,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+110,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+110,llama-13b,claude-v1,model_b,gpt4_pair,1
+110,llama-13b,claude-v1,model_b,gpt4_pair,2
+110,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+110,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+110,llama-13b,gpt-4,model_b,gpt4_pair,1
+110,llama-13b,gpt-4,model_b,gpt4_pair,2
+110,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+110,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+110,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+110,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+110,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+110,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+110,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,1
+110,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+111,alpaca-13b,claude-v1,tie,gpt4_pair,1
+111,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+111,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+111,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+111,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+111,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+111,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+111,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+111,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+111,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,2
+111,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+111,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+111,gpt-4,claude-v1,model_a,gpt4_pair,1
+111,gpt-4,claude-v1,model_a,gpt4_pair,2
+111,llama-13b,alpaca-13b,tie,gpt4_pair,1
+111,llama-13b,alpaca-13b,tie,gpt4_pair,2
+111,llama-13b,claude-v1,tie,gpt4_pair,1
+111,llama-13b,claude-v1,tie,gpt4_pair,2
+111,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+111,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+111,llama-13b,gpt-4,model_b,gpt4_pair,1
+111,llama-13b,gpt-4,model_b,gpt4_pair,2
+111,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+111,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+111,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+111,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,2
+111,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+111,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+111,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+111,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+112,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+112,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+112,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+112,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+112,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+112,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+112,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+112,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+112,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+112,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,2
+112,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+112,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+112,gpt-4,claude-v1,tie,gpt4_pair,1
+112,gpt-4,claude-v1,tie,gpt4_pair,2
+112,llama-13b,alpaca-13b,tie,gpt4_pair,1
+112,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+112,llama-13b,claude-v1,model_b,gpt4_pair,1
+112,llama-13b,claude-v1,model_b,gpt4_pair,2
+112,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+112,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+112,llama-13b,gpt-4,model_b,gpt4_pair,1
+112,llama-13b,gpt-4,model_b,gpt4_pair,2
+112,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+112,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+112,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+112,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+112,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+112,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+112,vicuna-13b-v1.2,gpt-4,tie,gpt4_pair,1
+112,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+113,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+113,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+113,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+113,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+113,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+113,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+113,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+113,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+113,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+113,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,2
+113,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+113,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+113,gpt-4,claude-v1,tie,gpt4_pair,1
+113,gpt-4,claude-v1,model_a,gpt4_pair,2
+113,llama-13b,alpaca-13b,tie,gpt4_pair,1
+113,llama-13b,alpaca-13b,tie,gpt4_pair,2
+113,llama-13b,claude-v1,model_b,gpt4_pair,1
+113,llama-13b,claude-v1,model_b,gpt4_pair,2
+113,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+113,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+113,llama-13b,gpt-4,model_b,gpt4_pair,1
+113,llama-13b,gpt-4,model_b,gpt4_pair,2
+113,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+113,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+113,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+113,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+113,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+113,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+113,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+113,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+114,alpaca-13b,claude-v1,tie,gpt4_pair,1
+114,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+114,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+114,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+114,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+114,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+114,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+114,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+114,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+114,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+114,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+114,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+114,gpt-4,claude-v1,model_a,gpt4_pair,1
+114,gpt-4,claude-v1,model_a,gpt4_pair,2
+114,llama-13b,alpaca-13b,tie,gpt4_pair,1
+114,llama-13b,alpaca-13b,tie,gpt4_pair,2
+114,llama-13b,claude-v1,tie,gpt4_pair,1
+114,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+114,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+114,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+114,llama-13b,gpt-4,model_b,gpt4_pair,1
+114,llama-13b,gpt-4,model_b,gpt4_pair,2
+114,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+114,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+114,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+114,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+114,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+114,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+114,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+114,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+115,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+115,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+115,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+115,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+115,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+115,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+115,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+115,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+115,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+115,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+115,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+115,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+115,gpt-4,claude-v1,model_a,gpt4_pair,1
+115,gpt-4,claude-v1,model_a,gpt4_pair,2
+115,llama-13b,alpaca-13b,tie,gpt4_pair,1
+115,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+115,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+115,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+115,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+115,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+115,llama-13b,gpt-4,model_b,gpt4_pair,1
+115,llama-13b,gpt-4,model_b,gpt4_pair,2
+115,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+115,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+115,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+115,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+115,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+115,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+115,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+115,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+116,alpaca-13b,claude-v1,tie,gpt4_pair,1
+116,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+116,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+116,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+116,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+116,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+116,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+116,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+116,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+116,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,2
+116,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+116,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+116,gpt-4,claude-v1,tie,gpt4_pair,1
+116,gpt-4,claude-v1,model_a,gpt4_pair,2
+116,llama-13b,alpaca-13b,tie,gpt4_pair,1
+116,llama-13b,alpaca-13b,tie,gpt4_pair,2
+116,llama-13b,claude-v1,tie,gpt4_pair,1
+116,llama-13b,claude-v1,tie,gpt4_pair,2
+116,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+116,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+116,llama-13b,gpt-4,tie (inconsistent),gpt4_pair,1
+116,llama-13b,gpt-4,model_b,gpt4_pair,2
+116,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+116,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+116,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+116,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+116,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+116,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+116,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+116,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+117,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+117,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+117,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+117,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+117,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+117,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+117,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+117,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+117,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+117,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+117,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+117,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+117,gpt-4,claude-v1,model_a,gpt4_pair,1
+117,gpt-4,claude-v1,model_a,gpt4_pair,2
+117,llama-13b,alpaca-13b,tie,gpt4_pair,1
+117,llama-13b,alpaca-13b,tie,gpt4_pair,2
+117,llama-13b,claude-v1,model_b,gpt4_pair,1
+117,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+117,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+117,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+117,llama-13b,gpt-4,model_b,gpt4_pair,1
+117,llama-13b,gpt-4,model_b,gpt4_pair,2
+117,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+117,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+117,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+117,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,2
+117,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+117,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+117,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+117,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+118,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+118,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+118,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+118,alpaca-13b,gpt-3.5-turbo,tie,gpt4_pair,2
+118,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+118,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+118,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+118,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+118,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+118,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+118,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,1
+118,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+118,gpt-4,claude-v1,model_a,gpt4_pair,1
+118,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+118,llama-13b,alpaca-13b,tie,gpt4_pair,1
+118,llama-13b,alpaca-13b,tie,gpt4_pair,2
+118,llama-13b,claude-v1,tie,gpt4_pair,1
+118,llama-13b,claude-v1,model_b,gpt4_pair,2
+118,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+118,llama-13b,gpt-3.5-turbo,tie,gpt4_pair,2
+118,llama-13b,gpt-4,tie (inconsistent),gpt4_pair,1
+118,llama-13b,gpt-4,model_b,gpt4_pair,2
+118,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+118,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+118,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+118,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+118,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+118,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,2
+118,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+118,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+119,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+119,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+119,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+119,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+119,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+119,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+119,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+119,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+119,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+119,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,2
+119,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+119,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+119,gpt-4,claude-v1,tie,gpt4_pair,1
+119,gpt-4,claude-v1,tie,gpt4_pair,2
+119,llama-13b,alpaca-13b,tie,gpt4_pair,1
+119,llama-13b,alpaca-13b,tie,gpt4_pair,2
+119,llama-13b,claude-v1,model_b,gpt4_pair,1
+119,llama-13b,claude-v1,model_b,gpt4_pair,2
+119,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+119,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+119,llama-13b,gpt-4,model_b,gpt4_pair,1
+119,llama-13b,gpt-4,model_b,gpt4_pair,2
+119,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+119,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+119,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,1
+119,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+119,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+119,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+119,vicuna-13b-v1.2,gpt-4,tie,gpt4_pair,1
+119,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+120,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+120,alpaca-13b,claude-v1,tie,gpt4_pair,2
+120,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+120,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+120,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+120,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+120,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+120,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+120,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+120,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+120,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+120,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+120,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+120,gpt-4,claude-v1,model_a,gpt4_pair,2
+120,llama-13b,alpaca-13b,tie,gpt4_pair,1
+120,llama-13b,alpaca-13b,tie,gpt4_pair,2
+120,llama-13b,claude-v1,model_b,gpt4_pair,1
+120,llama-13b,claude-v1,model_b,gpt4_pair,2
+120,llama-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+120,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+120,llama-13b,gpt-4,model_b,gpt4_pair,1
+120,llama-13b,gpt-4,model_b,gpt4_pair,2
+120,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+120,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+120,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+120,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,2
+120,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+120,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+120,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+120,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+121,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+121,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+121,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+121,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+121,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+121,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+121,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+121,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+121,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+121,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+121,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+121,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+121,gpt-4,claude-v1,model_a,gpt4_pair,1
+121,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+121,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+121,llama-13b,alpaca-13b,tie,gpt4_pair,2
+121,llama-13b,claude-v1,model_b,gpt4_pair,1
+121,llama-13b,claude-v1,model_b,gpt4_pair,2
+121,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+121,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+121,llama-13b,gpt-4,model_b,gpt4_pair,1
+121,llama-13b,gpt-4,model_b,gpt4_pair,2
+121,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+121,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+121,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+121,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+121,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+121,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+121,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+121,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,2
+122,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+122,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+122,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+122,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+122,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+122,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+122,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+122,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+122,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+122,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+122,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+122,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+122,gpt-4,claude-v1,model_a,gpt4_pair,1
+122,gpt-4,claude-v1,model_a,gpt4_pair,2
+122,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+122,llama-13b,alpaca-13b,tie,gpt4_pair,2
+122,llama-13b,claude-v1,model_b,gpt4_pair,1
+122,llama-13b,claude-v1,model_b,gpt4_pair,2
+122,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+122,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+122,llama-13b,gpt-4,model_b,gpt4_pair,1
+122,llama-13b,gpt-4,model_b,gpt4_pair,2
+122,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+122,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+122,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+122,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+122,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+122,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+122,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+122,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+123,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+123,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+123,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+123,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+123,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+123,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+123,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+123,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+123,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+123,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+123,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+123,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+123,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+123,gpt-4,claude-v1,tie,gpt4_pair,2
+123,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+123,llama-13b,alpaca-13b,tie,gpt4_pair,2
+123,llama-13b,claude-v1,model_b,gpt4_pair,1
+123,llama-13b,claude-v1,model_b,gpt4_pair,2
+123,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+123,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+123,llama-13b,gpt-4,model_b,gpt4_pair,1
+123,llama-13b,gpt-4,model_b,gpt4_pair,2
+123,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+123,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+123,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+123,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+123,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+123,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+123,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+123,vicuna-13b-v1.2,gpt-4,tie,gpt4_pair,2
+124,alpaca-13b,claude-v1,model_a,gpt4_pair,1
+124,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+124,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+124,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+124,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+124,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+124,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+124,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+124,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+124,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+124,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+124,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+124,gpt-4,claude-v1,model_a,gpt4_pair,1
+124,gpt-4,claude-v1,model_a,gpt4_pair,2
+124,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+124,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+124,llama-13b,claude-v1,tie,gpt4_pair,1
+124,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,2
+124,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+124,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+124,llama-13b,gpt-4,model_b,gpt4_pair,1
+124,llama-13b,gpt-4,model_b,gpt4_pair,2
+124,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+124,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+124,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+124,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+124,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+124,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+124,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,1
+124,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+125,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+125,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+125,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+125,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+125,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+125,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+125,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+125,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+125,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+125,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+125,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+125,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+125,gpt-4,claude-v1,model_b,gpt4_pair,1
+125,gpt-4,claude-v1,tie,gpt4_pair,2
+125,llama-13b,alpaca-13b,tie,gpt4_pair,1
+125,llama-13b,alpaca-13b,tie,gpt4_pair,2
+125,llama-13b,claude-v1,model_b,gpt4_pair,1
+125,llama-13b,claude-v1,model_b,gpt4_pair,2
+125,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+125,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+125,llama-13b,gpt-4,model_b,gpt4_pair,1
+125,llama-13b,gpt-4,model_b,gpt4_pair,2
+125,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+125,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+125,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+125,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+125,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+125,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+125,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+125,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+126,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+126,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+126,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+126,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+126,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+126,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+126,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+126,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+126,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+126,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+126,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+126,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+126,gpt-4,claude-v1,model_a,gpt4_pair,1
+126,gpt-4,claude-v1,model_a,gpt4_pair,2
+126,llama-13b,alpaca-13b,tie,gpt4_pair,1
+126,llama-13b,alpaca-13b,tie,gpt4_pair,2
+126,llama-13b,claude-v1,model_b,gpt4_pair,1
+126,llama-13b,claude-v1,model_b,gpt4_pair,2
+126,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+126,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+126,llama-13b,gpt-4,model_b,gpt4_pair,1
+126,llama-13b,gpt-4,model_b,gpt4_pair,2
+126,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+126,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+126,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+126,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+126,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+126,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+126,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+126,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+127,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+127,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+127,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+127,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+127,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+127,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+127,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+127,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+127,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+127,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+127,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+127,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+127,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+127,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+127,llama-13b,alpaca-13b,tie,gpt4_pair,1
+127,llama-13b,alpaca-13b,tie,gpt4_pair,2
+127,llama-13b,claude-v1,model_b,gpt4_pair,1
+127,llama-13b,claude-v1,model_b,gpt4_pair,2
+127,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+127,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+127,llama-13b,gpt-4,tie (inconsistent),gpt4_pair,1
+127,llama-13b,gpt-4,model_b,gpt4_pair,2
+127,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+127,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+127,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+127,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+127,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+127,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+127,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+127,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+128,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+128,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+128,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+128,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+128,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+128,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+128,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+128,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+128,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+128,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+128,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+128,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+128,gpt-4,claude-v1,model_a,gpt4_pair,1
+128,gpt-4,claude-v1,model_a,gpt4_pair,2
+128,llama-13b,alpaca-13b,tie,gpt4_pair,1
+128,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+128,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+128,llama-13b,claude-v1,model_b,gpt4_pair,2
+128,llama-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+128,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+128,llama-13b,gpt-4,model_b,gpt4_pair,1
+128,llama-13b,gpt-4,model_b,gpt4_pair,2
+128,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+128,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+128,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+128,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+128,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+128,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+128,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+128,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+129,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+129,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+129,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+129,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+129,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+129,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+129,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+129,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+129,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+129,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+129,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+129,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+129,gpt-4,claude-v1,model_b,gpt4_pair,1
+129,gpt-4,claude-v1,model_a,gpt4_pair,2
+129,llama-13b,alpaca-13b,tie,gpt4_pair,1
+129,llama-13b,alpaca-13b,tie,gpt4_pair,2
+129,llama-13b,claude-v1,model_b,gpt4_pair,1
+129,llama-13b,claude-v1,model_b,gpt4_pair,2
+129,llama-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+129,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+129,llama-13b,gpt-4,model_b,gpt4_pair,1
+129,llama-13b,gpt-4,model_b,gpt4_pair,2
+129,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+129,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+129,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+129,vicuna-13b-v1.2,claude-v1,tie,gpt4_pair,2
+129,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+129,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+129,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+129,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+130,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+130,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+130,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+130,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+130,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+130,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+130,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+130,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,2
+130,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+130,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+130,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+130,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+130,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+130,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+130,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+130,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+130,llama-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+130,llama-13b,claude-v1,model_b,gpt4_pair,2
+130,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+130,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+130,llama-13b,gpt-4,model_b,gpt4_pair,1
+130,llama-13b,gpt-4,model_b,gpt4_pair,2
+130,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+130,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+130,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+130,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+130,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+130,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+130,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+130,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+131,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+131,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+131,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+131,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+131,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+131,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+131,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+131,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+131,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+131,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+131,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+131,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,2
+131,gpt-4,claude-v1,tie,gpt4_pair,1
+131,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+131,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+131,llama-13b,alpaca-13b,model_a,gpt4_pair,2
+131,llama-13b,claude-v1,model_b,gpt4_pair,1
+131,llama-13b,claude-v1,model_b,gpt4_pair,2
+131,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+131,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+131,llama-13b,gpt-4,model_b,gpt4_pair,1
+131,llama-13b,gpt-4,model_b,gpt4_pair,2
+131,llama-13b,vicuna-13b-v1.2,model_a,gpt4_pair,1
+131,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+131,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+131,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+131,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+131,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+131,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+131,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+132,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+132,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+132,alpaca-13b,gpt-3.5-turbo,tie,gpt4_pair,1
+132,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+132,alpaca-13b,gpt-4,tie (inconsistent),gpt4_pair,1
+132,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+132,alpaca-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+132,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,2
+132,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+132,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+132,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+132,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+132,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+132,gpt-4,claude-v1,model_a,gpt4_pair,2
+132,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+132,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+132,llama-13b,claude-v1,model_b,gpt4_pair,1
+132,llama-13b,claude-v1,model_b,gpt4_pair,2
+132,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+132,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+132,llama-13b,gpt-4,model_b,gpt4_pair,1
+132,llama-13b,gpt-4,model_b,gpt4_pair,2
+132,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+132,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+132,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+132,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+132,vicuna-13b-v1.2,gpt-3.5-turbo,tie,gpt4_pair,1
+132,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+132,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+132,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+133,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+133,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+133,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+133,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+133,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+133,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+133,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+133,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+133,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+133,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+133,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+133,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+133,gpt-4,claude-v1,model_b,gpt4_pair,1
+133,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+133,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+133,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+133,llama-13b,claude-v1,model_b,gpt4_pair,1
+133,llama-13b,claude-v1,model_b,gpt4_pair,2
+133,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+133,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+133,llama-13b,gpt-4,model_b,gpt4_pair,1
+133,llama-13b,gpt-4,model_b,gpt4_pair,2
+133,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+133,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+133,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+133,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+133,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+133,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+133,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+133,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+134,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+134,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+134,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+134,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+134,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+134,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+134,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+134,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+134,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+134,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,2
+134,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+134,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+134,gpt-4,claude-v1,tie,gpt4_pair,1
+134,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+134,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+134,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+134,llama-13b,claude-v1,model_b,gpt4_pair,1
+134,llama-13b,claude-v1,model_b,gpt4_pair,2
+134,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+134,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+134,llama-13b,gpt-4,model_b,gpt4_pair,1
+134,llama-13b,gpt-4,model_b,gpt4_pair,2
+134,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+134,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+134,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+134,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+134,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+134,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+134,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,1
+134,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+135,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+135,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+135,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+135,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+135,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+135,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+135,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+135,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+135,gpt-3.5-turbo,claude-v1,tie,gpt4_pair,1
+135,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+135,gpt-3.5-turbo,gpt-4,tie,gpt4_pair,1
+135,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,2
+135,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+135,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+135,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+135,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+135,llama-13b,claude-v1,model_b,gpt4_pair,1
+135,llama-13b,claude-v1,model_b,gpt4_pair,2
+135,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+135,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+135,llama-13b,gpt-4,model_b,gpt4_pair,1
+135,llama-13b,gpt-4,model_b,gpt4_pair,2
+135,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+135,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+135,vicuna-13b-v1.2,claude-v1,model_a,gpt4_pair,1
+135,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+135,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+135,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+135,vicuna-13b-v1.2,gpt-4,model_a,gpt4_pair,1
+135,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+136,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+136,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+136,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+136,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+136,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+136,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+136,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,1
+136,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+136,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+136,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+136,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+136,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+136,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+136,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+136,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+136,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+136,llama-13b,claude-v1,model_b,gpt4_pair,1
+136,llama-13b,claude-v1,model_b,gpt4_pair,2
+136,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+136,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+136,llama-13b,gpt-4,model_b,gpt4_pair,1
+136,llama-13b,gpt-4,model_b,gpt4_pair,2
+136,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+136,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+136,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+136,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+136,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+136,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+136,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+136,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+137,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+137,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+137,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+137,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+137,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+137,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+137,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+137,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+137,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+137,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+137,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+137,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+137,gpt-4,claude-v1,tie,gpt4_pair,1
+137,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+137,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+137,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+137,llama-13b,claude-v1,model_b,gpt4_pair,1
+137,llama-13b,claude-v1,model_b,gpt4_pair,2
+137,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+137,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+137,llama-13b,gpt-4,model_b,gpt4_pair,1
+137,llama-13b,gpt-4,model_b,gpt4_pair,2
+137,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+137,llama-13b,vicuna-13b-v1.2,model_a,gpt4_pair,2
+137,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+137,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+137,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+137,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+137,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+137,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+138,alpaca-13b,claude-v1,tie (inconsistent),gpt4_pair,1
+138,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+138,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+138,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+138,alpaca-13b,gpt-4,tie (inconsistent),gpt4_pair,1
+138,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+138,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+138,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+138,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+138,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+138,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,1
+138,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,2
+138,gpt-4,claude-v1,tie,gpt4_pair,1
+138,gpt-4,claude-v1,model_b,gpt4_pair,2
+138,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+138,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+138,llama-13b,claude-v1,model_b,gpt4_pair,1
+138,llama-13b,claude-v1,model_b,gpt4_pair,2
+138,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+138,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+138,llama-13b,gpt-4,model_b,gpt4_pair,1
+138,llama-13b,gpt-4,model_b,gpt4_pair,2
+138,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+138,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+138,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+138,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+138,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+138,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+138,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+138,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,2
+139,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+139,alpaca-13b,claude-v1,model_a,gpt4_pair,2
+139,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+139,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+139,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+139,alpaca-13b,gpt-4,tie (inconsistent),gpt4_pair,2
+139,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,1
+139,alpaca-13b,vicuna-13b-v1.2,model_a,gpt4_pair,2
+139,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+139,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,2
+139,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+139,gpt-3.5-turbo,gpt-4,model_a,gpt4_pair,2
+139,gpt-4,claude-v1,model_a,gpt4_pair,1
+139,gpt-4,claude-v1,model_a,gpt4_pair,2
+139,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+139,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+139,llama-13b,claude-v1,model_b,gpt4_pair,1
+139,llama-13b,claude-v1,model_b,gpt4_pair,2
+139,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+139,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+139,llama-13b,gpt-4,model_b,gpt4_pair,1
+139,llama-13b,gpt-4,model_b,gpt4_pair,2
+139,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,1
+139,llama-13b,vicuna-13b-v1.2,tie,gpt4_pair,2
+139,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+139,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+139,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+139,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+139,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+139,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+140,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+140,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+140,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+140,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+140,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+140,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+140,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+140,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+140,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+140,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+140,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+140,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+140,gpt-4,claude-v1,model_a,gpt4_pair,1
+140,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+140,llama-13b,alpaca-13b,tie,gpt4_pair,1
+140,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+140,llama-13b,claude-v1,model_b,gpt4_pair,1
+140,llama-13b,claude-v1,model_b,gpt4_pair,2
+140,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+140,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+140,llama-13b,gpt-4,model_b,gpt4_pair,1
+140,llama-13b,gpt-4,model_b,gpt4_pair,2
+140,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+140,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+140,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+140,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+140,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+140,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+140,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+140,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+141,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+141,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+141,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+141,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+141,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+141,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+141,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+141,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+141,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+141,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+141,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+141,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+141,gpt-4,claude-v1,model_a,gpt4_pair,1
+141,gpt-4,claude-v1,model_b,gpt4_pair,2
+141,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+141,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+141,llama-13b,claude-v1,model_b,gpt4_pair,1
+141,llama-13b,claude-v1,model_b,gpt4_pair,2
+141,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+141,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+141,llama-13b,gpt-4,model_b,gpt4_pair,1
+141,llama-13b,gpt-4,model_b,gpt4_pair,2
+141,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+141,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+141,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+141,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+141,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+141,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,2
+141,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+141,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+142,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+142,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+142,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+142,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+142,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+142,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+142,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+142,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+142,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+142,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+142,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+142,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+142,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+142,gpt-4,claude-v1,model_b,gpt4_pair,2
+142,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+142,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+142,llama-13b,claude-v1,model_b,gpt4_pair,1
+142,llama-13b,claude-v1,model_b,gpt4_pair,2
+142,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+142,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+142,llama-13b,gpt-4,model_b,gpt4_pair,1
+142,llama-13b,gpt-4,model_b,gpt4_pair,2
+142,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+142,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+142,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+142,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+142,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+142,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+142,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+142,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+143,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+143,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+143,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+143,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+143,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+143,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+143,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+143,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+143,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+143,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+143,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+143,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+143,gpt-4,claude-v1,model_a,gpt4_pair,1
+143,gpt-4,claude-v1,model_a,gpt4_pair,2
+143,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+143,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+143,llama-13b,claude-v1,model_b,gpt4_pair,1
+143,llama-13b,claude-v1,model_b,gpt4_pair,2
+143,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+143,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+143,llama-13b,gpt-4,model_b,gpt4_pair,1
+143,llama-13b,gpt-4,model_b,gpt4_pair,2
+143,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+143,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+143,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+143,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+143,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+143,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+143,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+143,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+144,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+144,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+144,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+144,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+144,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+144,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+144,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+144,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+144,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+144,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+144,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+144,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+144,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+144,gpt-4,claude-v1,model_b,gpt4_pair,2
+144,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+144,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,2
+144,llama-13b,claude-v1,model_b,gpt4_pair,1
+144,llama-13b,claude-v1,model_b,gpt4_pair,2
+144,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+144,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+144,llama-13b,gpt-4,model_b,gpt4_pair,1
+144,llama-13b,gpt-4,model_b,gpt4_pair,2
+144,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+144,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+144,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+144,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+144,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+144,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+144,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+144,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+145,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+145,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+145,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+145,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+145,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+145,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+145,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+145,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+145,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+145,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+145,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+145,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+145,gpt-4,claude-v1,model_b,gpt4_pair,1
+145,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+145,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+145,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+145,llama-13b,claude-v1,model_b,gpt4_pair,1
+145,llama-13b,claude-v1,model_b,gpt4_pair,2
+145,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+145,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+145,llama-13b,gpt-4,model_b,gpt4_pair,1
+145,llama-13b,gpt-4,model_b,gpt4_pair,2
+145,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+145,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+145,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+145,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+145,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+145,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+145,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+145,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+146,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+146,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+146,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+146,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+146,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+146,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+146,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+146,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+146,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+146,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+146,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+146,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+146,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+146,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+146,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+146,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+146,llama-13b,claude-v1,model_b,gpt4_pair,1
+146,llama-13b,claude-v1,model_b,gpt4_pair,2
+146,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+146,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+146,llama-13b,gpt-4,model_b,gpt4_pair,1
+146,llama-13b,gpt-4,model_b,gpt4_pair,2
+146,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+146,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+146,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+146,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+146,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+146,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+146,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+146,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+147,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+147,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+147,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+147,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+147,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+147,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+147,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+147,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+147,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+147,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+147,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+147,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+147,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+147,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+147,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+147,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+147,llama-13b,claude-v1,model_b,gpt4_pair,1
+147,llama-13b,claude-v1,model_b,gpt4_pair,2
+147,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+147,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+147,llama-13b,gpt-4,model_b,gpt4_pair,1
+147,llama-13b,gpt-4,model_b,gpt4_pair,2
+147,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+147,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+147,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+147,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+147,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+147,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+147,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+147,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+148,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+148,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+148,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+148,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+148,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+148,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+148,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+148,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+148,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+148,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+148,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+148,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+148,gpt-4,claude-v1,model_a,gpt4_pair,1
+148,gpt-4,claude-v1,model_a,gpt4_pair,2
+148,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+148,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+148,llama-13b,claude-v1,model_b,gpt4_pair,1
+148,llama-13b,claude-v1,model_b,gpt4_pair,2
+148,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+148,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+148,llama-13b,gpt-4,model_b,gpt4_pair,1
+148,llama-13b,gpt-4,model_b,gpt4_pair,2
+148,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+148,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+148,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+148,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+148,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+148,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+148,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+148,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+149,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+149,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+149,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+149,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+149,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+149,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+149,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+149,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+149,gpt-3.5-turbo,claude-v1,model_a,gpt4_pair,1
+149,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+149,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+149,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+149,gpt-4,claude-v1,model_a,gpt4_pair,1
+149,gpt-4,claude-v1,model_a,gpt4_pair,2
+149,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+149,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+149,llama-13b,claude-v1,model_b,gpt4_pair,1
+149,llama-13b,claude-v1,model_b,gpt4_pair,2
+149,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+149,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+149,llama-13b,gpt-4,model_b,gpt4_pair,1
+149,llama-13b,gpt-4,model_b,gpt4_pair,2
+149,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+149,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+149,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+149,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+149,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+149,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+149,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+149,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+150,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+150,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+150,alpaca-13b,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+150,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+150,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+150,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+150,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+150,alpaca-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,2
+150,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+150,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+150,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+150,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+150,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+150,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+150,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+150,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+150,llama-13b,claude-v1,model_b,gpt4_pair,1
+150,llama-13b,claude-v1,model_b,gpt4_pair,2
+150,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+150,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+150,llama-13b,gpt-4,model_b,gpt4_pair,1
+150,llama-13b,gpt-4,model_b,gpt4_pair,2
+150,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+150,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+150,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+150,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+150,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,1
+150,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+150,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+150,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+151,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+151,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+151,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+151,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+151,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+151,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+151,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+151,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+151,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+151,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+151,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+151,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+151,gpt-4,claude-v1,model_a,gpt4_pair,1
+151,gpt-4,claude-v1,model_a,gpt4_pair,2
+151,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+151,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+151,llama-13b,claude-v1,model_b,gpt4_pair,1
+151,llama-13b,claude-v1,model_b,gpt4_pair,2
+151,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+151,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+151,llama-13b,gpt-4,model_b,gpt4_pair,1
+151,llama-13b,gpt-4,model_b,gpt4_pair,2
+151,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+151,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+151,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+151,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+151,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+151,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+151,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+151,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+152,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+152,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+152,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+152,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+152,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+152,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+152,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+152,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+152,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+152,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+152,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+152,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+152,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+152,gpt-4,claude-v1,model_a,gpt4_pair,2
+152,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+152,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+152,llama-13b,claude-v1,model_b,gpt4_pair,1
+152,llama-13b,claude-v1,model_b,gpt4_pair,2
+152,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+152,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+152,llama-13b,gpt-4,model_b,gpt4_pair,1
+152,llama-13b,gpt-4,model_b,gpt4_pair,2
+152,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+152,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+152,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+152,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+152,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+152,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+152,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+152,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+153,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+153,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+153,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+153,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+153,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+153,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+153,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+153,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+153,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+153,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+153,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+153,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+153,gpt-4,claude-v1,model_a,gpt4_pair,1
+153,gpt-4,claude-v1,model_a,gpt4_pair,2
+153,llama-13b,alpaca-13b,tie (inconsistent),gpt4_pair,1
+153,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+153,llama-13b,claude-v1,model_b,gpt4_pair,1
+153,llama-13b,claude-v1,model_b,gpt4_pair,2
+153,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+153,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+153,llama-13b,gpt-4,model_b,gpt4_pair,1
+153,llama-13b,gpt-4,model_b,gpt4_pair,2
+153,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+153,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+153,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+153,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+153,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+153,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+153,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+153,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+154,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+154,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+154,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+154,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+154,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+154,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+154,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+154,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+154,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+154,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+154,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,1
+154,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+154,gpt-4,claude-v1,model_a,gpt4_pair,1
+154,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+154,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+154,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+154,llama-13b,claude-v1,model_b,gpt4_pair,1
+154,llama-13b,claude-v1,model_b,gpt4_pair,2
+154,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+154,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+154,llama-13b,gpt-4,model_b,gpt4_pair,1
+154,llama-13b,gpt-4,model_b,gpt4_pair,2
+154,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+154,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+154,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+154,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+154,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+154,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+154,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+154,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+155,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+155,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+155,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+155,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+155,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+155,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+155,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+155,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+155,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+155,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,2
+155,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+155,gpt-3.5-turbo,gpt-4,tie (inconsistent),gpt4_pair,2
+155,gpt-4,claude-v1,model_a,gpt4_pair,1
+155,gpt-4,claude-v1,model_a,gpt4_pair,2
+155,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+155,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+155,llama-13b,claude-v1,model_b,gpt4_pair,1
+155,llama-13b,claude-v1,model_b,gpt4_pair,2
+155,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+155,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+155,llama-13b,gpt-4,model_b,gpt4_pair,1
+155,llama-13b,gpt-4,model_b,gpt4_pair,2
+155,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+155,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+155,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+155,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+155,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+155,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+155,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+155,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+156,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+156,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+156,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+156,alpaca-13b,gpt-3.5-turbo,model_a,gpt4_pair,2
+156,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+156,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+156,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+156,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+156,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+156,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+156,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+156,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+156,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+156,gpt-4,claude-v1,model_a,gpt4_pair,2
+156,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+156,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+156,llama-13b,claude-v1,model_b,gpt4_pair,1
+156,llama-13b,claude-v1,model_b,gpt4_pair,2
+156,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+156,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+156,llama-13b,gpt-4,model_b,gpt4_pair,1
+156,llama-13b,gpt-4,model_b,gpt4_pair,2
+156,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+156,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+156,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+156,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+156,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+156,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,2
+156,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+156,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+157,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+157,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+157,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+157,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+157,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+157,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+157,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+157,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+157,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+157,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+157,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+157,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+157,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+157,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,2
+157,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+157,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+157,llama-13b,claude-v1,model_b,gpt4_pair,1
+157,llama-13b,claude-v1,model_b,gpt4_pair,2
+157,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+157,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+157,llama-13b,gpt-4,model_b,gpt4_pair,1
+157,llama-13b,gpt-4,model_b,gpt4_pair,2
+157,llama-13b,vicuna-13b-v1.2,tie (inconsistent),gpt4_pair,1
+157,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+157,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+157,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+157,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+157,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+157,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+157,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+158,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+158,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+158,alpaca-13b,gpt-3.5-turbo,model_a,gpt4_pair,1
+158,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+158,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+158,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+158,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+158,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+158,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+158,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+158,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+158,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+158,gpt-4,claude-v1,model_a,gpt4_pair,1
+158,gpt-4,claude-v1,model_a,gpt4_pair,2
+158,llama-13b,alpaca-13b,model_b,gpt4_pair,1
+158,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+158,llama-13b,claude-v1,model_b,gpt4_pair,1
+158,llama-13b,claude-v1,model_b,gpt4_pair,2
+158,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+158,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+158,llama-13b,gpt-4,model_b,gpt4_pair,1
+158,llama-13b,gpt-4,model_b,gpt4_pair,2
+158,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+158,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+158,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+158,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,2
+158,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+158,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,2
+158,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+158,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+159,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+159,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+159,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+159,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+159,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+159,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+159,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+159,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+159,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,1
+159,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+159,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+159,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+159,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+159,gpt-4,claude-v1,model_a,gpt4_pair,2
+159,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+159,llama-13b,alpaca-13b,model_a,gpt4_pair,2
+159,llama-13b,claude-v1,model_b,gpt4_pair,1
+159,llama-13b,claude-v1,model_b,gpt4_pair,2
+159,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+159,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+159,llama-13b,gpt-4,model_b,gpt4_pair,1
+159,llama-13b,gpt-4,model_b,gpt4_pair,2
+159,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+159,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+159,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,1
+159,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+159,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,1
+159,vicuna-13b-v1.2,gpt-3.5-turbo,tie (inconsistent),gpt4_pair,2
+159,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,1
+159,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
+160,alpaca-13b,claude-v1,model_b,gpt4_pair,1
+160,alpaca-13b,claude-v1,model_b,gpt4_pair,2
+160,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+160,alpaca-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+160,alpaca-13b,gpt-4,model_b,gpt4_pair,1
+160,alpaca-13b,gpt-4,model_b,gpt4_pair,2
+160,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+160,alpaca-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+160,gpt-3.5-turbo,claude-v1,tie (inconsistent),gpt4_pair,1
+160,gpt-3.5-turbo,claude-v1,model_b,gpt4_pair,2
+160,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,1
+160,gpt-3.5-turbo,gpt-4,model_b,gpt4_pair,2
+160,gpt-4,claude-v1,tie (inconsistent),gpt4_pair,1
+160,gpt-4,claude-v1,model_b,gpt4_pair,2
+160,llama-13b,alpaca-13b,model_a,gpt4_pair,1
+160,llama-13b,alpaca-13b,model_b,gpt4_pair,2
+160,llama-13b,claude-v1,model_b,gpt4_pair,1
+160,llama-13b,claude-v1,model_b,gpt4_pair,2
+160,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,1
+160,llama-13b,gpt-3.5-turbo,model_b,gpt4_pair,2
+160,llama-13b,gpt-4,model_b,gpt4_pair,1
+160,llama-13b,gpt-4,model_b,gpt4_pair,2
+160,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,1
+160,llama-13b,vicuna-13b-v1.2,model_b,gpt4_pair,2
+160,vicuna-13b-v1.2,claude-v1,tie (inconsistent),gpt4_pair,1
+160,vicuna-13b-v1.2,claude-v1,model_b,gpt4_pair,2
+160,vicuna-13b-v1.2,gpt-3.5-turbo,model_a,gpt4_pair,1
+160,vicuna-13b-v1.2,gpt-3.5-turbo,model_b,gpt4_pair,2
+160,vicuna-13b-v1.2,gpt-4,tie (inconsistent),gpt4_pair,1
+160,vicuna-13b-v1.2,gpt-4,model_b,gpt4_pair,2
