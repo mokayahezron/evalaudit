@@ -16,6 +16,144 @@ the published wheels and the commit each wheel matches.
 
 ## [Unreleased]
 
+`judge_validation` can now measure the judge against a second human. The
+rest is text. Several printed sentences change, most of them for hyphens and
+plurals, and no number does. Anything that matches on the old sentences will
+stop matching. Every entry was checked by running the same calls against the
+v0.4.0 tag and against this tree.
+
+### Changed
+
+- Nothing.
+
+### Added
+
+- `judge_validation(..., item_ids=None, human_baseline=None, ties=None)`
+  measures the judge against a human baseline. `human_baseline` is a frame
+  with `item_id`, `cluster_id`, `rater_id` and `rating`, one row per human
+  rating, and `item_ids` names the item at each position of `human` and
+  `judge`. The result carries judge-human and human-human alpha on the same
+  items, and a percentile interval on judge-human minus human-human that
+  resamples whole clusters. The verdict reads that interval and nothing
+  else, and is called provisional when it rests on fewer than 30 clusters.
+  The interval is refused when fewer than 90% of resamples leave both
+  alphas defined.
+
+  `ties` is required with a baseline. `"category"` keeps a tie as a label of
+  its own and `"drop"` sets it aside as no label, and the choice applies to
+  every figure in the result, the headline included. Baseline items are set
+  aside by three rules in a fixed order, and the summary counts what each
+  one took. A baseline supports only `level="nominal"`. On the MT-Bench
+  human judgements the figures reproduce `analysis/mt-bench.md` to the third
+  decimal. The new arguments are refused, each with its own message, in the
+  combinations that cannot work, such as `ties` or `item_ids` without a
+  baseline.
+
+- `JudgeValidation.n_dropped_ties`, `JudgeValidation.ties`, eleven fields
+  that start with `baseline_`, and the properties `has_baseline` and
+  `has_baseline_interval`. The new fields are the last in the dataclass and
+  have defaults, so building a `JudgeValidation` by position with 0.4.0's
+  fields still works. A call that passes none of the three new arguments
+  returns the same numbers as 0.4.0.
+
+### Fixed
+
+- **Breaking.** `JudgeValidation.summary()` said "No interval was computed,
+  so nothing here is placed against sampling error." when the resamples had
+  been drawn and too few of them left alpha defined. On three items, two of
+  them unanimous, with `n_boot=2000` and `seed=0`, it now reads "There is
+  no interval on that alpha. 591 of 2000 resamples left it undefined, above
+  the 10% this reports through. Those are the resamples where every label
+  was the same, so percentiles of the rest would understate the upper
+  bound." When one resample is left undefined it reads "That is the
+  resample where every label was the same", and when only one was drawn
+  the count reads "1 of 1 resample". With `n_boot=0` it still says no
+  interval was computed. The `audit` judge finding carries the new
+  sentence.
+
+- **Breaking.** The `audit` finding on a margin whose interval clears zero
+  opened "This is the margin between new and old, and it survives the
+  fit." No model is fitted there. It now reads "This is the margin between
+  new and old, and its interval excludes zero."
+
+- **Breaking.** A count or figure of one was printed with a plural noun, or
+  with a verb or pronoun that assumed more than one. Each now takes the
+  singular. Anything other than one prints as before.
+
+  - `ScoreCI.summary()`. "With only 1 observations" now reads "With only 1
+    observation", and "The interval spans 1 points." now reads "The
+    interval spans 1 point."
+  - `ComparisonResult.summary()`. "1 of 1 items changed between systems."
+    now reads "1 of 1 item changed between systems."
+  - `KappaResult.summary()`. "(1 items, 2 raters, 2 categories)" now reads
+    "(1 item, 2 raters, 2 categories)".
+  - `AgreementResult.summary()`. "1 of 1 items graded more than once" now
+    reads "1 of 1 item graded more than once". Where the interval is
+    refused, "1 of 1 resamples came back undefined" now reads "1 of 1
+    resample came back undefined", and after one undefined resample "Those
+    resamples are the unanimous ones" now reads "That resample is the
+    unanimous one".
+  - `BTResult.summary()`. With two models, "0 of 1 pairs is separable" now
+    reads "0 of 1 pair is separable". With one pair separable among
+    several, "1 of 3 pairs are separable" now reads "1 of 3 pairs is
+    separable", since the verb follows the separable count. Where the
+    interval is refused, "1 of 1 resamples came back undefined" now reads
+    "1 of 1 resample came back undefined".
+  - The `ValueError` from `bradley_terry` for a missing item id. "item_id is
+    missing on 1 of 1 comparisons" now reads "item_id is missing on 1 of 1
+    comparison".
+  - `PositionBias.summary()`, randomised design. "Position A won 100.0% of 1
+    judgements" now reads "of 1 judgement". "1 pairs were also run in the
+    reverse order" now reads "1 pair was also run in the reverse order".
+    "1 judgements were ties and are left out of the rates above." now reads
+    "1 judgement was a tie and is left out of the rates above."
+  - `PositionBias.summary()`, both orders. "1 of 1 pairs were run in both
+    orders" now reads "1 of 1 pair was run in both orders", and "1 of 2
+    pairs were run in both orders" now reads "1 of 2 pairs was run in both
+    orders", since the verb follows the pairs run both ways. "on 0.0% of 1
+    pairs" now reads "on 0.0% of 1 pair", and "Of the 1 pairs it flipped
+    on" now reads "Of the 1 pair it flipped on".
+  - `LengthBias.summary()`. "(1 pairs)" now reads "(1 pair)", and "(1
+    disagreements)" now reads "(1 disagreement)", with or without a fitted
+    model. A length step that prints as 1, "1 characters of extra length
+    multiplies" or "1 characters multiplies", now reads "1 character".
+  - `PowerResult.summary()`. "you need roughly 1 paired comparisons" now
+    reads "you need roughly 1 paired comparison", and "about 1 discordant
+    pairs, and McNemar reads only those." now reads "about 1 discordant
+    pair, and McNemar reads only that one." A difference that prints as 1,
+    "is 1 points" or "a difference of 1 points", now reads "1 point".
+
+  The `audit` compare, agreement, position, length and power findings carry
+  these sentences word for word.
+
+- **Breaking.** Compound modifiers are hyphenated in printed text.
+
+  - `PowerResult.summary()`. "To detect a 5 point difference", "leaves at
+    most a 5 point difference" and "To find a 5 point difference" now read
+    "5-point", and the same holds for any figure. "the continuity
+    corrected and exact forms" now reads "continuity-corrected", and
+    "Pairing removes the item to item difficulty" now reads
+    "item-to-item". The `audit` power finding carries these sentences.
+  - The `audit` action under "Rater agreement holds up". "Keep the double
+    graded sample" now reads "Keep the double-graded sample".
+  - The `ValueError` from `detectable_effect` and `min_sample_size` when
+    power does not exceed alpha. "A two sided test" now reads "A two-sided
+    test".
+
+- The `rater_agreement` docstring said that without an interval nothing in
+  the result would name an outlier rater. Since 0.4.0 the summary lists
+  alpha with each rater left out and names no rater either way, and the
+  docstring now says so.
+
+- The README said scipy computes McNemar's test. It is statsmodels. It also
+  said the package builds fifteen intervals, while its own lists named
+  seventeen. It now counts eighteen, with the interval on the human baseline
+  among the eight pinned against a reference.
+
+### Removed
+
+- Nothing.
+
 ## [0.4.0] - 2026-09-11
 
 Nearly everything in 0.4.0 changes what a
@@ -57,7 +195,7 @@ released as 0.4.0.
   eval's reach", because without a stated effect the audit does not know
   what size of difference matters. Its lead says "This reports what the
   design could find and makes no claim about the margin it measured." On 400
-  paired items with a 5.0 point margin and an interval of 1.1% to 9.0%,
+  paired items with a 5.0-point margin and an interval of 1.1% to 9.0%,
   0.3.0 opened the report with a `critical` power finding and the verdict
   said the conclusion did not hold. Two systems with a margin of exactly
   zero, which 0.3.0 skipped, get the same warning.
@@ -389,7 +527,7 @@ breaking entry says what it was, what it is now and what to do about it.
   simulated data shaped like MT-Bench's human judgements, the rating
   intervals 0.2.1 reported covered 88% of the time at a nominal 95% once
   prompts shifted model strength by a spread of 0.5 on the log-odds scale,
-  and 79% at a spread of 1.0. `examples/pairwise_cluster_study.py` has the
+  and 80% at a spread of 1.0. `examples/pairwise_cluster_study.py` has the
   table for 0.3.0.
 
   To get the ratings and rating intervals an earlier version gave on the
@@ -497,7 +635,7 @@ breaking entry says what it was, what it is now and what to do about it.
 - `to_elo` stretches the gap intervals with the gaps and carries `pairs` and
   `resample` across.
 - `examples/pairwise_cluster_study.py`, in the source distribution, which
-  measures how narrow the comparison bootstrap runs on MT-Bench shaped data.
+  measures how narrow the comparison bootstrap runs on MT-Bench-shaped data.
 
 ### Fixed
 

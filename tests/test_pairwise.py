@@ -59,7 +59,7 @@ import statsmodels.api as sm
 
 try:
     import choix
-except ImportError:  # choix needs 3.10, this package supports 3.9
+except ImportError:  # choix needs 3.10, and this package supports 3.9
     choix = None
 
 import evalaudit
@@ -1664,9 +1664,10 @@ def test_bootstrap_covers_at_the_claimed_rate():
     reported scale by the mean of the reported ratings.
 
     The band is wide on purpose and the low end is the reason. A percentile
-    bootstrap undercovers at this size, and it does so here: about 0.92 at
-    120 comparisons per pair, climbing to about 0.94 at 200 and 300, which
-    is the finite-sample shortfall behaving as it should rather than a bug.
+    bootstrap undercovers at this size, and it does so here. Coverage is
+    about 0.92 at 120 comparisons per pair, climbing to about 0.94 at 200
+    and 300, which is the finite-sample shortfall behaving as it should
+    rather than a bug.
     Trials are independent and the five ratings inside a trial are not, so
     the standard error is clustered on the trial. At 120 trials it is about
     0.012, which puts 0.88 roughly 3.7 errors below the expected 0.923 and
@@ -2246,3 +2247,93 @@ def test_row_order_does_not_change_the_fit():
     a = bradley_terry(data, n_boot=0, reference="olmo")
     b = bradley_terry(shuffled, n_boot=0, reference="olmo")
     pd.testing.assert_frame_equal(a.ratings, b.ratings, atol=1e-10)
+
+
+# --------------------------------------------------------------------------
+# Counts of one
+# --------------------------------------------------------------------------
+
+def test_two_models_make_one_pair_in_the_singular():
+    """Two models tied twice, the smallest data with a fit and an item
+    bootstrap. It said "0 of 1 pairs is separable"."""
+    r = bradley_terry(frame([("a", "b", "tie"), ("a", "b", "tie")]), seed=0)
+    assert (r.n_pairs, r.n_separable) == (1, 0)
+    assert r.has_interval
+    assert r.summary() == (
+        "Bradley-Terry ratings for 2 models from 2 comparisons (ties split, 2 "
+        "of them). 0 of 1 pair is separable at 95%, meaning the interval on "
+        "the gap between the two ratings excludes zero. This data does not "
+        "establish an order for any pair. A ranking built on it puts the "
+        "models in a line this data has not established. That does not mean "
+        "the models are level. More comparisons could separate them. Ratings "
+        "are anchored on a at 0. Only differences between models mean "
+        "anything, and adding the same amount to every rating would change "
+        "nothing about the fit or about which pairs separate."
+    )
+
+
+def test_one_separable_pair_takes_a_singular_verb():
+    """Three models, six comparisons a pair. b beats a all six times, c
+    beats b all six, and a and c split three each, so only c over a
+    separates. It said "1 of 3 pairs are separable". The verb follows the
+    count of separable pairs, and the noun follows the count of pairs."""
+    rows = (
+        [("a", "b", "b")] * 6 + [("b", "c", "c")] * 6
+        + [("a", "c", "a")] * 3 + [("a", "c", "c")] * 3
+    )
+    r = bradley_terry(frame(rows), seed=0)
+    assert (r.n_pairs, r.n_separable) == (3, 1)
+    ordered = r.pairs[r.pairs["separable"]]
+    assert list(zip(ordered["model_a"], ordered["model_b"])) == [("c", "a")]
+    assert r.summary() == (
+        "Bradley-Terry ratings for 3 models from 18 comparisons (ties split). "
+        "1 of 3 pairs is separable at 95%, meaning the interval on the gap "
+        "between the two ratings excludes zero. For the other 2 pairs the "
+        "interval includes zero, so this data does not establish an order for "
+        "those pairs in either direction. That does not mean the models are "
+        "level. More comparisons could separate them. A leaderboard that puts "
+        "those models in a line is showing an order this data has not "
+        "established. Ratings are anchored on a at 0. Only differences "
+        "between models mean anything, and adding the same amount to every "
+        "rating would change nothing about the fit or about which pairs "
+        "separate."
+    )
+
+
+def test_one_resample_is_counted_in_the_singular():
+    """Two comparisons, one each way, and one resample. At seed 0 it draws
+    the same comparison twice and leaves a model unbeaten. It said "1 of 1
+    resamples"."""
+    data = frame([("a", "b", "a"), ("a", "b", "b")])
+    r = bradley_terry(data, n_boot=1, seed=0)
+    assert (r.n_boot, r.n_boot_usable) == (1, 0)
+    assert r.summary() == (
+        "Bradley-Terry ratings for 2 models from 2 comparisons (ties split). "
+        "No interval: 1 of 1 resample came back undefined, above the 10% this "
+        "reports through. A resample that misses a comparison can leave a "
+        "model unbeaten inside it, and those resamples are the ones with the "
+        "widest ratings, so percentiles of the rest would understate the "
+        "spread. Without an interval no pair can be called separable. Ratings "
+        "are anchored on a at 0. Only differences between models mean "
+        "anything, and adding the same amount to every rating would change "
+        "nothing about the fit or about which pairs separate."
+    )
+
+
+def test_a_missing_item_id_on_the_only_comparison_is_singular():
+    """One tied comparison with no item id. A tie credits both models, so
+    the fit exists and the item bootstrap is reached. It said "1 of 1
+    comparisons"."""
+    data = pd.DataFrame(
+        [(None, "a", "b", "tie")],
+        columns=["item_id", "model_a", "model_b", "winner"],
+    )
+    with pytest.raises(ValueError) as excinfo:
+        bradley_terry(data, n_boot=10)
+    assert str(excinfo.value) == (
+        "item_id is missing on 1 of 1 comparison, the first between 'a' and "
+        "'b'. The bootstrap resamples whole items, so it needs to know which "
+        "item every comparison belongs to. Fill in the item ids, or pass "
+        "resample='comparisons' to resample comparisons one at a time, which "
+        "treats every judgement as independent."
+    )

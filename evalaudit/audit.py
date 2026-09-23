@@ -54,7 +54,7 @@ SEVERITY_ORDER = _SEVERITIES
 # How findings sort inside one severity, and it is not module order.
 #
 # The margin comes first because the margin is the number on the slide. If
-# it does not survive a proper fit, nothing further down changes what the
+# its interval includes zero, nothing further down changes what the
 # client has to be told. Power sits behind it because it says what size of
 # difference the design could find. Then the two checks on whether the
 # labels underneath mean anything, then the two judge biases, then the
@@ -62,7 +62,7 @@ SEVERITY_ORDER = _SEVERITIES
 #
 # agreement and judge sitting below compare is deliberate and is not a
 # statement about their importance. They are what makes this package worth
-# building. But severity does the real work in this ordering: a critical
+# building. But severity does the real work in this ordering. A critical
 # agreement finding already outranks a compare warning, and this tuple only
 # breaks ties inside one severity. Reordering it on the instinct that the
 # best module should be first makes the report worse, because it moves the
@@ -395,8 +395,8 @@ def _compare_finding(comparison, systems: dict, cfg: AuditConfig):
     else:
         severity = "info"
         lead = (
-            f"This is the margin between {names[0]} and {names[1]}, and it "
-            f"survives the fit."
+            f"This is the margin between {names[0]} and {names[1]}, and its "
+            f"interval excludes zero."
         )
         action = (
             "Report the interval alongside the difference. The end of the "
@@ -590,8 +590,8 @@ def _established_power_finding(lead: str, result) -> Finding:
     it still bears on is precision, so this finding is info whatever the
     figure is, and it is written as the cost of a tighter estimate.
 
-    The branch reads the interval and never the point estimate. A five point
-    margin whose interval includes zero is the null case. A five point
+    The branch reads the interval and never the point estimate. A five-point
+    margin whose interval includes zero is the null case. A five-point
     margin below the design's reach whose interval clears zero is this one.
     """
     return Finding(
@@ -806,7 +806,7 @@ def _agreement_finding(ratings, cfg: AuditConfig):
             f"The grades reproduce at or above the "
             f"{cfg.agreement_threshold:.3f} the report is holding them to.",
             result,
-            "Nothing to do here. Keep the double graded sample in the next "
+            "Nothing to do here. Keep the double-graded sample in the next "
             "round so this stays measurable.",
         ),
         result=result,

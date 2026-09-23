@@ -10,7 +10,7 @@ For paired binary data the size that matters is not the number of items.
 McNemar reads only the pairs where the two systems disagree, and the rest
 carry no information about which one is better. So the calculation runs on
 the discordance rate. An eval with 500 items and 12 discordant pairs is a
-12 item study, and 488 of those items did nothing but cost money.
+12-item study, and 488 of those items did nothing but cost money.
 
 That rate is a property of the two systems and the item set, so it cannot
 be guessed from the pass rates. When it is not supplied these functions
@@ -86,7 +86,7 @@ def detectable_effect(
         The chance of finding a difference that is really there. 0.8 is the
         convention.
     alpha
-        Two sided significance level.
+        Two-sided significance level.
     paired
         True when both systems were run on the same items, which is how
         most evals are built.
@@ -107,17 +107,17 @@ def detectable_effect(
     items and not on the baseline. McNemar's test looks only at the pairs
     where one system passed and the other failed. Items both systems passed
     and items both failed drop out of the statistic entirely, so an eval
-    with 500 items and 12 discordant pairs carries the information of a 12
-    item study.
+    with 500 items and 12 discordant pairs carries the information of a
+    12-item study.
 
     The direction surprises people. A higher discordance rate makes the
     detectable difference larger, not smaller. Disagreement between the two
-    systems is noise in the per item comparison, so systems that agree on
+    systems is noise in the per-item comparison, so systems that agree on
     most items are the ones McNemar can separate sharply.
 
     The arithmetic is Connor's normal approximation, which is the standard
-    published formula. evalaudit's own McNemar runs the continuity
-    corrected chi-square above 25 discordant pairs and the exact binomial
+    published formula. evalaudit's own McNemar runs the continuity-corrected
+    chi-square above 25 discordant pairs and the exact binomial
     below it, and both are a little conservative. Measured over 200,000
     simulated evals the shipped test delivers about 0.784 where this
     formula promises 0.800. So the difference reported here is a floor. No
@@ -204,7 +204,7 @@ def min_sample_size(
     power
         The chance of finding that difference when it is really there.
     alpha
-        Two sided significance level.
+        Two-sided significance level.
     paired
         True when both systems will be run on the same items. Nearly always
         worth doing, and it cuts the number of items sharply.
@@ -363,7 +363,7 @@ def _paired_difference(
 def _power_independent(
     n_per_group: float, baseline: float, difference: float, alpha: float
 ) -> float:
-    """Power of the two proportion score test, equal groups.
+    """Power of the two-proportion score test, equal groups.
 
     The null variance is pooled, which is the maximum likelihood estimate
     when the two rates are equal and the variance the test in
@@ -391,7 +391,7 @@ def _independent_size(
 
         n = [z sqrt(2 p q) + z_beta sqrt(p1 q1 + p2 q2)]^2 / delta^2
 
-    The formula behind every published two proportion sample size table,
+    The formula behind every published two-proportion sample size table,
     and the one statsmodels solves in
     ``samplesize_proportions_2indep_onetail``.
     """
@@ -499,7 +499,7 @@ def _check_power_and_alpha(power: float, alpha: float) -> None:
     if power <= alpha:
         raise ValueError(
             f"power must exceed alpha, got power={power} and alpha={alpha}. "
-            f"A two sided test rejects at the alpha rate when there is "
+            f"A two-sided test rejects at the alpha rate when there is "
             f"nothing to find, so no sample size delivers less than that"
         )
 

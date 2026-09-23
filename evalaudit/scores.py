@@ -1,7 +1,7 @@
 """Confidence intervals on a single eval score.
 
-The most common missing piece in published eval results: a pass rate with no
-interval around it. At n=50 the interval is about +/- 10 points at an 85%
+The most common missing piece in published eval results is the interval
+around a pass rate. At n=50 the interval is about +/- 10 points at an 85%
 pass rate and +/- 13 points at 50%. That is the uncertainty in one score. A
 difference between two systems has its own interval, from
 :mod:`evalaudit.compare`, and on paired data it is often much narrower than

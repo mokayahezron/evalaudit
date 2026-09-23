@@ -324,7 +324,7 @@ def assert_slice_naming_rule(result):
     """A slice is named only when its own interval clears the overall one.
 
     The noise guard rater_dropout uses, in the form this statistic takes.
-    Both halves matter: naming when the rule says so, and staying quiet when
+    Both halves matter, naming when the rule says so and staying quiet when
     it does not.
 
     The slice sitting below the overall lower bound is necessary and not
@@ -1090,7 +1090,7 @@ def test_agreement_is_undefined_when_nobody_varied():
 def test_the_nobody_varied_summary_is_in_plain_sentences():
     """The sentence used to read "That is not perfect agreement, it is a
     rubric with one label in it." That construction is banned in this
-    codebase. Both halves of the meaning stay: the cause is a rubric with one
+    codebase. Both halves of the meaning stay. The cause is a rubric with one
     label in it, and the result is not perfect agreement."""
     text = judge_validation([1] * 40, [1] * 40, n_boot=200, seed=1).summary()
     assert (
@@ -1269,6 +1269,33 @@ def test_a_stray_swapped_pair_does_not_flip_the_design():
     assert "3" in r.summary()
 
 
+def test_one_stray_swapped_pair_is_counted_in_the_singular():
+    """One pair run both ways, among a hundred run once. The summary said
+    "1 pairs were also run". Compared whole, so the numbers are pinned with
+    the grammar."""
+    rng = np.random.default_rng(44)
+    frame = randomised_frame(100, 0.5, rng)
+    swap = frame.head(1).rename(
+        columns={"option_a": "option_b", "option_b": "option_a"}
+    )[COMPARISON_COLUMNS]
+    frame = pd.concat([frame, swap], ignore_index=True)
+
+    r = position_bias(frame)
+
+    assert (r.design, r.n_both_orders, r.n_ties) == ("randomised", 1, 0)
+    assert r.summary() == (
+        "Each pair was judged once, so this reports the position-A win rate. "
+        "Position A won 47.5% of 101 judgements (95% CI: 37.5% to 57.7%, "
+        "exact binomial p=0.6908). The interval includes 50%, so the data "
+        "cannot show that position moved the judge. That does not mean the "
+        "judge ignores position. This assumes presentation order was "
+        "randomised, which the data cannot confirm. If the same system sat in "
+        "position A each time, the same number appears when that system is "
+        "simply better. 1 pair was also run in the reverse order, too few to "
+        "change which analysis applies."
+    )
+
+
 def test_the_design_switches_at_half_the_pairs():
     """The boundary, pinned from both sides."""
     rng = np.random.default_rng(45)
@@ -1387,6 +1414,29 @@ def test_ties_are_dropped_and_counted():
     assert r.n_ties == 10
     assert r.n_decisive == 90
     assert "10" in r.summary()
+
+
+def test_one_tie_is_counted_in_the_singular():
+    """One tie in a hundred judgements. The summary said "1 judgements were
+    ties and are left out". Compared whole, so the numbers are pinned with
+    the grammar."""
+    rng = np.random.default_rng(54)
+    frame = randomised_frame(100, 0.6, rng)
+    frame.loc[0, "winner"] = None
+
+    r = position_bias(frame)
+
+    assert (r.design, r.n_both_orders, r.n_ties) == ("randomised", 0, 1)
+    assert r.summary() == (
+        "Each pair was judged once, so this reports the position-A win rate. "
+        "Position A won 61.6% of 99 judgements (95% CI: 51.3% to 71.2%, "
+        "exact binomial p=0.0265). The interval clears 50%, so the judge "
+        "favours whichever output it sees first. This assumes presentation "
+        "order was randomised, which the data cannot confirm. If the same "
+        "system sat in position A each time, the same number appears when "
+        "that system is simply better. 1 judgement was a tie and is left out "
+        "of the rates above."
+    )
 
 
 def test_consistency_is_undefined_in_the_randomised_branch():
@@ -1629,7 +1679,7 @@ def test_a_judge_indifferent_to_length_reports_no_effect():
 
     An interval covering the null covers it 95% of the time, so asserting
     that directly is a one-in-twenty failure across seeds. The assertion is
-    on the size of the effect instead: length has to move the odds by less
+    on the size of the effect instead. Length has to move the odds by less
     than a quarter across a full standard deviation of length difference,
     which is about four standard errors out at this sample size.
     """
@@ -1707,8 +1757,8 @@ def test_disagreement_model_is_oriented_by_the_human_choice():
     tracks quality is the shorter one, and that swamps the bias. Orienting
     by option A asks whether disagreement rises when A happens to be longer,
     which is a question about column order in the file. Neither can be told
-    from this one by shape alone, so the invariance is the test: relabelling
-    A and B must not move either coefficient.
+    from this one by shape alone, so the test is that relabelling A and B
+    must not move either coefficient.
     """
     rng = np.random.default_rng(77)
     human, judge, lengths = quality_pairs(500, rng, judge_length_weight=0.015)
@@ -1973,8 +2023,8 @@ def test_length_bias_rejects_mismatched_human_labels():
 # guard fails on it. The docstring says which test in this file is the one
 # that would catch the mutation in the ordinary course of running the suite.
 # The pattern is the one test_the_ordinal_metric_moves_between_resamples
-# uses in test_agreement.py: show the discriminating condition really does
-# discriminate, rather than trusting that it would.
+# uses in test_agreement.py. It shows the discriminating condition really
+# does discriminate, rather than trusting that it would.
 # --------------------------------------------------------------------------
 
 def test_mutation_sorting_slices_descending():
@@ -5095,4 +5145,324 @@ def test_baseline_refuses_an_item_in_two_clusters():
         "human_baseline puts item 'i8' in more than one cluster. The interval "
         "resamples whole clusters, so every row for an item needs the same "
         "cluster_id."
+    )
+
+
+# --------------------------------------------------------------------------
+# Counts of one
+#
+# A count of one takes the singular noun, and a sentence that goes on about
+# the thing counted takes the singular too. Each test builds the smallest
+# input that reaches its sentence, asserts the counts that put it on that
+# branch, and compares the whole summary.
+# --------------------------------------------------------------------------
+
+HEADLINE_ONE_OF_ONE_UNDEFINED = (
+    "Judge and human agree at alpha 0.000 (nominal, 3 items). There is no "
+    "interval on that alpha. 1 of 1 resample left it undefined, above the 10% "
+    "this reports through. That is the resample where every label was the "
+    "same, so percentiles of the rest would understate the upper bound. Plain "
+    "accuracy is 66.7%. Without an interval there is nothing to place the "
+    "judge's agreement with the humans against the conventional lines at "
+    "0.667 and 0.800, so the data cannot show that it clears either. That "
+    "does not mean it falls short of them."
+)
+
+HEADLINE_ONE_OF_FIVE_UNDEFINED = (
+    "Judge and human agree at alpha 0.000 (nominal, 3 items). There is no "
+    "interval on that alpha. 1 of 5 resamples left it undefined, above the "
+    "10% this reports through. That is the resample where every label was the "
+    "same, so percentiles of the rest would understate the upper bound. Plain "
+    "accuracy is 66.7%. Without an interval there is nothing to place the "
+    "judge's agreement with the humans against the conventional lines at "
+    "0.667 and 0.800, so the data cannot show that it clears either. That "
+    "does not mean it falls short of them."
+)
+
+
+@pytest.mark.parametrize(
+    "n_boot, seed, expected",
+    [
+        (1, 6, HEADLINE_ONE_OF_ONE_UNDEFINED),
+        (5, 2, HEADLINE_ONE_OF_FIVE_UNDEFINED),
+    ],
+    ids=["one-of-one", "one-of-five"],
+)
+def test_a_refused_headline_counts_one_resample_in_the_singular(
+    n_boot, seed, expected
+):
+    """Three items, two of them unanimous. With n_boot=1 the one resample
+    is undefined, and with n_boot=5 one of the five is. It said "1 of 1
+    resamples", and "Those are the resamples" after a count of one."""
+    r = judge_validation(
+        ["first", "first", "second"], ["first"] * 3, n_boot=n_boot, seed=seed
+    )
+    assert (r.n_boot, r.n_boot_usable) == (n_boot, n_boot - 1)
+    assert not r.has_interval
+    assert r.summary() == expected
+
+
+def two_clusters_one_unanimous():
+    """Two items in two clusters, each graded by two humans. Both humans
+    say "first" on i0 and they split on i1. The judge says "first" on i0
+    and "second" on i1.
+
+    A draw that picks c0 twice holds one human label, so human-human alpha
+    is undefined on it. The seeds in the tests below are ones where exactly
+    one draw is.
+    """
+    frame = pd.DataFrame({
+        "item_id": ["i0", "i0", "i1", "i1"],
+        "cluster_id": ["c0", "c0", "c1", "c1"],
+        "rater_id": ["h0", "h1", "h0", "h1"],
+        "rating": ["first", "first", "second", "first"],
+    })
+    return frame, pd.Series(["first", "second"], index=["i0", "i1"])
+
+
+BASELINE_ONE_OF_ONE_UNDEFINED = (
+    "Judge and human agree at alpha 1.000 (nominal, 2 items). There is no "
+    "interval on that alpha. 1 of 1 resample left it undefined, above the 10% "
+    "this reports through. That is the resample where every label was the "
+    "same, so percentiles of the rest would understate the upper bound. Plain "
+    "accuracy is 100.0%. Against the human baseline, on 2 items, the judge "
+    "agrees with the human labels at alpha 0.533 and the humans agree with "
+    "each other at alpha 0.000. Judge-human minus human-human is +0.533. Ties "
+    "count as a label of their own on both sides. There is no interval on the "
+    "difference, and so no verdict. 1 of 1 resample left an alpha undefined, "
+    "above the 10% this reports through. That is the resample where every "
+    "human label was the same, so an interval from the rest would lean in the "
+    "judge's favour."
+)
+
+BASELINE_ONE_OF_FIVE_UNDEFINED = (
+    "Judge and human agree at alpha 1.000 (nominal, 2 items). There is no "
+    "interval on that alpha. 4 of 5 resamples left it undefined, above the "
+    "10% this reports through. Those are the resamples where every label was "
+    "the same, so percentiles of the rest would understate the upper bound. "
+    "Plain accuracy is 100.0%. Against the human baseline, on 2 items, the "
+    "judge agrees with the human labels at alpha 0.533 and the humans agree "
+    "with each other at alpha 0.000. Judge-human minus human-human is +0.533. "
+    "Ties count as a label of their own on both sides. There is no interval "
+    "on the difference, and so no verdict. 1 of 5 resamples left an alpha "
+    "undefined, above the 10% this reports through. That is the resample "
+    "where every human label was the same, so an interval from the rest would "
+    "lean in the judge's favour."
+)
+
+
+@pytest.mark.parametrize(
+    "n_boot, seed, expected",
+    [
+        (1, 11, BASELINE_ONE_OF_ONE_UNDEFINED),
+        (5, 7, BASELINE_ONE_OF_FIVE_UNDEFINED),
+    ],
+    ids=["one-of-one", "one-of-five"],
+)
+def test_a_refused_baseline_counts_one_resample_in_the_singular(
+    n_boot, seed, expected
+):
+    """With n_boot=1 the one draw leaves human-human alpha undefined, and
+    with n_boot=5 one of the five does, so the interval on the difference
+    is refused. It said "1 of 1 resamples", and "Those are the resamples"
+    after a count of one. The headline refuses its own interval here too,
+    in its own words."""
+    frame, judge_labels = two_clusters_one_unanimous()
+    r = validate_with_baseline(
+        frame, judge_labels, ties="category", n_boot=n_boot, seed=seed
+    )
+    assert (r.n_boot, r.baseline_n_boot_usable) == (n_boot, n_boot - 1)
+    assert not r.has_baseline_interval
+    assert r.summary() == expected
+
+
+def test_one_undefined_baseline_draw_is_counted_in_the_singular():
+    """Ten draws, and one leaves human-human alpha undefined, so the
+    interval stands on the other nine. It said "Those are the resamples"
+    and "leaving them out" after a count of one."""
+    frame, judge_labels = two_clusters_one_unanimous()
+    r = validate_with_baseline(
+        frame, judge_labels, ties="category", n_boot=10, seed=4
+    )
+    assert (r.n_boot, r.baseline_n_boot_usable) == (10, 9)
+    assert r.has_baseline_interval
+    assert r.summary() == (
+        "Judge and human agree at alpha 1.000 (nominal, 2 items). There is no "
+        "interval on that alpha. 6 of 10 resamples left it undefined, above "
+        "the 10% this reports through. Those are the resamples where every "
+        "label was the same, so percentiles of the rest would understate the "
+        "upper bound. Plain accuracy is 100.0%. Against the human baseline, "
+        "on 2 items, the judge agrees with the human labels at alpha 0.533 "
+        "and the humans agree with each other at alpha 0.000. Judge-human "
+        "minus human-human is +0.533 (95% CI: +0.333 to +0.533, resampling 2 "
+        "clusters). 1 of 10 resamples left an alpha undefined, and the "
+        "interval comes from the other 9. That is the resample where every "
+        "human label was the same, so leaving it out shifts the interval in "
+        "the judge's favour. Ties count as a label of their own on both "
+        "sides. The whole interval sits above zero, so the judge agrees with "
+        "a human more than a second human does. A judge that sits nearer the "
+        "middle of the human spread than a typical human does will score this "
+        "way, so this does not show that the judge is better than a human. "
+        "That interval rests on only 2 clusters, so treat the verdict as "
+        "provisional."
+    )
+
+
+def test_one_judgement_is_counted_in_the_singular():
+    """One pair judged once. It said "of 1 judgements"."""
+    frame = pd.DataFrame([("p0", "x", "y", "x")], columns=COMPARISON_COLUMNS)
+    r = position_bias(frame)
+    assert (r.design, r.n_decisive) == ("randomised", 1)
+    assert r.summary() == (
+        "Each pair was judged once, so this reports the position-A win rate. "
+        "Position A won 100.0% of 1 judgement (95% CI: 2.5% to 100.0%, exact "
+        "binomial p=1.0000). The interval includes 50%, so the data cannot "
+        "show that position moved the judge. That does not mean the judge "
+        "ignores position. This assumes presentation order was randomised, "
+        "which the data cannot confirm. If the same system sat in position A "
+        "each time, the same number appears when that system is simply better."
+    )
+
+
+def test_one_pair_run_both_ways_is_counted_in_the_singular():
+    """One pair judged in both orders, and the judge took the output shown
+    first both times, so it flipped. It said "1 of 1 pairs were run", "of
+    1 pairs" and "Of the 1 pairs it flipped on"."""
+    frame = pd.DataFrame(
+        [("p0", "x", "y", "x"), ("p0", "y", "x", "y")],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert (r.design, r.n_pairs, r.n_both_orders) == ("both_orders", 1, 1)
+    assert (r.n_pairs_scored, r.n_decisive) == (1, 1)
+    assert r.summary() == (
+        "1 of 1 pair was run in both orders, so this reports the consistency "
+        "rate. The judge named the same output under both orderings on 0.0% "
+        "of 1 pair (95% CI: 0.0% to 79.3%). Of the 1 pair it flipped on, 1 "
+        "went to whichever output was shown first (100.0%, 95% CI: 2.5% to "
+        "100.0%, exact binomial p=1.0000). That share is not clear of 50% at "
+        "this many flips, so the data cannot show that the flips have a "
+        "direction. That does not mean the judge is free of position bias. "
+        "Inconsistency is its own problem and does not become position bias "
+        "without a direction."
+    )
+
+
+def test_one_of_two_pairs_run_both_ways_takes_a_singular_verb():
+    """Two pairs, one of them run both ways, which is half and so the
+    both-orders design. It said "1 of 2 pairs were run". The verb follows
+    the pairs run both ways, and the noun follows all the pairs."""
+    frame = pd.DataFrame(
+        [("p0", "x", "y", "x"), ("p0", "y", "x", "x"), ("p1", "u", "v", "u")],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert (r.design, r.n_pairs, r.n_both_orders) == ("both_orders", 2, 1)
+    assert (r.n_pairs_scored, r.n_decisive) == (1, 0)
+    assert r.summary() == (
+        "1 of 2 pairs was run in both orders, so this reports the consistency "
+        "rate. The judge named the same output under both orderings on 100.0% "
+        "of 1 pair (95% CI: 20.7% to 100.0%). It never flipped, so there is "
+        "no direction to test and nothing here points at position."
+    )
+
+
+def test_one_flip_among_two_pairs_is_counted_in_the_singular():
+    """Two pairs run both ways, and the judge flipped on one. It said "Of
+    the 1 pairs it flipped on" beside a consistency rate over two pairs, so
+    the noun follows the flips."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "x", "y", "x"), ("p0", "y", "x", "x"),
+            ("p1", "u", "v", "u"), ("p1", "v", "u", "v"),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert (r.n_pairs, r.n_both_orders) == (2, 2)
+    assert (r.n_pairs_scored, r.n_decisive) == (2, 1)
+    assert r.summary() == (
+        "2 of 2 pairs were run in both orders, so this reports the "
+        "consistency rate. The judge named the same output under both "
+        "orderings on 50.0% of 2 pairs (95% CI: 9.5% to 90.5%). Of the 1 pair "
+        "it flipped on, 1 went to whichever output was shown first (100.0%, "
+        "95% CI: 2.5% to 100.0%, exact binomial p=1.0000). That share is not "
+        "clear of 50% at this many flips, so the data cannot show that the "
+        "flips have a direction. That does not mean the judge is free of "
+        "position bias. Inconsistency is its own problem and does not become "
+        "position bias without a direction."
+    )
+
+
+def test_one_pair_with_no_preference_model_is_singular():
+    """One pair, so the outcome cannot vary. It said "(1 pairs)"."""
+    r = length_bias([1], [[10, 5]])
+    assert (r.n, r.note) == (1, NOTE_ONE_OUTCOME)
+    assert r.summary() == (
+        "No judge preference model: the outcome never varied, so there is "
+        "nothing to model (1 pair). The judge picked the longer answer on "
+        "100.0% of pairs. Without human labels there is no second model, so "
+        "this cannot separate a length preference from longer answers being "
+        "better. Supply human_preferences to get the sharper of the two."
+    )
+
+
+def test_a_length_step_that_prints_as_one_character_is_singular():
+    """Three pairs with length differences of -1, 0 and 1, and the judge
+    took the first option at both ends. The standard deviation is exactly
+    1, and it printed as "1 characters". The step is a measure rather than
+    a count, and it takes the singular all the same."""
+    r = length_bias([1, 0, 1], [[4, 5], [5, 5], [6, 5]])
+    assert r.sd_difference == pytest.approx(1.0)
+    assert np.isfinite(r.coefficient)
+    assert r.summary() == (
+        "Judge preference against length: 1 character of extra length "
+        "multiplies the odds the judge picks that answer by 1.00 (95% CI: "
+        "0.05 to 18.91, p=1.0000, 3 pairs). It picked the longer answer on "
+        "33.3% of pairs. The interval includes an odds ratio of 1, so the "
+        "data cannot show that length moved the judge. That does not mean "
+        "length plays no part in its choices. Without human labels there is "
+        "no second model, so this cannot separate a length preference from "
+        "longer answers being better. Supply human_preferences to get the "
+        "sharper of the two."
+    )
+
+
+def test_one_disagreement_with_no_model_is_singular():
+    """Two pairs and one disagreement, which the length difference splits
+    from the agreement. It said "(1 disagreements)"."""
+    r = length_bias([1, 0], [[10, 5], [6, 5]], human_preferences=[1, 1])
+    assert (r.n_disagreements, r.disagreement_note) == (1, NOTE_SEPARATED)
+    assert r.summary() == (
+        "No judge preference model: length difference splits the outcome "
+        "perfectly, so the coefficient is unbounded (2 pairs). The judge "
+        "picked the longer answer on 50.0% of pairs. No disagreement model: "
+        "length difference splits the outcome perfectly, so the coefficient "
+        "is unbounded (1 disagreement)."
+    )
+
+
+def test_one_disagreement_with_a_fitted_model_is_singular():
+    """Three pairs, and the judge breaks with the humans on the middle one,
+    where the oriented difference is 0 between -1 and 1. The fit exists and
+    its step is exactly 1. It said "1 characters" and "1 disagreements"."""
+    r = length_bias(
+        [1, 1, 1], [[4, 5], [5, 5], [6, 5]], human_preferences=[1, 0, 1]
+    )
+    assert r.n_disagreements == 1
+    assert r.disagreement_sd_difference == pytest.approx(1.0)
+    assert np.isfinite(r.disagreement_coefficient)
+    assert r.summary() == (
+        "No judge preference model: the outcome never varied, so there is "
+        "nothing to model (3 pairs). The judge picked the longer answer on "
+        "33.3% of pairs. Judge-human disagreement against the same length "
+        "difference, oriented by what the humans picked: 1 character "
+        "multiplies the odds the judge breaks with them by 1.00 (95% CI: 0.05 "
+        "to 18.91, p=1.0000, 1 disagreement). That interval includes an odds "
+        "ratio of 1, so the data cannot show that the judge breaks with the "
+        "humans toward longer or shorter answers. That does not mean it "
+        "follows them on length. Holding the human verdict fixed strips the "
+        "part of the length-quality link the human labels capture, and it "
+        "does not remove the rest, since a binary label is a coarse measure "
+        "of quality. Read this as an indication rather than as proof."
     )

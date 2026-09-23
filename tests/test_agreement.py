@@ -37,10 +37,12 @@ NOTE_NO_OVERLAP = "no item left with two or more ratings"
 NOTE_NO_VARIANCE = "remaining raters agreed everywhere, so alpha has no denominator"
 NOTE_ONE_ITEM = "only one item left with two or more ratings"
 
-# The phrase summary() opens with when it does name a rater. Tests assert on
-# this rather than on a bare rater id, because "r0" is a substring of plenty
-# of things a summary legitimately contains, and a test that fails because an
-# item got called "essay-r05" is a test failing for the wrong reason.
+# How the summary opened the sentence that named a rater, before 0.4.0. Since
+# 0.4.0 it lists the leave-one-out alphas and names nobody, so tests assert
+# this never appears. They assert on this rather than on a bare rater id,
+# because "r0" is a substring of plenty of things a summary legitimately
+# contains, and a test that fails because an item got called "essay-r05" is a
+# test failing for the wrong reason.
 NAMES_A_RATER = "Dropping "
 
 # The two things the dropout sentence can say. When every leave-one-out
@@ -68,7 +70,7 @@ LISTS_THE_DROPOUT = " Leaving one rater out at a time gives alpha of "
 def to_long(matrix, rater_names=None, item_names=None):
     """Turn a (raters x items) matrix with NaN holes into a long frame.
 
-    The reference package wants the wide matrix, this library wants long
+    The reference package wants the wide matrix. This library wants long
     format, so every cross-check goes through here.
     """
     arr = np.asarray(matrix, dtype=float)
@@ -824,7 +826,7 @@ def test_bootstrap_resamples_items_not_ratings():
 # its sampling error, so resampling them would let the double-grading rate,
 # which is a scheduling decision, leak into a statistic about raters.
 #
-# That choice does not make the problem go away, it moves it. A resample can
+# That choice moves the problem. It does not make it go away. A resample can
 # still come back undefined, because if it happens to draw only items every
 # rater agreed on then the expected disagreement is zero and alpha is 0/0.
 # Undefined resamples are not missing at random. They are exactly the
@@ -915,7 +917,7 @@ def test_the_two_reasons_for_no_alpha_read_differently():
 def test_the_no_variance_summary_is_in_plain_sentences():
     """The sentence used to read "That is not perfect agreement, it is a
     scale nobody varied." That construction is banned in this codebase. The
-    meaning has two halves and both stay: the cause is a scale nobody varied,
+    meaning has two halves and both stay. The cause is a scale nobody varied,
     and the result is not perfect agreement."""
     agreed = rater_agreement(
         pd.DataFrame(
@@ -1041,7 +1043,7 @@ def test_the_floor_is_inclusive_at_exactly_nine_hundred():
     or it does not, and a resample is undefined only when every item in it
     is unanimous on the same value, so splitting two of three raters instead
     of all three moves nothing. The knob that does move in fine steps is the
-    item count: the undefined share is ((n - k) / n) ** n, which for k=2
+    item count. The undefined share is ((n - k) / n) ** n, which for k=2
     walks 0.0878, 0.0949, 0.1001, 0.1042 as n goes 6, 7, 8, 9. Eight items
     put it at 0.100113, so the usable count lands within a few of 900 and
     both sides of the boundary come up across seeds.
@@ -1302,14 +1304,17 @@ def test_summary_refuses_to_name_an_outlier_on_thin_data():
 
 
 def test_the_naming_rule_is_the_shift_against_the_sampling_error():
-    """The rule, asserted directly. A rater is named only when removing them
-    shifts alpha by more than the sampling error on alpha.
+    """The withdrawn rule, asserted directly on dropout_is_distinguishable.
+    It holds when removing a rater shifts alpha by more than the sampling
+    error on alpha. Before 0.4.0 the summary named a rater when it held.
+    Since 0.4.0 the summary lists the leave-one-out alphas and names nobody,
+    and the property still computes the rule for callers who read it.
 
     The obvious alternative, comparing the leave-one-out alpha to ci_high,
     fails on data that is nothing but noise. When alpha sits near zero the
     interval runs far below it and barely above, so ci_high is a low bar and
     a rater picked out of six random items clears it. The test above pins
-    that case; this one pins the rule that makes it come out right.
+    that case; this one pins the rule as the property computes it.
     """
     for seed, n_items, n_noisy in [(83, 300, 1), (89, 8, 1), (97, 40, 0)]:
         rng = np.random.default_rng(seed)
@@ -1917,3 +1922,108 @@ def test_the_withdrawn_rule_is_documented_with_its_figures():
         assert figure in doc
     top = " ".join(AgreementResult.top_dropout_rater.__doc__.split())
     assert "Always None" in top
+
+
+# --------------------------------------------------------------------------
+# Counts of one
+#
+# A count of one takes the singular noun, and a sentence that goes on about
+# the thing counted takes the singular too. Each test builds the smallest
+# input that reaches its sentence, asserts the counts that put it on that
+# branch, and compares the whole summary.
+# --------------------------------------------------------------------------
+
+def test_cohens_kappa_counts_one_item_in_the_singular():
+    """One item the two raters split on. It said "(1 items, ...)"."""
+    r = cohens_kappa(["a"], ["b"])
+    assert (r.n_items, r.n_raters, r.n_categories) == (1, 2, 2)
+    assert r.summary() == (
+        "Cohen's kappa 0.000 (1 item, 2 raters, 2 categories). Raters agreed "
+        "on 0.0% of ratings, and 0.0% was expected by chance. Kappa moves "
+        "with how often each category is used, so the same raters score lower "
+        "on a lopsided scale than a balanced one. Krippendorff's alpha moves "
+        "the same way, because it also corrects for chance using how often "
+        "each category is used. Prefer rater_agreement for anything you "
+        "report, since alpha handles missing ratings, more than two raters "
+        "and ordered scales."
+    )
+
+
+def test_one_item_graded_twice_is_counted_in_the_singular():
+    """One item graded by two raters. It said "1 of 1 items graded"."""
+    ratings = pd.DataFrame({
+        "item_id": ["u0", "u0"],
+        "rater_id": ["r1", "r2"],
+        "rating": [1, 2],
+    })
+    r = rater_agreement(ratings)
+    assert (r.n_items, r.n_overlapping_items) == (1, 1)
+    assert r.summary() == (
+        "Krippendorff's alpha is undefined (nominal, 1 of 1 item graded more "
+        "than once). One item cannot carry a reliability estimate, so there "
+        "is no number to report and no interval around it. The arithmetic "
+        "does return a value at this size, which is why it is withheld rather "
+        "than shown. Grade a larger sample twice. Every leave-one-out alpha "
+        "is undefined, so the data cannot show that any one rater is pulling "
+        "alpha down."
+    )
+
+
+def two_items_one_unanimous():
+    """Two items graded by two raters, who agree on u0 and split on u1.
+
+    A resample that draws u0 twice is unanimous, so alpha is undefined on
+    it. The seeds in the test below are ones where exactly one resample is.
+    """
+    return pd.DataFrame({
+        "item_id": ["u0", "u0", "u1", "u1"],
+        "rater_id": ["r1", "r2", "r1", "r2"],
+        "rating": [1, 1, 1, 2],
+    })
+
+
+AGREEMENT_ONE_OF_ONE_UNDEFINED = (
+    "Krippendorff's alpha 0.000 (nominal, 2 of 2 items graded more than "
+    "once). No interval: 1 of 1 resample came back undefined, above the 10% "
+    "this reports through. That resample is the unanimous one, so percentiles "
+    "of the rest would understate the upper bound. Without an interval there "
+    "is nothing to place rater agreement against the conventional lines at "
+    "0.667 and 0.800, so the data cannot show that it clears either. That "
+    "does not mean it falls short of them. Every leave-one-out alpha is "
+    "undefined, so the data cannot show that any one rater is pulling alpha "
+    "down."
+)
+
+AGREEMENT_ONE_OF_FIVE_UNDEFINED = (
+    "Krippendorff's alpha 0.000 (nominal, 2 of 2 items graded more than "
+    "once). No interval: 1 of 5 resamples came back undefined, above the 10% "
+    "this reports through. That resample is the unanimous one, so percentiles "
+    "of the rest would understate the upper bound. Without an interval there "
+    "is nothing to place rater agreement against the conventional lines at "
+    "0.667 and 0.800, so the data cannot show that it clears either. That "
+    "does not mean it falls short of them. Every leave-one-out alpha is "
+    "undefined, so the data cannot show that any one rater is pulling alpha "
+    "down."
+)
+
+
+@pytest.mark.parametrize(
+    "n_boot, seed, expected",
+    [
+        (1, 11, AGREEMENT_ONE_OF_ONE_UNDEFINED),
+        (5, 7, AGREEMENT_ONE_OF_FIVE_UNDEFINED),
+    ],
+    ids=["one-of-one", "one-of-five"],
+)
+def test_one_undefined_resample_is_counted_in_the_singular(
+    n_boot, seed, expected
+):
+    """With n_boot=1 the one resample is undefined, and with n_boot=5 one
+    of the five is, which is still past the 10% line. It said "1 of 1
+    resamples", and "Those resamples are the unanimous ones" after a count
+    of one. The second case keeps the resample count plural, so the
+    sentence after it has to follow the number that came back undefined."""
+    r = rater_agreement(two_items_one_unanimous(), n_boot=n_boot, seed=seed)
+    assert (r.n_boot, r.n_boot_usable) == (n_boot, n_boot - 1)
+    assert not r.has_interval
+    assert r.summary() == expected
