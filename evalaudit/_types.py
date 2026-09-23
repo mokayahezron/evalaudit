@@ -774,6 +774,20 @@ _NOTE_SLICE_NO_VARIANCE = (
     "human and judge used one label throughout, so alpha has no denominator"
 )
 
+# How each tie coding reads in a summary with a human baseline.
+_BASELINE_TIE_WORDS = {
+    "category": " Ties count as a label of their own on both sides.",
+    "drop": " Ties are set aside as no label on both sides.",
+}
+
+
+def _set_aside(n: int, what: str, because: str) -> str:
+    """One sentence counting the items a rule set aside, or nothing."""
+    if not n:
+        return ""
+    verb = "was" if n == 1 else "were"
+    return f" {n} {what}{_plural('item', n)} {verb} set aside because {because}."
+
 
 @dataclass(frozen=True)
 class JudgeValidation:
@@ -792,6 +806,30 @@ class JudgeValidation:
     number routinely hides the failure. The table is sorted ascending, worst
     first, and ``summary()`` refuses to name the top row unless its
     agreement falls below the interval on the overall figure.
+
+    The fields that start with ``baseline_`` are filled when a human
+    baseline was given, and ``ties`` records its coding, ``"category"`` or
+    ``"drop"``. ``ties`` is None without a baseline, and the baseline fields
+    are then NaN or zero. ``baseline_judge_human`` and
+    ``baseline_human_human`` are the two alphas on the same
+    ``baseline_n_items`` items, and ``baseline_difference`` is the first
+    minus the second. ``baseline_ci_low`` and ``baseline_ci_high`` are a
+    percentile interval on that difference from resampling
+    ``baseline_n_clusters`` clusters, and they are NaN when the interval is
+    refused. ``baseline_n_boot_usable`` counts the resamples that left both
+    alphas defined, out of ``n_boot``, which is the resample count for both
+    intervals. ``baseline_n_no_judge_label``, ``baseline_n_too_few_humans``
+    and ``baseline_n_judge_ties`` count the baseline items each rule set
+    aside, in the order the rules ran. ``n_dropped_ties`` counts the headline
+    items set aside because one side called it a tie, which happens only
+    under ``ties="drop"``. ``n_dropped`` still counts the items with no
+    label on a side, and an item with no label on one side and a tie on the
+    other counts there.
+
+    With a baseline, ``summary()`` reads the interval on the difference and
+    prints no band sentence. The conventional lines measure the judge
+    against a fixed bar. The baseline measures it against a second human,
+    which is the question those lines stand in for.
     """
 
     agreement: float
@@ -805,10 +843,34 @@ class JudgeValidation:
     confidence: float = 0.95
     n_boot: int = 0
     n_boot_usable: int = 0
+    n_dropped_ties: int = 0
+    ties: Optional[str] = None
+    baseline_judge_human: float = float("nan")
+    baseline_human_human: float = float("nan")
+    baseline_difference: float = float("nan")
+    baseline_ci_low: float = float("nan")
+    baseline_ci_high: float = float("nan")
+    baseline_n_items: int = 0
+    baseline_n_clusters: int = 0
+    baseline_n_no_judge_label: int = 0
+    baseline_n_too_few_humans: int = 0
+    baseline_n_judge_ties: int = 0
+    baseline_n_boot_usable: int = 0
 
     @property
     def has_interval(self) -> bool:
         return self.ci_low == self.ci_low and self.ci_high == self.ci_high
+
+    @property
+    def has_baseline(self) -> bool:
+        return self.ties is not None
+
+    @property
+    def has_baseline_interval(self) -> bool:
+        return (
+            self.baseline_ci_low == self.baseline_ci_low
+            and self.baseline_ci_high == self.baseline_ci_high
+        )
 
     @property
     def width(self) -> float:
@@ -852,18 +914,16 @@ class JudgeValidation:
         return self.by_slice.iloc[0]["slice"]
 
     def summary(self) -> str:
+        if self.has_baseline:
+            return self._head() + self._baseline() + self._slice_sentence()
         return self._head() + self._verdict() + self._slice_sentence()
 
     def _head(self) -> str:
         conf = f"{self.confidence * 100:.0f}%"
         accuracy = f" Plain accuracy is {_pct(self.accuracy)}."
-        dropped = ""
-        if self.n_dropped:
-            verb = "was" if self.n_dropped == 1 else "were"
-            dropped = (
-                f" {self.n_dropped} {_plural('item', self.n_dropped)} {verb} "
-                f"set aside because one side had no label."
-            )
+        dropped = _set_aside(
+            self.n_dropped, "", "one side had no label"
+        ) + _set_aside(self.n_dropped_ties, "", "one side called it a tie")
 
         if self.agreement != self.agreement:  # NaN
             return self._undefined() + accuracy + dropped
@@ -874,11 +934,24 @@ class JudgeValidation:
                 f"({conf} CI: {self.ci_low:.3f} to {self.ci_high:.3f}, "
                 f"{self.level}, {self.n_items} items)."
             )
-        else:
+        elif self.n_boot == 0:
             head = (
                 f"Judge and human agree at alpha {self.agreement:.3f} "
                 f"({self.level}, {self.n_items} items). No interval was "
                 f"computed, so nothing here is placed against sampling error."
+            )
+        else:
+            # The resamples were drawn and too few came back defined. Saying
+            # nothing was computed would hide which ones are missing. They
+            # are the unanimous ones, so the gap leans one way.
+            head = (
+                f"Judge and human agree at alpha {self.agreement:.3f} "
+                f"({self.level}, {self.n_items} items). There is no interval "
+                f"on that alpha. {self.n_boot - self.n_boot_usable} of "
+                f"{self.n_boot} resamples left it undefined, above the "
+                f"{(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports through. "
+                f"Those are the resamples where every label was the same, so "
+                f"percentiles of the rest would understate the upper bound."
             )
         return head + accuracy + dropped
 
@@ -915,6 +988,165 @@ class JudgeValidation:
             "the judge's agreement with the humans",
             " The judge is not a stand-in for the humans at this level.",
         )
+
+    def _baseline(self) -> str:
+        """The judge against a second human, and what the data says about it.
+
+        The verdict reads the interval on the difference and nothing else.
+        Both alphas come from the same draws, so their separate intervals can
+        overlap while the difference between them is well measured.
+        """
+        coding = _BASELINE_TIE_WORDS[self.ties]
+        rules = self._baseline_rules()
+
+        if self.baseline_difference != self.baseline_difference:  # NaN
+            return self._baseline_undefined() + coding + rules
+
+        figures = (
+            f" Against the human baseline, on {self.baseline_n_items} items, "
+            f"the judge agrees with the human labels at alpha "
+            f"{self.baseline_judge_human:.3f} and the humans agree with each "
+            f"other at alpha {self.baseline_human_human:.3f}."
+        )
+        if not self.has_baseline_interval:
+            return (
+                figures
+                + f" Judge-human minus human-human is "
+                f"{self.baseline_difference:+.3f}."
+                + coding + rules + self._baseline_refusal()
+            )
+
+        conf = f"{self.confidence * 100:.0f}%"
+        difference = (
+            f" Judge-human minus human-human is "
+            f"{self.baseline_difference:+.3f} ({conf} CI: "
+            f"{self.baseline_ci_low:+.3f} to {self.baseline_ci_high:+.3f}, "
+            f"resampling {self.baseline_n_clusters} clusters)."
+        )
+        return (
+            figures + difference + self._baseline_undefined_draws()
+            + coding + rules + self._baseline_verdict()
+        )
+
+    def _baseline_undefined(self) -> str:
+        """Why there is no difference. Three causes, the item count first.
+
+        The same order _undefined uses. With no item left there is nothing to
+        measure, and one item is too few to measure whatever else is true of
+        it. With two or more, human-human alpha is undefined only when every
+        human label was the same, and judge-human can only be undefined then
+        too.
+        """
+        n = self.baseline_n_items
+        if n == 0:
+            return (
+                " Against the human baseline, every item was set aside, so "
+                "there is no difference to report and no verdict."
+            )
+        head = (
+            f" Against the human baseline, human-human agreement is undefined "
+            f"({self.level}, {n} {_plural('item', n)})."
+        )
+        if n < 2:
+            return head + (
+                " One item cannot carry a reliability estimate, so there is no "
+                "difference to report and no interval around it. Have two or "
+                "more humans grade more items and run this again."
+            )
+        return head + (
+            " Every human label that could be compared was identical, so there "
+            "is no disagreement to divide by and no difference to report. This "
+            "comes from humans who used one label throughout. It is not "
+            "perfect agreement."
+        )
+
+    def _baseline_rules(self) -> str:
+        """What each set-aside rule took, in the order the rules ran."""
+        n = self.baseline_n_too_few_humans
+        if self.ties == "drop":
+            too_few = "fewer than two humans gave a decisive label"
+        else:
+            pronoun = "it" if n == 1 else "them"
+            too_few = f"fewer than two humans graded {pronoun}"
+        text = (
+            _set_aside(
+                self.baseline_n_no_judge_label, "baseline ",
+                "the judge gave no label",
+            )
+            + _set_aside(n, "baseline ", too_few)
+            + _set_aside(
+                self.baseline_n_judge_ties, "baseline ",
+                "the judge's label was a tie",
+            )
+        )
+        if self.baseline_n_judge_ties:
+            # A judge that ties on the hard items is scored on the easy ones,
+            # and nothing in the figures shows it.
+            text += " The judge's own ties decide which items it is scored on."
+        return text
+
+    def _baseline_undefined_draws(self) -> str:
+        dropped = self.n_boot - self.baseline_n_boot_usable
+        if not dropped:
+            return ""
+        return (
+            f" {dropped} of {self.n_boot} resamples left an alpha undefined, "
+            f"and the interval comes from the other "
+            f"{self.baseline_n_boot_usable}. Those are the resamples where "
+            f"every human label was the same, so leaving them out shifts the "
+            f"interval in the judge's favour."
+        )
+
+    def _baseline_refusal(self) -> str:
+        """Why there is no interval on the difference, in place of a verdict."""
+        if self.n_boot == 0:
+            return (
+                " No interval was computed on the difference, so there is no "
+                "verdict."
+            )
+        head = " There is no interval on the difference, and so no verdict."
+        if self.baseline_n_clusters < 2:
+            return head + (
+                " The items that remain sit in one cluster, and resampling "
+                "one cluster draws the same items every time."
+            )
+        dropped = self.n_boot - self.baseline_n_boot_usable
+        return head + (
+            f" {dropped} of {self.n_boot} resamples left an alpha undefined, "
+            f"above the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports "
+            f"through. Those are the resamples where every human label was "
+            f"the same, so an interval from the rest would lean in the "
+            f"judge's favour."
+        )
+
+    def _baseline_verdict(self) -> str:
+        if self.baseline_ci_low > 0:
+            verdict = (
+                " The whole interval sits above zero, so the judge agrees with "
+                "a human more than a second human does. A judge that sits "
+                "nearer the middle of the human spread than a typical human "
+                "does will score this way, so this does not show that the "
+                "judge is better than a human."
+            )
+        elif self.baseline_ci_high < 0:
+            verdict = (
+                " The whole interval sits below zero, so the judge agrees with "
+                "a human less than a second human does. On these items the "
+                "judge is not a stand-in for a second human."
+            )
+        else:
+            return (
+                " The interval includes zero, so the data cannot show that the "
+                "judge agrees with a human any more or less than a second "
+                "human does. That does not mean it agrees equally well."
+            )
+
+        if self.baseline_n_clusters < _THIN_SLICE:
+            verdict += (
+                f" That interval rests on only {self.baseline_n_clusters} "
+                f"clusters, so treat the verdict as provisional."
+            )
+        return verdict
 
     def _slice_sentence(self) -> str:
         if self.by_slice.empty:

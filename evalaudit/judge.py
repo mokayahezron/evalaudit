@@ -22,18 +22,28 @@ from scipy import special as _special
 from scipy import stats as _stats
 
 from ._types import (
+    _MIN_USABLE_SHARE,
     _NOTE_SLICE_NO_VARIANCE,
     _NOTE_SLICE_ONE_ITEM,
     JudgeValidation,
     LengthBias,
     PositionBias,
 )
-from .agreement import _LEVELS, _Units, _bootstrap
+from .agreement import (
+    _LEVELS,
+    _Units,
+    _bootstrap,
+    _expected_batch,
+    _multiplicities,
+)
+from .pairwise import _TIE, _is_tie
 from .scores import _wilson
 
 __all__ = ["judge_validation", "position_bias", "length_bias"]
 
 _COMPARISON_COLUMNS = ("pair_id", "option_a", "option_b", "winner")
+_BASELINE_COLUMNS = ("item_id", "cluster_id", "rater_id", "rating")
+_TIE_CODINGS = ("category", "drop")
 
 # A pair counts as run in both orders when two of its rows are exact
 # reverses. The design is read as both-orders when at least this share of
@@ -67,6 +77,9 @@ def judge_validation(
     confidence: float = 0.95,
     n_boot: int = 1000,
     seed: Optional[int] = None,
+    item_ids: Optional[Sequence] = None,
+    human_baseline: Optional[pd.DataFrame] = None,
+    ties: Optional[str] = None,
 ) -> JudgeValidation:
     """Agreement between an LLM judge's labels and human labels.
 
@@ -95,6 +108,37 @@ def judge_validation(
         sampling error to judge one against.
     seed
         Seeds the bootstrap. Set it in anything you publish.
+    item_ids
+        The id of the item at each position of ``human`` and ``judge``. It
+        goes with ``human_baseline`` and is refused without one, because it
+        is how the judge's label on each baseline item is found. Each id
+        appears once. Every item in the baseline has to be named here,
+        including items the judge never graded, which go in with no judge
+        label.
+    human_baseline
+        A frame with ``item_id``, ``cluster_id``, ``rater_id`` and
+        ``rating``, one row per human rating. Supplying it answers the
+        question a headline alpha cannot, which is whether the judge agrees
+        with a human as often as a second human does. The result then
+        carries judge-human and human-human alpha on the same items, and an
+        interval on their difference. ``cluster_id`` groups items that are
+        not independent of each other, such as comparisons that share a
+        prompt, and the interval resamples whole clusters. Give every item
+        its own cluster when there is no such grouping. Every row for an
+        item has to carry the same ``cluster_id``, and the frame has to have
+        at least one row. A row with a missing rating is no label. Nominal
+        labels only for now.
+    ties
+        ``"category"`` or ``"drop"``, and required with ``human_baseline``.
+        ``"category"`` keeps a tie as a label of its own, and ``"drop"`` sets
+        it aside as no label. The two give different alphas, which is why
+        there is no default. The coding applies to every figure in the
+        result, the headline included, and under ``"drop"`` a headline item
+        with a tie on either side is set aside and counted apart from the
+        items with no label. A tie is a label that reads "tie" once case and
+        surrounding spaces are ignored, as ``bradley_terry`` reads one. A
+        missing label is never a tie here, where ``bradley_terry`` would
+        count it as one.
 
     Returns
     -------
@@ -110,11 +154,39 @@ def judge_validation(
     the one the slice used. That is the right definition for how well the
     judge did there, and it means two slices can carry alphas that are not on
     quite the same footing when they used different label sets.
+
+    With a human baseline, three rules set baseline items aside before
+    anything is computed, and they run in this order. An item with no judge
+    label goes first. An item with fewer than two human labels goes next,
+    and under ``ties="drop"`` only decisive labels count toward the two.
+    Last, under ``ties="drop"``, an item whose judge label is a tie goes.
+    Each item is counted under the first rule it fails. Human-human is alpha
+    over the human labels on the items that remain, as ``rater_agreement``
+    computes it. Judge-human pairs every one of those human labels with the
+    judge's label on its item. Both alphas use the same items and the same
+    human labels, so the two figures differ only in what those labels are
+    compared with.
+
+    Under ``ties="drop"`` the judge's own ties decide which items it is
+    scored on. A judge that ties on the hard items is scored on the easy
+    ones, and the summary says so whenever that rule set anything aside.
+
+    The interval on the difference resamples clusters. Clusters are numbered
+    in order of first appearance among the rows that remain, one index
+    matrix is drawn, and both alphas are computed on every draw from it, so
+    the part of their sampling error they share cancels. A draw where either
+    alpha is undefined is left out. Those are the draws where every human
+    label was the same, so leaving them out leans the interval toward the
+    judge, and when fewer than 90% of draws are usable there is no interval
+    and no verdict. The verdict reads the interval on the difference and
+    nothing else, and it is called provisional when the clusters that remain
+    number fewer than 30.
     """
     if level not in _LEVELS:
         raise ValueError(f"level must be one of {sorted(_LEVELS)}, got {level!r}")
     if not 0 < confidence < 1:
         raise ValueError(f"confidence must be in (0, 1), got {confidence}")
+    _check_baseline_arguments(level, item_ids, human_baseline, ties)
 
     human_raw = np.asarray(list(human), dtype=object)
     judge_raw = np.asarray(list(judge), dtype=object)
@@ -136,10 +208,19 @@ def judge_validation(
                 f"{slice_raw.size} and {human_raw.size}"
             )
 
+    if ties is not None:
+        human_raw = _one_tie_spelling(human_raw)
+        judge_raw = _one_tie_spelling(judge_raw)
+
     keep = np.array(
         [_present(a) and _present(b) for a, b in zip(human_raw, judge_raw)]
     )
     n_dropped = int((~keep).sum())
+    # An item with no label on one side is counted above, whatever the other
+    # side said, so only items with two labels can count as tied.
+    tied = keep & (_ties_in(human_raw) | _ties_in(judge_raw)) & (ties == "drop")
+    n_dropped_ties = int(tied.sum())
+    keep = keep & ~tied
     human_kept = human_raw[keep]
     judge_kept = judge_raw[keep]
     slice_kept = None if slice_raw is None else slice_raw[keep]
@@ -152,6 +233,12 @@ def judge_validation(
     ci_low, ci_high, drawn, usable = _bootstrap(
         units, confidence, n_boot > 0, n_boot, seed
     )
+
+    baseline = {}
+    if human_baseline is not None:
+        baseline = _baseline(
+            human_baseline, item_ids, judge_raw, ties, confidence, n_boot, seed
+        )
 
     return JudgeValidation(
         agreement=agreement,
@@ -167,7 +254,265 @@ def judge_validation(
         confidence=confidence,
         n_boot=drawn,
         n_boot_usable=usable,
+        n_dropped_ties=n_dropped_ties,
+        ties=ties,
+        **baseline,
     )
+
+
+def _check_baseline_arguments(level, item_ids, human_baseline, ties) -> None:
+    """The baseline arguments come as a set. Each refusal names the part that
+    is missing or does not belong."""
+    if human_baseline is None:
+        if ties is not None:
+            raise ValueError(
+                f"ties applies only with a human_baseline, got ties={ties!r} "
+                f"and no human_baseline."
+            )
+        if item_ids is not None:
+            raise ValueError(
+                "item_ids applies only with a human_baseline, got item_ids "
+                "and no human_baseline."
+            )
+        return
+
+    if ties not in _TIE_CODINGS:
+        raise ValueError(
+            f"ties must be 'category' or 'drop' when human_baseline is given, "
+            f"got {ties!r}. The two codings give different alphas, so the "
+            f"choice has to be made and stated."
+        )
+    if level != "nominal":
+        raise ValueError(
+            f"human_baseline supports level='nominal' only, got "
+            f"level={level!r}. Ordinal and interval baselines are not "
+            f"implemented yet."
+        )
+    if item_ids is None:
+        raise ValueError(
+            "item_ids is required with a human_baseline. It names the item at "
+            "each position of human and judge, which is how the judge's label "
+            "on each baseline item is found."
+        )
+
+
+def _ties_in(labels: np.ndarray) -> np.ndarray:
+    """True where a label is a tie, read the way bradley_terry reads one.
+
+    A missing label is never a tie here, and that is where the two differ.
+    In bradley_terry a comparison with no winner is a tie, because that is
+    what the empty cell records. Here a missing label means nobody gave one.
+    """
+    series = pd.Series(labels, dtype=object)
+    return (_is_tie(series) & series.notna()).to_numpy()
+
+
+def _one_tie_spelling(labels: np.ndarray) -> np.ndarray:
+    """Every tie spelled "tie", so "Tie" and " tie " count as the same
+    label."""
+    out = labels.copy()
+    out[_ties_in(labels)] = _TIE
+    return out
+
+
+def _baseline(frame, item_ids, judge, ties, confidence, n_boot, seed) -> dict:
+    """Judge-human and human-human alpha on the same items, and an interval
+    on their difference that resamples clusters.
+
+    Returns the baseline fields of JudgeValidation. ``judge`` is the judge's
+    labels by position, with ties already spelled one way.
+    """
+    data = _clean_baseline(frame)
+    ids = pd.Index(np.asarray(list(item_ids), dtype=object))
+    if ids.size != judge.size:
+        raise ValueError(
+            f"item_ids must be the same length as human and judge, got "
+            f"{ids.size} and {judge.size}"
+        )
+    repeated = ids.duplicated()
+    if repeated.any():
+        raise ValueError(
+            f"item_ids must name each item once, got "
+            f"{ids[repeated].tolist()[0]!r} more than once. The judge's label "
+            f"on a baseline item is found by its id."
+        )
+
+    position = ids.get_indexer(data["item_id"])
+    if (position < 0).any():
+        raise ValueError(
+            f"human_baseline names item "
+            f"{data['item_id'][position < 0].tolist()[0]!r}, and item_ids does "
+            f"not. The usual cause is ids of different types, such as 5 in "
+            f"one and '5' in the other. An item the judge never graded still "
+            f"goes in item_ids, with no judge label."
+        )
+
+    rating = data["rating"].astype(object)
+    present = rating.notna().to_numpy()
+    tie = _ties_in(rating.to_numpy())
+    rating = rating.where(~tie, _TIE)
+
+    rated = data[present]
+    repeat = rated.duplicated(subset=["item_id", "rater_id"])
+    if repeat.any():
+        first = rated[repeat].iloc[0]
+        raise ValueError(
+            f"human_baseline has duplicate rater/item pairs, starting with "
+            f"item {first['item_id']!r} rated twice by {first['rater_id']!r}. "
+            f"Two rows for one rater on one item count that rater twice. Keep "
+            f"one row per rater and item."
+        )
+
+    # The three rules, by item and in order. Each item counts under the
+    # first one it fails, so each later rule only sees what the earlier
+    # ones kept.
+    item_codes, items = pd.factorize(data["item_id"], sort=False)
+    item_judge = judge[ids.get_indexer(items)]
+    labelled = present & ~(tie & (ties == "drop"))
+    n_labels = np.bincount(item_codes, weights=labelled, minlength=len(items))
+
+    no_judge_label = ~np.array([_present(v) for v in item_judge], dtype=bool)
+    too_few_humans = ~no_judge_label & (n_labels < 2)
+    judge_tie = (
+        ~no_judge_label & ~too_few_humans & _ties_in(item_judge)
+        & (ties == "drop")
+    )
+    kept_item = ~(no_judge_label | too_few_humans | judge_tie)
+
+    rows = labelled & kept_item[item_codes]
+    kept = pd.DataFrame({
+        "item_id": data["item_id"][rows].to_numpy(),
+        "rater_id": data["rater_id"][rows].to_numpy(),
+        "rating": rating[rows].to_numpy(),
+    })
+    judge_on_row = judge[position[rows]]
+
+    human_human = _Units.build(kept, "nominal")
+    judge_human = _Units.build(
+        _long_frame(kept["rating"].to_numpy(), judge_on_row), "nominal"
+    )
+    difference = judge_human.alpha() - human_human.alpha()
+
+    # An item moves with its cluster. Every row of an item carries the same
+    # one, which _clean_baseline checked, so its first row that remains says
+    # which.
+    kept_codes, kept_items = pd.factorize(kept["item_id"], sort=False)
+    cluster_codes, clusters = pd.factorize(
+        data["cluster_id"][rows].to_numpy(), sort=False
+    )
+    item_cluster = cluster_codes[np.unique(kept_codes, return_index=True)[1]]
+    n_clusters = len(clusters)
+
+    ci_low = ci_high = float("nan")
+    usable = 0
+    if n_boot > 0 and n_clusters >= 2:
+        ci_low, ci_high, usable = _baseline_interval(
+            judge_human,
+            item_cluster[kept_codes[judge_human.item_ids.astype(int)]],
+            human_human,
+            item_cluster[kept_items.get_indexer(human_human.item_ids)],
+            n_clusters, confidence, n_boot, seed,
+        )
+
+    return {
+        "baseline_judge_human": judge_human.alpha(),
+        "baseline_human_human": human_human.alpha(),
+        "baseline_difference": difference,
+        "baseline_ci_low": ci_low,
+        "baseline_ci_high": ci_high,
+        "baseline_n_items": len(kept_items),
+        "baseline_n_clusters": n_clusters,
+        "baseline_n_no_judge_label": int(no_judge_label.sum()),
+        "baseline_n_too_few_humans": int(too_few_humans.sum()),
+        "baseline_n_judge_ties": int(judge_tie.sum()),
+        "baseline_n_boot_usable": usable,
+    }
+
+
+def _clean_baseline(frame) -> pd.DataFrame:
+    """Validate and copy the four baseline columns.
+
+    Every check here is a data-entry mistake. The first three are worded the
+    way bradley_terry words the same three.
+    """
+    if not isinstance(frame, pd.DataFrame):
+        raise ValueError("human_baseline must be a pandas DataFrame")
+
+    missing = [c for c in _BASELINE_COLUMNS if c not in frame.columns]
+    if missing:
+        raise ValueError(
+            f"human_baseline is missing required column(s): "
+            f"{', '.join(missing)}. Expected {', '.join(_BASELINE_COLUMNS)}, "
+            f"where cluster_id groups items that are not independent of each "
+            f"other."
+        )
+
+    data = frame.loc[:, list(_BASELINE_COLUMNS)].reset_index(drop=True)
+    if data.empty:
+        raise ValueError("human_baseline must not be empty")
+
+    # The interval moves an item with its cluster, and an item in two
+    # clusters has no one cluster to move with.
+    clusters = data.groupby("item_id", sort=False)["cluster_id"].nunique()
+    split = clusters.index[clusters.to_numpy() > 1]
+    if len(split):
+        raise ValueError(
+            f"human_baseline puts item {split.tolist()[0]!r} in more than one "
+            f"cluster. The interval resamples whole clusters, so every row for "
+            f"an item needs the same cluster_id."
+        )
+    return data
+
+
+def _baseline_interval(judge_human, judge_cluster, human_human, human_cluster,
+                       n_clusters, confidence, n_boot, seed):
+    """Percentile interval on judge-human minus human-human, over resampled
+    clusters.
+
+    One index matrix, and both alphas on every draw from it. A draw where
+    either alpha is undefined is left out. Human-human is undefined exactly
+    when every human label in a draw is the same, and judge-human can only be
+    undefined then too, so the draws left out all lean the same way. Past
+    the usable share the interval is refused rather than reported.
+    """
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, n_clusters, size=(n_boot, n_clusters))
+    times = _multiplicities(idx, n_clusters)
+
+    judge_alphas = _alphas_per_draw(judge_human, judge_cluster, n_clusters, times)
+    human_alphas = _alphas_per_draw(human_human, human_cluster, n_clusters, times)
+    usable = np.isfinite(judge_alphas) & np.isfinite(human_alphas)
+    n_usable = int(usable.sum())
+    if n_usable < _MIN_USABLE_SHARE * n_boot:
+        return float("nan"), float("nan"), n_usable
+
+    tail = (1 - confidence) / 2
+    low, high = np.percentile(
+        (judge_alphas - human_alphas)[usable], [100 * tail, 100 * (1 - tail)]
+    )
+    return float(low), float(high), n_usable
+
+
+def _alphas_per_draw(units, cluster_of_unit, n_clusters, times) -> np.ndarray:
+    """Nominal alpha on every draw, from sums within each cluster.
+
+    Alpha reads a set of units only through their summed disagreement and
+    their summed value counts, and both add over units. So each draw is its
+    cluster multiplicities times the per-cluster sums, one matrix product
+    for all of them.
+    """
+    observed = np.bincount(
+        cluster_of_unit, weights=units.numerators(), minlength=n_clusters
+    )
+    counts = np.zeros((n_clusters, units.counts.shape[1]))
+    np.add.at(counts, cluster_of_unit, units.counts)
+
+    marginals = times @ counts
+    totals = marginals.sum(axis=1)
+    expected = _expected_batch(units, marginals, totals)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        alphas = 1.0 - (totals - 1) * (times @ observed) / expected
+    return np.where(expected > 0, alphas, np.nan)
 
 
 def _present(value) -> bool:

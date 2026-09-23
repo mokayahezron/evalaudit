@@ -4682,3 +4682,417 @@ def test_baseline_refuses_levels_other_than_nominal():
         "human_baseline supports level='nominal' only, got level='interval'. "
         "Ordinal and interval baselines are not implemented yet."
     )
+
+
+# --------------------------------------------------------------------------
+# judge_validation against a human baseline, the branches the tests above
+# do not reach
+#
+# Mutation testing of the implementation found five branches that no test
+# above reaches. The first five tests here pin them as the code has them.
+# They are a refusal for a baseline with no item_ids, a refusal for item_ids
+# of the wrong length, "graded it" when exactly one item has too few humans,
+# the refusal when the items that remain sit in one cluster, and the
+# summary at n_boot=0.
+#
+# The rest are written before the code and fail until it changes. When
+# human-human alpha is undefined, the summary names the cause, in the words
+# JudgeValidation._undefined uses for its own two causes. A human_baseline
+# that is not a DataFrame, lacks a column or is empty is refused in the
+# words bradley_terry uses for the same three. An item whose rows carry more
+# than one cluster_id is refused, because the interval moves an item with
+# its cluster and such an item has no one cluster to move with.
+# --------------------------------------------------------------------------
+
+def one_item_graded_by_one_human():
+    """judge_like_a_fourth_human with h1 and h2 removed from i0, so i0 holds
+    one human label and every other item holds three.
+
+    The property the test relies on is that under ties="category" the
+    too-few-humans rule sets aside exactly one item and no other rule sets
+    anything aside. Its sentence is the one place a summary says "graded
+    it".
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    thinned = (frame["item_id"] == "i0") & (frame["rater_id"] != "h0")
+    return frame[~thinned].reset_index(drop=True), judge_labels
+
+
+def judge_silent_on_a_whole_cluster():
+    """Two clusters of 20 items, humans and judge right 80% of the time, and
+    no judge label on any item of c0.
+
+    The property the test relies on is that the frame spans two clusters,
+    the no-judge-label rule sets aside all 20 items of c0, and the 20 items
+    that remain sit in c1 alone. Both alphas are defined on those items,
+    judge-human 0.502 and human-human 0.631, so the difference has a value
+    and only the interval is missing.
+    """
+    frame, judge_labels = graded_items(
+        [0.8, 0.8], [0.8, 0.8], items_per_cluster=20, seed=3
+    )
+    judge_labels = judge_labels.astype(object)
+    judge_labels.loc[
+        pd.unique(frame.loc[frame["cluster_id"] == "c0", "item_id"])
+    ] = None
+    return frame, judge_labels
+
+
+def both_alphas_defined():
+    """judge_like_a_fourth_human, for a call with n_boot=0.
+
+    The property the test relies on is that both alphas are defined on its
+    144 items, judge-human 0.408 and human-human 0.427, so the difference
+    has a value and the interval is the only thing missing.
+    """
+    return judge_like_a_fourth_human()
+
+
+def one_item_left_with_humans_to_compare():
+    """judge_like_a_fourth_human with h1 and h2 kept only on i0, so i0 is
+    the one item with more than one human label.
+
+    The property the test relies on is that under ties="category" the
+    too-few-humans rule sets aside the other 143 items and one item
+    remains. Its three humans do not all agree, so one item is the only
+    reason human-human alpha is undefined. The headline pairs h0 with the
+    judge on all 144 items and has an alpha of its own.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    thinned = (frame["item_id"] != "i0") & (frame["rater_id"] != "h0")
+    return frame[~thinned].reset_index(drop=True), judge_labels
+
+
+def every_human_says_first():
+    """Three clusters of ten items, every human label "first", and the
+    judge alternating between "first" and "second".
+
+    The property the test relies on is that every item keeps three human
+    labels, so no rule sets anything aside, and every human label is the
+    same, so identical labels are the only reason human-human alpha is
+    undefined. The judge's labels vary, so the headline has an alpha.
+    """
+    return clusters_where_every_human_says_first(["c0", "c1", "c2"])
+
+
+def items_in_two_clusters():
+    """judge_like_a_fourth_human with h2's row on i8 moved to c5 and h1's
+    row on i12 moved to c7.
+
+    i8 sits in c1 and i12 in c2, so each of the two now has rows in two
+    clusters. The property the test relies on is that they are the only
+    such items, and that i8 comes first in the baseline's order while i12
+    comes first in sorted order. Nothing else about the call is wrong.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    frame = frame.copy()
+    frame.loc[(frame["item_id"] == "i8") & (frame["rater_id"] == "h2"),
+              "cluster_id"] = "c5"
+    frame.loc[(frame["item_id"] == "i12") & (frame["rater_id"] == "h1"),
+              "cluster_id"] = "c7"
+    return frame, judge_labels
+
+
+def every_item_left_with_one_decisive_human():
+    """judge_like_a_fourth_human with h1 and h2 saying tie on every item.
+
+    The property the test relies on is that under ties="drop" each item
+    keeps one decisive human label, h0's, so the too-few-humans rule sets
+    aside all 144 items and no baseline item remains. Neither h0 nor the
+    judge ever says tie, so the headline keeps all 144 of its items.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    frame = frame.copy()
+    frame.loc[frame["rater_id"] != "h0", "rating"] = TIE
+    return frame, judge_labels
+
+
+# As the code has them now. The figures are what baseline_reference and
+# kref_figures give on each fixture.
+
+SUMMARY_ONE_ITEM_TOO_FEW_HUMANS = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, on "
+    "143 items, the judge agrees with the human labels at alpha 0.408 and "
+    "the humans agree with each other at alpha 0.432. Judge-human minus "
+    "human-human is -0.024 (95% CI: -0.110 to +0.069, resampling 24 "
+    "clusters). Ties count as a label of their own on both sides. 1 "
+    "baseline item was set aside because fewer than two humans graded it. "
+    "The interval includes zero, so the data cannot show that the judge "
+    "agrees with a human any more or less than a second human does. That "
+    "does not mean it agrees equally well."
+)
+
+SUMMARY_ONE_CLUSTER = (
+    "Judge and human agree at alpha 0.594 (95% CI: 0.188 to 0.900, nominal,"
+    " 20 items). Plain accuracy is 80.0%. 20 items were set aside because "
+    "one side had no label. Against the human baseline, on 20 items, the "
+    "judge agrees with the human labels at alpha 0.502 and the humans agree"
+    " with each other at alpha 0.631. Judge-human minus human-human is "
+    "-0.129. Ties count as a label of their own on both sides. 20 baseline "
+    "items were set aside because the judge gave no label. There is no "
+    "interval on the difference, and so no verdict. The items that remain "
+    "sit in one cluster, and resampling one cluster draws the same items "
+    "every time."
+)
+
+SUMMARY_BASELINE_WITHOUT_RESAMPLES = (
+    "Judge and human agree at alpha 0.363 (nominal, 144 items). No interval"
+    " was computed, so nothing here is placed against sampling error. Plain"
+    " accuracy is 68.1%. Against the human baseline, on 144 items, the "
+    "judge agrees with the human labels at alpha 0.408 and the humans agree"
+    " with each other at alpha 0.427. Judge-human minus human-human is "
+    "-0.019. Ties count as a label of their own on both sides. No interval "
+    "was computed on the difference, so there is no verdict."
+)
+
+# Written before the code. The headline and the sentences after the first
+# baseline sentence are what the code says now. The first baseline
+# sentence names the cause in the words JudgeValidation._undefined uses.
+
+SUMMARY_UNDEFINED_ON_ONE_ITEM = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, "
+    "human-human agreement is undefined (nominal, 1 item). One item cannot "
+    "carry a reliability estimate, so there is no difference to report and "
+    "no interval around it. Have two or more humans grade more items and "
+    "run this again. Ties count as a label of their own on both sides. 143 "
+    "baseline items were set aside because fewer than two humans graded "
+    "them."
+)
+
+SUMMARY_UNDEFINED_ON_IDENTICAL_LABELS = (
+    "Judge and human agree at alpha -0.311 (95% CI: -0.475 to -0.180, "
+    "nominal, 30 items). Plain accuracy is 50.0%. Against the human "
+    "baseline, human-human agreement is undefined (nominal, 30 items). "
+    "Every human label that could be compared was identical, so there is no"
+    " disagreement to divide by and no difference to report. This comes "
+    "from humans who used one label throughout. It is not perfect "
+    "agreement. Ties count as a label of their own on both sides."
+)
+
+SUMMARY_NO_ITEM_REMAINS = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, "
+    "every item was set aside, so there is no difference to report and no "
+    "verdict. Ties are set aside as no label on both sides. 144 baseline "
+    "items were set aside because fewer than two humans gave a decisive "
+    "label."
+)
+
+
+# Pinned as the code has them now.
+
+def test_baseline_refuses_a_baseline_without_item_ids():
+    """The same call with item_ids runs, so the missing item_ids is the only
+    defect."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    judge_validation(
+        human, judge, item_ids=item_ids, human_baseline=frame,
+        ties="category", n_boot=0,
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(human, judge, human_baseline=frame, ties="category")
+
+    assert str(excinfo.value) == (
+        "item_ids is required with a human_baseline. It names the item at "
+        "each position of human and judge, which is how the judge's label on "
+        "each baseline item is found."
+    )
+
+
+def test_baseline_refuses_item_ids_of_the_wrong_length():
+    """One id too many, added at the end. Every baseline item is still named
+    once, so the length is the only defect."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    item_ids = np.append(item_ids, "i999")
+    assert (len(item_ids), len(human)) == (145, 144)
+    assert set(frame["item_id"]) <= set(item_ids)
+    assert len(set(item_ids)) == len(item_ids)
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=frame,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "item_ids must be the same length as human and judge, got 145 and 144"
+    )
+
+
+def test_baseline_summary_says_graded_it_for_one_item():
+    frame, judge_labels = one_item_graded_by_one_human()
+    labels_per_item = frame.groupby("item_id", sort=False).size()
+    assert list(labels_per_item.index[labels_per_item != 3]) == ["i0"]
+    assert labels_per_item["i0"] == 1
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (0, 1, 0)
+    reference = baseline_reference(kept, kept_labels)
+    assert three_decimals(reference_figures(reference)) == (
+        "0.408", "0.432", "-0.024", "-0.110", "0.069"
+    )
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_ONE_ITEM_TOO_FEW_HUMANS
+
+
+def test_baseline_refuses_an_interval_on_one_cluster():
+    """Resampling one cluster draws the same items every time, so an
+    interval would have no width and a verdict would rest on nothing."""
+    frame, judge_labels = judge_silent_on_a_whole_cluster()
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (20, 0, 0)
+    assert frame["cluster_id"].nunique() == 2
+    assert list(pd.unique(kept["cluster_id"])) == ["c1"]
+    assert three_decimals(kref_figures(kept, kept_labels)) == ("0.502", "0.631")
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert np.isnan(result.baseline_ci_low)
+    assert np.isnan(result.baseline_ci_high)
+    assert result.summary() == SUMMARY_ONE_CLUSTER
+
+
+def test_baseline_summary_without_resamples():
+    frame, judge_labels = both_alphas_defined()
+    assert three_decimals(kref_figures(frame, judge_labels)) == (
+        "0.408", "0.427"
+    )
+
+    result = validate_with_baseline(
+        frame, judge_labels, ties="category", n_boot=0
+    )
+
+    assert np.isnan(result.baseline_ci_low)
+    assert np.isnan(result.baseline_ci_high)
+    assert result.summary() == SUMMARY_BASELINE_WITHOUT_RESAMPLES
+
+
+# Written before the code. These fail until it changes.
+
+def test_baseline_summary_names_one_item_as_the_cause():
+    frame, judge_labels = one_item_left_with_humans_to_compare()
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (0, 143, 0)
+    assert list(kept_labels.index) == ["i0"]
+    assert kept["rating"].nunique() == 2
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_UNDEFINED_ON_ONE_ITEM
+
+
+def test_baseline_summary_names_identical_labels_as_the_cause():
+    frame, judge_labels = every_human_says_first()
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (0, 0, 0)
+    assert (frame.groupby("item_id").size() == 3).all()
+    assert set(frame["rating"]) == {"first"}
+    assert set(judge_labels) == {"first", "second"}
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_UNDEFINED_ON_IDENTICAL_LABELS
+
+
+def test_baseline_summary_when_no_item_remains():
+    frame, judge_labels = every_item_left_with_one_decisive_human()
+    h0 = frame["rater_id"] == "h0"
+    assert set(frame.loc[~h0, "rating"]) == {TIE}
+    assert TIE not in set(frame.loc[h0, "rating"])
+    assert frame.loc[h0, "item_id"].nunique() == 144
+    assert TIE not in set(judge_labels)
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "drop")
+    assert counts == (0, 144, 0)
+    assert (len(kept), kept_labels.size) == (0, 0)
+    assert headline_ties(frame, judge_labels) == 0
+
+    result = validate_with_baseline(frame, judge_labels, ties="drop")
+
+    assert result.summary() == SUMMARY_NO_ITEM_REMAINS
+
+
+def test_baseline_refuses_a_baseline_that_is_not_a_frame():
+    """The rows as a dict of columns, the usual slip. Every column is there,
+    so the type is the only defect."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    as_dict = frame.to_dict("list")
+    assert set(as_dict) == {"item_id", "cluster_id", "rater_id", "rating"}
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=as_dict,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == "human_baseline must be a pandas DataFrame"
+
+
+def test_baseline_refuses_a_baseline_missing_columns():
+    """cluster_id and rater_id are dropped. The message lists both, in the
+    order the columns are expected."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    thin = frame.drop(columns=["rater_id", "cluster_id"])
+    assert list(thin.columns) == ["item_id", "rating"]
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=thin,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "human_baseline is missing required column(s): cluster_id, rater_id. "
+        "Expected item_id, cluster_id, rater_id, rating, where cluster_id "
+        "groups items that are not independent of each other."
+    )
+
+
+def test_baseline_refuses_an_empty_baseline():
+    """Every column is there and no row is."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    empty = frame.iloc[:0]
+    assert list(empty.columns) == ["item_id", "cluster_id", "rater_id", "rating"]
+    assert len(empty) == 0
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=empty,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == "human_baseline must not be empty"
+
+
+def test_baseline_refuses_an_item_in_two_clusters():
+    """The message names i8, the first split item in the baseline's order,
+    which sorted order would not pick."""
+    frame, judge_labels = items_in_two_clusters()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    clusters_per_item = frame.groupby("item_id", sort=False)["cluster_id"].nunique()
+    split = list(clusters_per_item.index[clusters_per_item > 1])
+    assert split == ["i8", "i12"]
+    assert sorted(split) == ["i12", "i8"]
+    assert set(frame["item_id"]) <= set(item_ids)
+    assert len(set(item_ids)) == len(item_ids)
+    assert not frame.duplicated(["item_id", "rater_id"]).any()
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=frame,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "human_baseline puts item 'i8' in more than one cluster. The interval "
+        "resamples whole clusters, so every row for an item needs the same "
+        "cluster_id."
+    )
