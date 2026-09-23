@@ -12,9 +12,13 @@ which is the one reference scipy cannot have influenced.
 
 The last section mutates the slice path and the two bias paths and names,
 for each mutation, the test that catches it.
+
+The human-baseline section at the end adds a fourth reference, the MT-Bench
+figures published in analysis/mt-bench.md.
 """
 
 import math
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -2586,3 +2590,2509 @@ def test_the_consistency_interval_stays_wilson():
     lo, hi = proportion_confint(21, 30, method="wilson")
     assert r.ci_low == pytest.approx(lo, abs=1e-12)
     assert r.ci_high == pytest.approx(hi, abs=1e-12)
+
+
+# --------------------------------------------------------------------------
+# judge_validation against a human baseline
+#
+# Written before the implementation. The baseline is a long frame of items
+# graded by two or more humans, with item_id, cluster_id, rater_id and
+# rating. The function reports judge-human alpha and human-human alpha on
+# the same items, and a percentile interval on judge-human minus
+# human-human that resamples cluster_id. The verdict reads that interval
+# and nothing else.
+#
+# validate_with_baseline makes the call for every test here except the
+# refusals, which call judge_validation directly. item_ids names the item
+# at each position of human and judge, and the baseline's item_id column is
+# matched against it to find the judge's label on each baseline item. ties
+# defaults to None. "category" keeps a tie as a label of its own, and
+# "drop" sets it aside as no label. With a baseline, ties sets the coding
+# for every figure in the result, the headline included. Under "drop" a
+# headline item with a tie on either side is set aside and counted in
+# n_dropped_ties, apart from the items with no label that n_dropped counts.
+#
+# A tie is a rating that reads "tie" once case and surrounding spaces are
+# ignored, as bradley_terry's _is_tie reads one. A missing rating stays no
+# label. It is never a tie here, where bradley_terry would count it as one.
+#
+# judge_validation raises ValueError for a baseline with no ties, for ties
+# or item_ids with no baseline, for a repeated value in item_ids, for a
+# baseline item that item_ids does not name, for a repeated (item_id,
+# rater_id) pair in the baseline, and for a baseline at any level other
+# than "nominal".
+#
+# Baseline items are set aside before anything is computed, by three rules
+# in this order. An item with no judge label goes first. An item with fewer
+# than two human labels goes next, and under "drop" only decisive labels
+# count toward the two. Last, under "drop", an item whose judge label is a
+# tie goes. Each item is counted once, under the first rule it fails. Both
+# alphas use the items that remain. A baseline row with a missing rating is
+# no label, so it counts toward nothing and changes nothing.
+#
+# The result carries baseline_judge_human, baseline_human_human,
+# baseline_difference, baseline_ci_low, baseline_ci_high, baseline_n_items,
+# baseline_n_no_judge_label, baseline_n_too_few_humans,
+# baseline_n_judge_ties and baseline_n_boot_usable, and n_dropped_ties
+# beside the existing n_dropped.
+#
+# The bootstrap is the one analysis/q5_judge_against_human_baseline.py ran.
+# It is written down here because the published MT-Bench intervals pin it
+# to the third decimal. Clusters are numbered in order of first appearance
+# among the baseline rows that remain. One index matrix comes from
+# default_rng(seed).integers(0, n_clusters, size=(n_boot, n_clusters)),
+# and both alphas are computed on every draw from it. A draw where either
+# alpha is undefined is left out, and the bounds are numpy's default
+# percentiles of the difference over the draws that remain. Human-human is
+# undefined exactly when every human label in a draw is the same, and
+# judge-human can only be undefined then too. When the usable draws fall
+# below _MIN_USABLE_SHARE there is no interval on the difference and no
+# verdict. baseline_reference below does all of this apart from the
+# package, and the intervals in the pinned summaries are the ones it gives.
+#
+# With a baseline, the summary has no band sentence. Under "drop" it says
+# the judge's own ties decide which items it is scored on whenever the
+# judge-tie rule set an item aside. When the interval on the difference
+# excludes zero and the items that remain span fewer than THIN_SLICE
+# clusters, a sentence after the verdict gives the cluster count and calls
+# the verdict provisional. THIN_SLICE is 30, the line ScoreCI and the slice
+# table use. The pinned summaries below show every sentence it can carry.
+# --------------------------------------------------------------------------
+
+PREFERENCE = np.array(["first", "second"], dtype=object)
+TIE = "tie"
+BASELINE_BOOT = 2000
+BASELINE_SEED = 0
+
+# The package's _MIN_USABLE_SHARE, copied out by hand. Below this share of
+# usable draws there is no interval on the difference.
+USABLE_SHARE = 0.90
+
+MT_BENCH_DATA = Path(__file__).resolve().parent / "data"
+MT_BENCH_BOOT = 5000
+MT_BENCH_SEED = 0
+
+# As analysis/mt-bench.md prints them. Judge-human, human-human, the
+# difference, and the two bounds on the difference.
+PUBLISHED_ALL_COMPARISONS = ("0.479", "0.478", "0.001", "-0.055", "0.054")
+PUBLISHED_DECISIVE_ONLY = ("0.737", "0.692", "0.045", "0.002", "0.088")
+
+# The same five at full precision, from run() in
+# analysis/q5_judge_against_human_baseline.py, coded by alphabetical
+# position, with 5,000 question resamples at seed 0. The published bounds
+# were produced under NumPy 2.5.3, the version analysis/README.md records.
+# These values come from q5 run again under NumPy 2.5.3 with evalaudit
+# 0.4.0 from PyPI.
+Q5_ALL_COMPARISONS = (
+    0.4785201983909394, 0.4779214095927723, 0.0005987887981671047,
+    -0.05499709908783848, 0.05449167095807316,
+)
+Q5_DECISIVE_ONLY = (
+    0.7368054671588595, 0.6915237503781908, 0.045281716780668724,
+    0.0019998554309556714, 0.0878113776308402,
+)
+
+
+def graded_items(human_accuracy, judge_accuracy, items_per_cluster, seed,
+                 humans_per_item=3, human_tie=0.0, judge_tie=0.0):
+    """A human baseline and the judge's label on each of its items.
+
+    One cluster per entry of the two accuracy arrays. Each item has a true
+    preference, first or second. Every human and the judge report it at
+    their cluster's accuracy and report the other label otherwise. Raters
+    h0, h1 and so on grade every item.
+
+    human_tie and judge_tie are the chance that a label is replaced by
+    "tie". Those draws come after all the others, so a fixture with no ties
+    is the same whether or not the arguments exist.
+
+    Returns the baseline frame and the judge's labels as a Series indexed
+    by item_id.
+    """
+    rng = np.random.default_rng(seed)
+    human_accuracy = np.asarray(human_accuracy, dtype=float)
+    judge_accuracy = np.asarray(judge_accuracy, dtype=float)
+    cluster = np.repeat(np.arange(human_accuracy.size), items_per_cluster)
+    truth = rng.integers(0, 2, size=cluster.size)
+    human_right = (
+        rng.random((cluster.size, humans_per_item))
+        < human_accuracy[cluster][:, None]
+    )
+    human = np.where(human_right, truth[:, None], 1 - truth[:, None])
+    judge_right = rng.random(cluster.size) < judge_accuracy[cluster]
+    judge = np.where(judge_right, truth, 1 - truth)
+    human_labels = PREFERENCE[human]
+    judge_labels = PREFERENCE[judge]
+    human_labels[rng.random(human_labels.shape) < human_tie] = TIE
+    judge_labels[rng.random(judge_labels.shape) < judge_tie] = TIE
+
+    items = np.array([f"i{u}" for u in range(cluster.size)], dtype=object)
+    frame = pd.DataFrame({
+        "item_id": np.repeat(items, humans_per_item),
+        "cluster_id": np.repeat([f"c{c}" for c in cluster], humans_per_item),
+        "rater_id": np.tile(
+            [f"h{r}" for r in range(humans_per_item)], cluster.size
+        ),
+        "rating": human_labels.ravel(),
+    })
+    return frame, pd.Series(judge_labels, index=items, name="judge")
+
+
+def is_tie(values):
+    """True where a rating is a tie.
+
+    Read the way bradley_terry's _is_tie reads one, with case and
+    surrounding spaces ignored, except that a missing rating is never a tie.
+    Keeps the index of a Series.
+    """
+    values = pd.Series(values, dtype=object)
+    present = values.notna()
+    words = values.where(present, "").astype(str).str.strip().str.lower()
+    return present & (words == TIE)
+
+
+def headline_ties(frame, judge_labels):
+    """How many headline items ties="drop" sets aside for a tie.
+
+    An item where either side has no label is counted by n_dropped
+    instead, so it is left out here.
+    """
+    human, judge, _ = headline_inputs(frame, judge_labels)
+    present = pd.Series(human).notna() & pd.Series(judge).notna()
+    return int((present & (is_tie(human) | is_tie(judge))).sum())
+
+
+def kref_human_human(frame):
+    """Human-human alpha from the krippendorff package, nominal, on exactly
+    the ratings in the frame."""
+    item_codes, items = pd.factorize(frame["item_id"], sort=False)
+    rater_codes, raters = pd.factorize(frame["rater_id"], sort=False)
+    values, coded = np.unique(frame["rating"].to_numpy(dtype=str),
+                              return_inverse=True)
+    matrix = np.full((raters.size, items.size), np.nan)
+    matrix[rater_codes, item_codes] = coded
+    return float(kref.alpha(reliability_data=matrix,
+                            level_of_measurement="nominal"))
+
+
+def kref_figures(frame, judge_labels):
+    """Judge-human and human-human alpha from the krippendorff package,
+    nominal, on exactly the items and ratings given.
+
+    Judge-human pairs every human rating with the judge's label on its
+    item. The caller builds the item set by hand, so this is the reference
+    for which items the package keeps.
+    """
+    item_codes, items = pd.factorize(frame["item_id"], sort=False)
+    ratings = frame["rating"].to_numpy(dtype=str)
+    judged = judge_labels.loc[items].to_numpy(dtype=str)[item_codes]
+    values = np.unique(np.concatenate([ratings, judged]))
+    pairs = np.vstack([np.searchsorted(values, ratings),
+                       np.searchsorted(values, judged)]).astype(float)
+    judge_human = float(kref.alpha(reliability_data=pairs,
+                                   level_of_measurement="nominal"))
+    return judge_human, kref_human_human(frame)
+
+
+def nominal_alpha(numerator, marginals):
+    """Alpha from summed per-item disagreement and summed value counts."""
+    n = marginals.sum(axis=-1)
+    expected = n ** 2 - (marginals ** 2).sum(axis=-1)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        alpha = 1.0 - (n - 1) * numerator / expected
+    return np.where(expected > 0, alpha, np.nan)
+
+
+def baseline_reference(frame, judge_labels, unit="cluster_id",
+                       n_boot=BASELINE_BOOT, seed=BASELINE_SEED,
+                       confidence=0.95):
+    """Both alphas, their difference, and percentile intervals on all
+    three, computed apart from the package on the items given.
+
+    The caller sets items aside first. Every item in the frame is used.
+
+    ``unit`` is what one draw picks up. "cluster_id" is the design under
+    test. "item_id" draws whole items. "row" draws single human ratings,
+    each carrying the judge's label on its item, and rebuilds the items
+    from whatever rows came up. The last two are the wrong units, and the
+    tests use them to show that a fixture can tell them apart.
+
+    Nominal only. The point figures are checked against kref_figures
+    before anything is returned. The counts of undefined draws are split
+    by which alpha was undefined, so a fixture can say which one it
+    leaves undefined.
+    """
+    item_codes, items = pd.factorize(frame["item_id"], sort=False)
+    ratings = frame["rating"].to_numpy(dtype=str)
+    judged = judge_labels.loc[items].to_numpy(dtype=str)[item_codes]
+    values = np.unique(np.concatenate([ratings, judged]))
+    human = np.eye(values.size)[np.searchsorted(values, ratings)]
+    judge = np.eye(values.size)[np.searchsorted(values, judged)]
+    disagree = 1.0 - (human * judge).sum(axis=1)
+    member = np.zeros((items.size, len(frame)))
+    member[item_codes, np.arange(len(frame))] = 1.0
+
+    def from_items(copies):
+        """Both alphas for each row of ``copies``, a count per item."""
+        counts = member @ human
+        size = counts.sum(axis=1)
+        hh_num = copies @ ((size ** 2 - (counts ** 2).sum(axis=1)) / (size - 1))
+        jh_num = copies @ (2.0 * (member @ disagree))
+        return (
+            nominal_alpha(jh_num, copies @ (counts + member @ judge)),
+            nominal_alpha(hh_num, copies @ counts),
+        )
+
+    def from_rows(copies):
+        """Both alphas for each row of ``copies``, a count per rating."""
+        counts = np.stack(
+            [(copies * human[:, v]) @ member.T for v in range(values.size)],
+            axis=-1,
+        )
+        size = counts.sum(axis=-1)
+        pairable = size >= 2
+        with np.errstate(divide="ignore", invalid="ignore"):
+            per_item = (size ** 2 - (counts ** 2).sum(axis=-1)) / (size - 1)
+        hh_num = np.where(pairable, per_item, 0.0).sum(axis=1)
+        hh_marg = (counts * pairable[..., None]).sum(axis=1)
+        jh_num = copies @ (2.0 * disagree)
+        return (
+            nominal_alpha(jh_num, copies @ (human + judge)),
+            nominal_alpha(hh_num, hh_marg),
+        )
+
+    jh, hh = (float(a[0]) for a in from_items(np.ones((1, items.size))))
+    assert (jh, hh) == pytest.approx(kref_figures(frame, judge_labels), abs=1e-9)
+
+    group = {
+        "cluster_id": pd.factorize(frame["cluster_id"], sort=False)[0],
+        "item_id": item_codes,
+        "row": np.arange(len(frame)),
+    }[unit]
+    n_groups = int(group.max()) + 1
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, n_groups, size=(n_boot, n_groups))
+    offset = idx + np.arange(n_boot)[:, None] * n_groups
+    drawn = np.bincount(offset.ravel(), minlength=n_boot * n_groups)
+    drawn = drawn.reshape(n_boot, n_groups).astype(float)
+
+    first_row = pd.Series(np.arange(len(frame))).groupby(item_codes).first()
+    jh_b, hh_b = (
+        from_rows(drawn) if unit == "row"
+        else from_items(drawn[:, group[first_row.to_numpy()]])
+    )
+    judge_defined = np.isfinite(jh_b)
+    human_defined = np.isfinite(hh_b)
+    usable = judge_defined & human_defined
+    tail = 100 * (1 - confidence) / 2
+
+    def bounds(x):
+        low, high = np.percentile(x[usable], [tail, 100 - tail])
+        return float(low), float(high)
+
+    return {
+        "judge_human": jh,
+        "human_human": hh,
+        "difference": jh - hh,
+        "difference_ci": bounds(jh_b - hh_b),
+        "judge_human_ci": bounds(jh_b),
+        "human_human_ci": bounds(hh_b),
+        "n_undefined": int((~usable).sum()),
+        "n_usable": int(usable.sum()),
+        "n_judge_human_undefined": int((~judge_defined).sum()),
+        "n_human_human_undefined": int((~human_defined).sum()),
+    }
+
+
+def baseline_items(frame, judge_labels, ties):
+    """The baseline items the package keeps, built by hand.
+
+    The three rules run in their fixed order, and each item counts under
+    the first one it fails. Items with no judge label go first. A row with
+    a missing rating is no label and never counts. Under "drop" the tie
+    ratings go as no label too. Items left with fewer than two human labels
+    go next. Last, under "drop", items whose judge label is a tie go. Every
+    tie comes back spelled "tie", whatever its case and spacing were.
+
+    Returns the remaining frame in its original row order, the judge's
+    labels on its items, and the three counts in rule order.
+    """
+    judge_labels = judge_labels.where(~is_tie(judge_labels), TIE)
+    frame = frame.assign(
+        rating=frame["rating"].where(~is_tie(frame["rating"]), TIE)
+    )
+    no_judge = judge_labels.index[judge_labels.isna()]
+    rest = frame[~frame["item_id"].isin(no_judge)]
+    candidates = pd.unique(rest["item_id"])
+    labelled = rest[rest["rating"].notna()]
+    labelled = labelled[labelled["rating"] != TIE] if ties == "drop" else labelled
+    raters = labelled.groupby("item_id")["rater_id"].nunique()
+    enough = raters.index[raters >= 2]
+    labelled = labelled[labelled["item_id"].isin(enough)]
+    judged = judge_labels.loc[pd.unique(labelled["item_id"])]
+    judge_ties = judged.index[(judged == TIE) & (ties == "drop")]
+    kept = labelled[~labelled["item_id"].isin(judge_ties)].reset_index(drop=True)
+    kept_labels = judge_labels.loc[pd.unique(kept["item_id"])]
+    counts = (no_judge.size, candidates.size - enough.size, judge_ties.size)
+    return kept, kept_labels, counts
+
+
+def reference_figures(reference):
+    low, high = reference["difference_ci"]
+    return (reference["judge_human"], reference["human_human"],
+            reference["difference"], low, high)
+
+
+def baseline_figures(result):
+    return (result.baseline_judge_human, result.baseline_human_human,
+            result.baseline_difference, result.baseline_ci_low,
+            result.baseline_ci_high)
+
+
+def three_decimals(figures):
+    return tuple(f"{x:.3f}" for x in figures)
+
+
+def interval_width(reference):
+    low, high = reference["difference_ci"]
+    return high - low
+
+
+def headline_inputs(frame, judge_labels):
+    """The first human listed on each item, the judge's labels, and the
+    item ids, one position per item."""
+    first_human = (
+        frame.drop_duplicates("item_id").set_index("item_id")["rating"]
+    )
+    return (
+        first_human.loc[judge_labels.index].to_numpy(),
+        judge_labels.to_numpy(),
+        judge_labels.index.to_numpy(),
+    )
+
+
+def validate_with_baseline(frame, judge_labels, ties, n_boot=BASELINE_BOOT,
+                           seed=BASELINE_SEED, confidence=0.95):
+    """judge_validation with a human baseline, the call every test here
+    makes except the refusals.
+
+    The headline pair is the judge against the first human listed on each
+    item. The baseline is every human rating in the frame.
+    """
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    return judge_validation(
+        human, judge, item_ids=item_ids, human_baseline=frame, ties=ties,
+        n_boot=n_boot, seed=seed, confidence=confidence,
+    )
+
+
+def every_figure(result):
+    """Every number the result carries about the headline and the
+    baseline, for comparing two results whole."""
+    return (
+        result.agreement, result.ci_low, result.ci_high, result.accuracy,
+        result.n_items, result.n_dropped, result.n_dropped_ties,
+        *baseline_figures(result),
+        result.baseline_n_items, result.baseline_n_no_judge_label,
+        result.baseline_n_too_few_humans, result.baseline_n_judge_ties,
+        result.baseline_n_boot_usable,
+    )
+
+
+# Fixtures. Each docstring states the property the tests rely on, and each
+# test asserts that property on the fixture before it calls the package.
+
+def judge_like_a_fourth_human():
+    """Three humans and a judge, all drawn the same way.
+
+    Every rater, the judge included, reports an item's true preference 80%
+    of the time, over 24 clusters of six items. Judge-human and human-human
+    agreement estimate the same number.
+
+    The property the tests rely on is that the interval on the difference
+    includes zero, and that the bounds move when the seed does.
+    """
+    return graded_items([0.8] * 24, [0.8] * 24, items_per_cluster=6, seed=1)
+
+
+def judge_more_reliable_than_the_humans():
+    """The judge is right 98% of the time and each human 72%, over 24
+    clusters of ten items.
+
+    The property the test relies on is that the interval on the difference
+    sits wholly above zero. The separate intervals on the two alphas do not
+    overlap either, and the test checks that too. So this fixture cannot
+    tell a verdict read off the difference from one read off the two
+    intervals. The fixture for test_baseline_verdict_reads_the_difference
+    can.
+    """
+    return graded_items([0.72] * 24, [0.98] * 24, items_per_cluster=10, seed=0)
+
+
+def judge_less_reliable_than_the_humans():
+    """The humans are right 90% of the time and the judge 60%, over 24
+    clusters of six items.
+
+    The property the test relies on is that the interval on the difference
+    sits wholly below zero.
+    """
+    return graded_items([0.9] * 24, [0.6] * 24, items_per_cluster=6, seed=0)
+
+
+def judge_that_guesses_in_half_the_clusters():
+    """The humans are right 85% of the time everywhere. The judge is right
+    95% of the time in the even clusters and guesses in the odd ones.
+
+    Twelve clusters of 25 items, three ratings per item. Every item in a
+    cluster gets the same judge, so the clusters differ from each other far
+    more than the items inside one do. A bootstrap that draws items or rows
+    treats 300 items or 900 ratings as independent evidence about a
+    difference that mostly varies between 12 clusters.
+
+    The property the test relies on is that resampling items and resampling
+    rows each give an interval on the difference less than half as wide as
+    resampling clusters. Both of those intervals also sit wholly below zero,
+    where the cluster interval includes it.
+    """
+    return graded_items(
+        [0.85] * 12, [0.95, 0.5] * 6, items_per_cluster=25, seed=0
+    )
+
+
+def judge_a_little_ahead_in_every_cluster():
+    """Human accuracy runs from 60% to 94% over ten clusters of 30 items,
+    and the judge is 8 points more accurate than the humans in each.
+
+    The spread between clusters moves both alphas together, so each one has
+    a wide interval. Their difference moves much less, because what the two
+    share cancels in it.
+
+    The property the test relies on is that the separate intervals on the
+    two alphas overlap, and that the interval on the difference sits wholly
+    above zero.
+    """
+    accuracy = np.linspace(0.6, 0.94, 10)
+    return graded_items(
+        accuracy, np.minimum(accuracy + 0.08, 1.0), items_per_cluster=30, seed=0
+    )
+
+
+def ties_on_both_sides():
+    """Humans right 80% of the time and the judge 85%, over 24 clusters of
+    six items, with 30% of human labels and 20% of judge labels replaced by
+    a tie.
+
+    The property the test relies on is that ties are on both sides, 131
+    human labels and 29 judge labels, and that the two codings give
+    different alphas. Under ties="drop" the too-few-humans rule sets aside
+    30 items and the judge-tie rule 23 more. Six items fail both rules, so
+    the counts would read 24 and 29 if the judge-tie rule ran first.
+    """
+    return graded_items(
+        [0.8] * 24, [0.85] * 24, items_per_cluster=6, seed=2,
+        human_tie=0.3, judge_tie=0.2,
+    )
+
+
+def judge_silent_on_some_items():
+    """Humans right 80% of the time and the judge 85%, over 16 clusters of
+    six items. The judge gives no label on the first twelve items where all
+    three humans agree.
+
+    The property the test relies on is that human-human alpha over every
+    baseline item differs from human-human alpha over the items the judge
+    labelled. Taking unanimous items out lowers it from 0.308 to 0.209.
+    """
+    frame, judge_labels = graded_items(
+        [0.8] * 16, [0.85] * 16, items_per_cluster=6, seed=5
+    )
+    distinct = frame.groupby("item_id", sort=False)["rating"].nunique()
+    silent = distinct.index[distinct == 1][:12]
+    judge_labels = judge_labels.astype(object)
+    judge_labels.loc[silent] = None
+    return frame, judge_labels
+
+
+def one_decisive_human_and_a_tie():
+    """Two humans per item, right 80% of the time, and a judge right 80% of
+    the time, over 16 clusters of six items. On the first twelve items
+    where the judge disagrees with h0, h1's label is replaced by a tie.
+
+    The property the test relies on is that those twelve items each hold
+    one decisive human label and one tie, the judge gives no tie anywhere,
+    and keeping the twelve items with their one decisive label would lower
+    judge-human alpha from 0.417 to 0.323. Human-human alpha is the same
+    either way, since an item with one label has no pair to compare.
+    """
+    frame, judge_labels = graded_items(
+        [0.8] * 16, [0.8] * 16, items_per_cluster=6, seed=7, humans_per_item=2
+    )
+    h0 = frame[frame["rater_id"] == "h0"].set_index("item_id")["rating"]
+    against = h0.index[(h0 != judge_labels.loc[h0.index]).to_numpy()][:12]
+    tied = frame["item_id"].isin(against) & (frame["rater_id"] == "h1")
+    frame.loc[tied, "rating"] = TIE
+    return frame, judge_labels
+
+
+def one_cluster_where_every_human_says_first():
+    """Three clusters of ten items, humans and judge right 80% of the time.
+    In c0 every human label is "first", and the judge alternates between
+    "first" and "second".
+
+    A draw that picks c0 three times holds human labels of one value only,
+    so human-human alpha is undefined there. The judge's labels still vary,
+    so judge-human alpha is defined.
+
+    The property the test relies on is that 68 of 2,000 draws leave
+    human-human alpha undefined and none leave judge-human undefined. That
+    is 3.4%, under the 10% past which the package refuses an interval.
+    """
+    return clusters_where_every_human_says_first(["c0"])
+
+
+def two_clusters_where_every_human_says_first():
+    """The same three clusters, with every human label "first" in c1 as
+    well as c0, and the judge alternating in both.
+
+    A draw that picks only c0 and c1 leaves human-human alpha undefined.
+    That happens in about (2/3) ** 3 of draws, near 30%.
+
+    The property the test relies on is that 591 of 2,000
+    draws leave human-human alpha undefined, which is past the 10% line,
+    and none leave judge-human undefined.
+    """
+    return clusters_where_every_human_says_first(["c0", "c1"])
+
+
+def clusters_where_every_human_says_first(clusters):
+    """Three clusters of ten items, humans and judge right 80% of the time,
+    and in each named cluster every human label set to "first" and the
+    judge alternating between "first" and "second"."""
+    frame, judge_labels = graded_items(
+        [0.8] * 3, [0.8] * 3, items_per_cluster=10, seed=11
+    )
+    judge_labels = judge_labels.copy()
+    for cluster in clusters:
+        inside = frame["cluster_id"] == cluster
+        frame.loc[inside, "rating"] = "first"
+        items = pd.unique(frame.loc[inside, "item_id"])
+        judge_labels.loc[items] = np.where(
+            np.arange(items.size) % 2 == 0, "first", "second"
+        )
+    return frame, judge_labels
+
+
+def some_items_graded_by_one_human():
+    """judge_like_a_fourth_human with h1 and h2 removed from the first item
+    of every third cluster, so eight items keep one human label each.
+
+    The property the test relies on is that those eight items hold one
+    human label, and that keeping them would move judge-human alpha from
+    0.427 to 0.419. Human-human alpha is the
+    same either way, since an item with one label has no pair to compare.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    first_items = frame.drop_duplicates("cluster_id")["item_id"].iloc[::3]
+    thinned = frame["item_id"].isin(first_items) & (frame["rater_id"] != "h0")
+    return frame[~thinned].reset_index(drop=True), judge_labels
+
+
+def judge_silent_among_ties():
+    """ties_on_both_sides, with the judge's label removed on the first four
+    items that have fewer than two decisive human labels and a decisive
+    judge label.
+
+    The property the test relies on is that four items fail both the
+    no-judge-label rule and the too-few-humans rule, and six items fail
+    both the too-few-humans rule and the judge-tie rule. An item cannot
+    fail the first and last rules together, since a missing label is not a
+    tie. So the counts come out 4, 26 and 23 only when the rules run
+    no-judge-label, then too-few-humans, then judge-tie. Every other order
+    moves one of the two groups of overlapping items to another count.
+    """
+    frame, judge_labels = ties_on_both_sides()
+    decisive = frame[frame["rating"] != TIE].groupby("item_id")["rater_id"]
+    decisive_humans = decisive.nunique().reindex(judge_labels.index, fill_value=0)
+    thin = judge_labels.index[
+        (decisive_humans < 2).to_numpy() & (judge_labels != TIE).to_numpy()
+    ]
+    judge_labels = judge_labels.astype(object)
+    judge_labels.loc[thin[:4]] = None
+    return frame, judge_labels
+
+
+def ties_spelled_two_ways():
+    """ties_on_both_sides, with every tie respelled. Human ties alternate
+    between "Tie" and " tie ", and judge ties between " tie " and "Tie".
+
+    The property the test relies on is that no tie is spelled "tie", both
+    spellings appear on both sides, and reading the spellings as labels of
+    their own would move the alphas. kref on the respelled data gives
+    judge-human 0.144 and human-human 0.071, against 0.149 and 0.122 on the
+    data as generated.
+    """
+    frame, judge_labels = ties_on_both_sides()
+    human_ties = np.flatnonzero((frame["rating"] == TIE).to_numpy())
+    frame.loc[human_ties, "rating"] = np.where(
+        np.arange(human_ties.size) % 2 == 0, "Tie", " tie "
+    )
+    judge_labels = judge_labels.astype(object)
+    judge_ties = np.flatnonzero((judge_labels == TIE).to_numpy())
+    judge_labels.iloc[judge_ties] = np.where(
+        np.arange(judge_ties.size) % 2 == 0, " tie ", "Tie"
+    )
+    return frame, judge_labels
+
+
+def ties_with_a_missing_rating():
+    """ties_on_both_sides with one row added at the end. Rater h3, who
+    grades nothing else, has a row with no rating on i5, the
+    first item with exactly one decisive human label and a decisive judge
+    label.
+
+    A missing rating is no label, so every figure, count and summary should
+    be the one ties_on_both_sides gives. The property the test relies on is
+    that reading the missing rating any other way would show. Read as a
+    decisive label under "drop", it gives i5 a second decisive
+    label and keeps it, so the too-few-humans count falls from 30 to 29.
+    Under "category", read as a label of its own it moves human-human alpha
+    from 0.122 to 0.121, and read as a tie, the way bradley_terry
+    reads a missing winner, it moves it to 0.124.
+    """
+    frame, judge_labels = ties_on_both_sides()
+    decisive = frame[frame["rating"] != TIE].groupby("item_id")["rater_id"]
+    decisive_humans = decisive.nunique().reindex(judge_labels.index, fill_value=0)
+    item = judge_labels.index[
+        (decisive_humans == 1).to_numpy() & (judge_labels != TIE).to_numpy()
+    ][0]
+    cluster = frame.loc[frame["item_id"] == item, "cluster_id"].iloc[0]
+    extra = pd.DataFrame({
+        "item_id": [item], "cluster_id": [cluster], "rater_id": ["h3"],
+        "rating": pd.Series([None], dtype=object),
+    })
+    return pd.concat([frame, extra], ignore_index=True), judge_labels
+
+
+def headline_items_with_a_tie_and_no_label():
+    """ties_on_both_sides with two headline items changed. On
+    i1, where h0 says tie and the judge does not, the
+    judge's label is removed. On i4, where the judge says tie
+    and h0 does not, h0's rating is removed.
+
+    Both were among the 64 headline items set aside for a tie. The property
+    the test relies on is that each now has no label on one side and a tie
+    on the other, so under "drop" they belong in n_dropped, which becomes 2,
+    and n_dropped_ties falls to 62.
+    """
+    frame, judge_labels = ties_on_both_sides()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    human_tie = is_tie(human).to_numpy()
+    judge_tie = is_tie(judge).to_numpy()
+    tie_then_none = item_ids[human_tie & ~judge_tie][0]
+    none_then_tie = item_ids[judge_tie & ~human_tie][0]
+    judge_labels = judge_labels.astype(object)
+    judge_labels.loc[tie_then_none] = None
+    first_row = frame.index[frame["item_id"] == none_then_tie][0]
+    frame = frame.astype({"rating": object})
+    frame.loc[first_row, "rating"] = None
+    return frame, judge_labels
+
+
+def one_item_under_each_rule():
+    """judge_like_a_fourth_human, which has no ties, with three items
+    changed. The judge gives no label on i0. h1 and h2 say tie on i6, so it
+    keeps one decisive human label. The judge says tie on i12.
+
+    The property the test relies on is that under "drop" each baseline rule
+    sets aside exactly one item, i0, i6 and i12 in rule order, one headline
+    item has no label, i0, and one headline item has a tie, i12. Every count
+    in the summary is one, so every sentence that gives a count is in the
+    singular.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    judge_labels = judge_labels.astype(object)
+    judge_labels.loc["i0"] = None
+    judge_labels.loc["i12"] = TIE
+    frame.loc[(frame["item_id"] == "i6") & (frame["rater_id"] != "h0"), "rating"] = TIE
+    return frame, judge_labels
+
+
+def six_clusters_where_everyone_says_first():
+    """Eight clusters of three items, three humans per item. In c0 to c5
+    every human and the judge say "first". c6 and c7 come from graded_items
+    and each hold at least one other human label.
+
+    A draw is undefined when it picks only from c0 to c5, which happens
+    with probability 0.75 ** 8, just over 10%. So the usable share of 2,000
+    draws falls either side of the 90% line depending on the seed.
+
+    The property the test relies on is that seed 1 leaves exactly 1,800
+    usable draws, on the line, and seed 20 leaves exactly 1,799, under it.
+    """
+    frame, judge_labels = graded_items(
+        [0.8] * 8, [0.8] * 8, items_per_cluster=3, seed=3
+    )
+    unanimous = frame["cluster_id"].isin([f"c{c}" for c in range(6)])
+    frame.loc[unanimous, "rating"] = "first"
+    judge_labels = judge_labels.copy()
+    judge_labels.loc[pd.unique(frame.loc[unanimous, "item_id"])] = "first"
+    return frame, judge_labels
+
+
+def three_items_two_of_them_unanimous():
+    """Three items in three clusters, three humans each. On i0 and i1 every
+    human and the judge say "first". On i2 the humans say "second", "first"
+    and "second", and the judge says "first".
+
+    A draw that picks only i0 and i1 holds one label, on the headline pair
+    and in the baseline alike, and that happens in about (2/3) ** 3 of
+    draws. The property the test relies on is that both the headline
+    interval and the baseline interval are refused.
+    """
+    frame = pd.DataFrame({
+        "item_id": np.repeat(["i0", "i1", "i2"], 3),
+        "cluster_id": np.repeat(["c0", "c1", "c2"], 3),
+        "rater_id": np.tile(["h0", "h1", "h2"], 3),
+        "rating": ["first"] * 6 + ["second", "first", "second"],
+    })
+    judge_labels = pd.Series(
+        ["first", "first", "first"], index=["i0", "i1", "i2"], dtype=object,
+        name="judge",
+    )
+    return frame, judge_labels
+
+
+def judge_ahead_on_29_clusters():
+    """The judge right 98% of the time and each human 72%, over 29 clusters
+    of ten items.
+
+    The property the test relies on is that the interval on the difference
+    sits wholly above zero and rests on 29 clusters, one under THIN_SLICE.
+    """
+    return graded_items([0.72] * 29, [0.98] * 29, items_per_cluster=10, seed=0)
+
+
+def judge_ahead_on_30_clusters():
+    """The same design over 30 clusters of ten items.
+
+    The property the test relies on is that the interval on the difference
+    sits wholly above zero and rests on 30 clusters, exactly THIN_SLICE.
+    """
+    return graded_items([0.72] * 30, [0.98] * 30, items_per_cluster=10, seed=0)
+
+
+def judge_ahead_on_30_clusters_with_one_unjudged():
+    """judge_ahead_on_30_clusters with the judge's label removed on every
+    item of c0.
+
+    The property the test relies on is that the frame spans 30 clusters,
+    the no-judge-label rule sets aside all ten items of c0, so the items
+    that remain span 29, and the interval on the difference still sits
+    wholly above zero.
+    """
+    frame, judge_labels = judge_ahead_on_30_clusters()
+    judge_labels = judge_labels.astype(object)
+    judge_labels.loc[pd.unique(frame.loc[frame["cluster_id"] == "c0", "item_id"])] = None
+    return frame, judge_labels
+
+
+def mt_bench_splits():
+    """The human and gpt4_pair splits of lmsys/mt_bench_human_judgments at
+    revision f7d2896, as committed under tests/data.
+
+    tests/data/make_mt_bench_csv.py wrote them from the parquet files by
+    selecting six columns. winner keeps its raw strings. Every string is
+    read as it is, so no value turns into a missing one.
+    """
+    return tuple(
+        pd.read_csv(MT_BENCH_DATA / f"mt_bench_{split}.csv",
+                    keep_default_na=False, na_values=[])
+        for split in ("human", "gpt4_pair")
+    )
+
+
+def mt_bench_baseline(human, gpt4):
+    """Every MT-Bench comparison two or more humans judged, ties kept.
+
+    Built the way analysis/q5_judge_against_human_baseline.py builds its
+    units. An item is one question, one ordered pair of models and one
+    turn. A human's first vote on an item is kept, and an item needs two or
+    more distinct humans. The label is the winner's alphabetical position
+    in the pair, "first" or "second", or "tie". gpt4_pair's "tie" and "tie
+    (inconsistent)" both become "tie". The cluster is question_id. Rows
+    stay in the order of the human split.
+
+    The property the MT-Bench tests rely on is checked by
+    assert_mt_bench_is_the_published_data.
+    """
+    def labelled(votes):
+        lo = votes[["model_a", "model_b"]].min(axis=1).to_numpy()
+        winner = np.where(
+            votes["winner"] == "model_a", votes["model_a"],
+            np.where(votes["winner"] == "model_b", votes["model_b"], TIE),
+        )
+        return votes.assign(
+            lo=lo,
+            hi=votes[["model_a", "model_b"]].max(axis=1),
+            label=np.where(
+                winner == TIE, TIE, np.where(winner == lo, "first", "second")
+            ),
+        )
+
+    judged = labelled(gpt4)[["question_id", "lo", "hi", "turn", "label"]]
+    votes = labelled(human).merge(
+        judged.rename(columns={"label": "judge_label"}),
+        on=["question_id", "lo", "hi", "turn"], how="left", validate="m:1",
+    )
+    votes["item_id"] = (
+        votes["question_id"].astype(str) + "|" + votes["model_a"] + "|"
+        + votes["model_b"] + "|t" + votes["turn"].astype(str)
+    )
+    votes = votes.drop_duplicates(["item_id", "judge"], keep="first")
+    raters = votes.groupby("item_id")["judge"].nunique()
+    votes = votes[votes["item_id"].isin(raters.index[raters >= 2])]
+    votes = votes.reset_index(drop=True)
+
+    frame = pd.DataFrame({
+        "item_id": votes["item_id"],
+        "cluster_id": votes["question_id"],
+        "rater_id": votes["judge"],
+        "rating": votes["label"],
+    })
+    judge_labels = votes.groupby("item_id", sort=False)["judge_label"].first()
+    return frame, judge_labels
+
+
+def assert_mt_bench_is_the_published_data(human, gpt4, frame, judge_labels):
+    """The committed files are the two splits, with raw winner strings, and
+    the frame built from them is the one the write-up measured.
+
+    Ties are on both sides, 386 human labels and 193 judge labels. The 80
+    clusters hold between 2 and 18 items each, and the 761 items carry
+    between two and five human labels, 1,720 in all. So clusters, items and
+    rows are three different units. Every item has a judge label.
+    """
+    assert (len(human), len(gpt4)) == (3355, 2400)
+    assert set(human["winner"]) == {"model_a", "model_b", "tie"}
+    assert set(gpt4["winner"]) == {
+        "model_a", "model_b", "tie", "tie (inconsistent)"
+    }
+    labels_per_item = frame.groupby("item_id").size()
+    items_per_cluster = frame.groupby("cluster_id")["item_id"].nunique()
+    assert (len(frame), len(labels_per_item), len(items_per_cluster)) == (
+        1720, 761, 80
+    )
+    assert (
+        int((frame["rating"] == TIE).sum()), int((judge_labels == TIE).sum())
+    ) == (386, 193)
+    assert sorted(labels_per_item.unique()) == [2, 3, 4, 5]
+    assert (items_per_cluster.min(), items_per_cluster.max()) == (2, 18)
+    assert set(judge_labels) == {"first", "second", TIE}
+
+
+# The full summaries. Written out whole and compared whole. The wording is
+# new, the figures are what baseline_reference gives on each fixture, and
+# the headline is what judge_validation already prints for the first human
+# on each item, on the items the tie coding keeps.
+
+SUMMARY_MT_BENCH_ALL_COMPARISONS = (
+    "Judge and human agree at alpha 0.497 (95% CI: 0.448 to 0.547, nominal,"
+    " 761 items). Plain accuracy is 66.9%. Against the human baseline, on "
+    "761 items, the judge agrees with the human labels at alpha 0.479 and "
+    "the humans agree with each other at alpha 0.478. Judge-human minus "
+    "human-human is +0.001 (95% CI: -0.055 to +0.054, resampling 80 "
+    "clusters). Ties count as a label of their own on both sides. The "
+    "interval includes zero, so the data cannot show that the judge agrees "
+    "with a human any more or less than a second human does. That does not "
+    "mean it agrees equally well."
+)
+
+
+SUMMARY_MT_BENCH_DECISIVE_ONLY = (
+    "Judge and human agree at alpha 0.761 (95% CI: 0.701 to 0.816, nominal,"
+    " 468 items). Plain accuracy is 88.0%. 293 items were set aside because"
+    " one side called it a tie. Against the human baseline, on 453 items, "
+    "the judge agrees with the human labels at alpha 0.737 and the humans "
+    "agree with each other at alpha 0.692. Judge-human minus human-human is"
+    " +0.045 (95% CI: +0.002 to +0.088, resampling 78 clusters). Ties are "
+    "set aside as no label on both sides. 225 baseline items were set aside"
+    " because fewer than two humans gave a decisive label. 83 baseline "
+    "items were set aside because the judge's label was a tie. The judge's "
+    "own ties decide which items it is scored on. The whole interval sits "
+    "above zero, so the judge agrees with a human more than a second human "
+    "does. A judge that sits nearer the middle of the human spread than a "
+    "typical human does will score this way, so this does not show that the"
+    " judge is better than a human."
+)
+
+
+SUMMARY_INCLUDES_ZERO = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, on "
+    "144 items, the judge agrees with the human labels at alpha 0.408 and "
+    "the humans agree with each other at alpha 0.427. Judge-human minus "
+    "human-human is -0.019 (95% CI: -0.106 to +0.074, resampling 24 "
+    "clusters). Ties count as a label of their own on both sides. The "
+    "interval includes zero, so the data cannot show that the judge agrees "
+    "with a human any more or less than a second human does. That does not "
+    "mean it agrees equally well."
+)
+
+
+SUMMARY_ABOVE_ZERO = (
+    "Judge and human agree at alpha 0.409 (95% CI: 0.292 to 0.526, nominal,"
+    " 240 items). Plain accuracy is 70.4%. Against the human baseline, on "
+    "240 items, the judge agrees with the human labels at alpha 0.414 and "
+    "the humans agree with each other at alpha 0.115. Judge-human minus "
+    "human-human is +0.299 (95% CI: +0.237 to +0.357, resampling 24 "
+    "clusters). Ties count as a label of their own on both sides. The whole"
+    " interval sits above zero, so the judge agrees with a human more than "
+    "a second human does. A judge that sits nearer the middle of the human "
+    "spread than a typical human does will score this way, so this does not"
+    " show that the judge is better than a human. That interval rests on "
+    "only 24 clusters, so treat the verdict as provisional."
+)
+
+
+SUMMARY_BELOW_ZERO = (
+    "Judge and human agree at alpha 0.156 (95% CI: -0.012 to 0.308, "
+    "nominal, 144 items). Plain accuracy is 57.6%. Against the human "
+    "baseline, on 144 items, the judge agrees with the human labels at "
+    "alpha 0.153 and the humans agree with each other at alpha 0.551. "
+    "Judge-human minus human-human is -0.398 (95% CI: -0.569 to -0.246, "
+    "resampling 24 clusters). Ties count as a label of their own on both "
+    "sides. The whole interval sits below zero, so the judge agrees with a "
+    "human less than a second human does. On these items the judge is not a"
+    " stand-in for a second human. That interval rests on only 24 clusters,"
+    " so treat the verdict as provisional."
+)
+
+
+SUMMARY_OVERLAPPING_INTERVALS = (
+    "Judge and human agree at alpha 0.418 (95% CI: 0.317 to 0.520, nominal,"
+    " 300 items). Plain accuracy is 71.0%. Against the human baseline, on "
+    "300 items, the judge agrees with the human labels at alpha 0.436 and "
+    "the humans agree with each other at alpha 0.362. Judge-human minus "
+    "human-human is +0.074 (95% CI: +0.036 to +0.105, resampling 10 "
+    "clusters). Ties count as a label of their own on both sides. The whole"
+    " interval sits above zero, so the judge agrees with a human more than "
+    "a second human does. A judge that sits nearer the middle of the human "
+    "spread than a typical human does will score this way, so this does not"
+    " show that the judge is better than a human. That interval rests on "
+    "only 10 clusters, so treat the verdict as provisional."
+)
+
+
+SUMMARY_TIES_AS_CATEGORY = (
+    "Judge and human agree at alpha 0.103 (95% CI: -0.022 to 0.220, "
+    "nominal, 144 items). Plain accuracy is 41.0%. Against the human "
+    "baseline, on 144 items, the judge agrees with the human labels at "
+    "alpha 0.149 and the humans agree with each other at alpha 0.122. "
+    "Judge-human minus human-human is +0.027 (95% CI: -0.077 to +0.125, "
+    "resampling 24 clusters). Ties count as a label of their own on both "
+    "sides. The interval includes zero, so the data cannot show that the "
+    "judge agrees with a human any more or less than a second human does. "
+    "That does not mean it agrees equally well."
+)
+
+
+SUMMARY_TIES_DROPPED = (
+    "Judge and human agree at alpha 0.277 (95% CI: 0.054 to 0.464, nominal,"
+    " 80 items). Plain accuracy is 63.7%. 64 items were set aside because "
+    "one side called it a tie. Against the human baseline, on 91 items, the"
+    " judge agrees with the human labels at alpha 0.374 and the humans "
+    "agree with each other at alpha 0.360. Judge-human minus human-human is"
+    " +0.014 (95% CI: -0.185 to +0.194, resampling 24 clusters). Ties are "
+    "set aside as no label on both sides. 30 baseline items were set aside "
+    "because fewer than two humans gave a decisive label. 23 baseline items"
+    " were set aside because the judge's label was a tie. The judge's own "
+    "ties decide which items it is scored on. The interval includes zero, "
+    "so the data cannot show that the judge agrees with a human any more or"
+    " less than a second human does. That does not mean it agrees equally "
+    "well."
+)
+
+
+SUMMARY_UNDEFINED_RESAMPLES = (
+    "Judge and human agree at alpha 0.409 (95% CI: 0.066 to 0.718, nominal,"
+    " 30 items). Plain accuracy is 70.0%. Against the human baseline, on 30"
+    " items, the judge agrees with the human labels at alpha 0.381 and the "
+    "humans agree with each other at alpha 0.546. Judge-human minus human-"
+    "human is -0.165 (95% CI: -0.571 to +0.359, resampling 3 clusters). 68 "
+    "of 2000 resamples left an alpha undefined, and the interval comes from"
+    " the other 1932. Those are the resamples where every human label was "
+    "the same, so leaving them out shifts the interval in the judge's "
+    "favour. Ties count as a label of their own on both sides. The interval"
+    " includes zero, so the data cannot show that the judge agrees with a "
+    "human any more or less than a second human does. That does not mean it"
+    " agrees equally well."
+)
+
+
+SUMMARY_NO_INTERVAL = (
+    "Judge and human agree at alpha 0.063 (95% CI: -0.317 to 0.388, "
+    "nominal, 30 items). Plain accuracy is 56.7%. Against the human "
+    "baseline, on 30 items, the judge agrees with the human labels at alpha"
+    " 0.070 and the humans agree with each other at alpha 0.641. Judge-"
+    "human minus human-human is -0.571. Ties count as a label of their own "
+    "on both sides. There is no interval on the difference, and so no "
+    "verdict. 591 of 2000 resamples left an alpha undefined, above the 10% "
+    "this reports through. Those are the resamples where every human label "
+    "was the same, so an interval from the rest would lean in the judge's "
+    "favour."
+)
+
+
+SUMMARY_ONE_HUMAN = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, on "
+    "136 items, the judge agrees with the human labels at alpha 0.427 and "
+    "the humans agree with each other at alpha 0.432. Judge-human minus "
+    "human-human is -0.006 (95% CI: -0.097 to +0.084, resampling 24 "
+    "clusters). Ties count as a label of their own on both sides. 8 "
+    "baseline items were set aside because fewer than two humans graded "
+    "them. The interval includes zero, so the data cannot show that the "
+    "judge agrees with a human any more or less than a second human does. "
+    "That does not mean it agrees equally well."
+)
+
+
+SUMMARY_JUDGE_SILENT = (
+    "Judge and human agree at alpha 0.286 (95% CI: 0.077 to 0.479, nominal,"
+    " 84 items). Plain accuracy is 64.3%. 12 items were set aside because "
+    "one side had no label. Against the human baseline, on 84 items, the "
+    "judge agrees with the human labels at alpha 0.348 and the humans agree"
+    " with each other at alpha 0.209. Judge-human minus human-human is "
+    "+0.139 (95% CI: -0.030 to +0.293, resampling 16 clusters). Ties count "
+    "as a label of their own on both sides. 12 baseline items were set "
+    "aside because the judge gave no label. The interval includes zero, so "
+    "the data cannot show that the judge agrees with a human any more or "
+    "less than a second human does. That does not mean it agrees equally "
+    "well."
+)
+
+
+SUMMARY_ON_THE_LINE = (
+    "Judge and human agree at alpha 0.781 (95% CI: -0.022 to 1.000, "
+    "nominal, 24 items). Plain accuracy is 95.8%. Against the human "
+    "baseline, on 24 items, the judge agrees with the human labels at alpha"
+    " 0.580 and the humans agree with each other at alpha 0.376. Judge-"
+    "human minus human-human is +0.204 (95% CI: -0.328 to +0.341, "
+    "resampling 8 clusters). 200 of 2000 resamples left an alpha undefined,"
+    " and the interval comes from the other 1800. Those are the resamples "
+    "where every human label was the same, so leaving them out shifts the "
+    "interval in the judge's favour. Ties count as a label of their own on "
+    "both sides. The interval includes zero, so the data cannot show that "
+    "the judge agrees with a human any more or less than a second human "
+    "does. That does not mean it agrees equally well."
+)
+
+SUMMARY_UNDER_THE_LINE = (
+    "Judge and human agree at alpha 0.781 (95% CI: -0.022 to 1.000, "
+    "nominal, 24 items). Plain accuracy is 95.8%. Against the human "
+    "baseline, on 24 items, the judge agrees with the human labels at alpha"
+    " 0.580 and the humans agree with each other at alpha 0.376. Judge-"
+    "human minus human-human is +0.204. Ties count as a label of their own "
+    "on both sides. There is no interval on the difference, and so no "
+    "verdict. 201 of 2000 resamples left an alpha undefined, above the 10% "
+    "this reports through. Those are the resamples where every human label "
+    "was the same, so an interval from the rest would lean in the judge's "
+    "favour."
+)
+
+SUMMARY_ONE_OF_EACH = (
+    "Judge and human agree at alpha 0.368 (95% CI: 0.206 to 0.521, nominal,"
+    " 142 items). Plain accuracy is 68.3%. 1 item was set aside because one"
+    " side had no label. 1 item was set aside because one side called it a "
+    "tie. Against the human baseline, on 141 items, the judge agrees with "
+    "the human labels at alpha 0.410 and the humans agree with each other "
+    "at alpha 0.434. Judge-human minus human-human is -0.024 (95% CI: "
+    "-0.111 to +0.070, resampling 24 clusters). Ties are set aside as no "
+    "label on both sides. 1 baseline item was set aside because the judge "
+    "gave no label. 1 baseline item was set aside because fewer than two "
+    "humans gave a decisive label. 1 baseline item was set aside because "
+    "the judge's label was a tie. The judge's own ties decide which items "
+    "it is scored on. The interval includes zero, so the data cannot show "
+    "that the judge agrees with a human any more or less than a second "
+    "human does. That does not mean it agrees equally well."
+)
+
+SUMMARY_BOTH_REFUSE = (
+    "Judge and human agree at alpha 0.000 (nominal, 3 items). There is no "
+    "interval on that alpha. 591 of 2000 resamples left it undefined, above"
+    " the 10% this reports through. Those are the resamples where every "
+    "label was the same, so percentiles of the rest would understate the "
+    "upper bound. Plain accuracy is 66.7%. Against the human baseline, on 3"
+    " items, the judge agrees with the human labels at alpha -0.062 and the"
+    " humans agree with each other at alpha 0.429. Judge-human minus human-"
+    "human is -0.491. Ties count as a label of their own on both sides. "
+    "There is no interval on the difference, and so no verdict. 591 of 2000"
+    " resamples left an alpha undefined, above the 10% this reports "
+    "through. Those are the resamples where every human label was the same,"
+    " so an interval from the rest would lean in the judge's favour."
+)
+
+
+SUMMARY_ONE_DECISIVE_HUMAN = (
+    "Judge and human agree at alpha 0.398 (95% CI: 0.211 to 0.567, nominal,"
+    " 96 items). Plain accuracy is 69.8%. Against the human baseline, on 84"
+    " items, the judge agrees with the human labels at alpha 0.417 and the "
+    "humans agree with each other at alpha 0.302. Judge-human minus human-"
+    "human is +0.116 (95% CI: -0.100 to +0.314, resampling 16 clusters). "
+    "Ties are set aside as no label on both sides. 12 baseline items were "
+    "set aside because fewer than two humans gave a decisive label. The "
+    "interval includes zero, so the data cannot show that the judge agrees "
+    "with a human any more or less than a second human does. That does not "
+    "mean it agrees equally well."
+)
+
+HEADLINE_WITHOUT_RESAMPLES = (
+    "Judge and human agree at alpha 0.363 (nominal, 144 items). No interval"
+    " was computed, so nothing here is placed against sampling error. Plain"
+    " accuracy is 68.1%. Without an interval there is nothing to place the "
+    "judge's agreement with the humans against the conventional lines at "
+    "0.667 and 0.800, so the data cannot show that it clears either. That "
+    "does not mean it falls short of them."
+)
+
+HEADLINE_REFUSED = (
+    "Judge and human agree at alpha 0.000 (nominal, 3 items). There is no "
+    "interval on that alpha. 591 of 2000 resamples left it undefined, above"
+    " the 10% this reports through. Those are the resamples where every "
+    "label was the same, so percentiles of the rest would understate the "
+    "upper bound. Plain accuracy is 66.7%. Without an interval there is "
+    "nothing to place the judge's agreement with the humans against the "
+    "conventional lines at 0.667 and 0.800, so the data cannot show that it"
+    " clears either. That does not mean it falls short of them."
+)
+
+
+SUMMARY_29_CLUSTERS = (
+    "Judge and human agree at alpha 0.382 (95% CI: 0.270 to 0.492, nominal,"
+    " 290 items). Plain accuracy is 69.3%. Against the human baseline, on "
+    "290 items, the judge agrees with the human labels at alpha 0.410 and "
+    "the humans agree with each other at alpha 0.156. Judge-human minus "
+    "human-human is +0.255 (95% CI: +0.202 to +0.309, resampling 29 "
+    "clusters). Ties count as a label of their own on both sides. The whole"
+    " interval sits above zero, so the judge agrees with a human more than "
+    "a second human does. A judge that sits nearer the middle of the human "
+    "spread than a typical human does will score this way, so this does not"
+    " show that the judge is better than a human. That interval rests on "
+    "only 29 clusters, so treat the verdict as provisional."
+)
+
+SUMMARY_30_CLUSTERS = (
+    "Judge and human agree at alpha 0.418 (95% CI: 0.317 to 0.519, nominal,"
+    " 300 items). Plain accuracy is 71.0%. Against the human baseline, on "
+    "300 items, the judge agrees with the human labels at alpha 0.417 and "
+    "the humans agree with each other at alpha 0.142. Judge-human minus "
+    "human-human is +0.274 (95% CI: +0.224 to +0.323, resampling 30 "
+    "clusters). Ties count as a label of their own on both sides. The whole"
+    " interval sits above zero, so the judge agrees with a human more than "
+    "a second human does. A judge that sits nearer the middle of the human "
+    "spread than a typical human does will score this way, so this does not"
+    " show that the judge is better than a human."
+)
+
+
+SUMMARY_30_CLUSTERS_ONE_UNJUDGED = (
+    "Judge and human agree at alpha 0.432 (95% CI: 0.327 to 0.529, nominal,"
+    " 290 items). Plain accuracy is 71.7%. 10 items were set aside because "
+    "one side had no label. Against the human baseline, on 290 items, the "
+    "judge agrees with the human labels at alpha 0.424 and the humans agree"
+    " with each other at alpha 0.140. Judge-human minus human-human is "
+    "+0.284 (95% CI: +0.233 to +0.331, resampling 29 clusters). Ties count "
+    "as a label of their own on both sides. 10 baseline items were set "
+    "aside because the judge gave no label. The whole interval sits above "
+    "zero, so the judge agrees with a human more than a second human does. "
+    "A judge that sits nearer the middle of the human spread than a typical"
+    " human does will score this way, so this does not show that the judge "
+    "is better than a human. That interval rests on only 29 clusters, so "
+    "treat the verdict as provisional."
+)
+
+
+# baseline_reference on judge_like_a_fourth_human at seed 1. At seed 0
+# the bounds are -0.10578 and 0.07356.
+SEED_1_BOUNDS = (-0.11088995448993597, 0.06908082521187421)
+
+
+# baseline_reference on judge_like_a_fourth_human at confidence 0.90 and
+# seed 0. At 0.95 the bounds are -0.10578 and 0.07356.
+CONFIDENCE_90_BOUNDS = (-0.0923096724775582, 0.0595140973148152)
+
+
+def test_baseline_reproduces_the_published_mt_bench_figures():
+    """The ties-as-a-label row of analysis/mt-bench.md, coded by the
+    winner's alphabetical position.
+
+    The write-up reports judge-human alpha 0.479, human-human 0.478, and a
+    difference of +0.001 with a 95% interval from -0.055 to +0.054, from
+    5,000 question resamples at seed 0. The fixture is built the way q5
+    built it, and the published figures are the reference, at three
+    decimals and at full precision from q5's run().
+
+    These are the inputs on which a wrong implementation would still match.
+
+    - The ties argument ignored and "tie" read as an ordinary label. Under
+      ties="category" that is the same computation. The decisive-only test
+      catches it, since there a tie has to leave.
+    - Clusters in sorted order. The human split is sorted by question_id,
+      so sorted order and first-appearance order draw the same resamples.
+      The synthetic fixtures name clusters c0 to c23, where the two orders
+      differ.
+    - A seed ignored in favour of default_rng(0). The seed-1 test catches
+      it.
+    - A confidence argument ignored. Only 0.95 runs here. The
+      confidence-0.90 test catches it.
+    - Items without a judge label. Every item here has one. The silent-judge
+      test covers them.
+    - Items graded by one human. The frame is filtered to two or more
+      before the call, as q5 did. The one-human test covers them.
+    - A tie recognised only when spelled exactly "tie". Every tie here is
+      spelled that way. The spelling test catches it.
+    - A rule for undefined resamples. All 5,000 resamples define both
+      alphas here. The two undefined-resample tests cover it, on each side
+      of the refusal line.
+
+    These are the inputs that do tell the implementations apart.
+
+    - Ties dropped on both sides. That gives 453 items at 0.737 against
+      0.692, a difference of +0.045 (+0.002 to +0.088).
+    - Clusters equal to items or to rows. Here 80 clusters hold 761 items
+      and 1,720 ratings. Resampling items gives -0.045 to +0.046, and
+      resampling rows gives -0.262 to -0.180.
+    - The judge added as one more rater on each item gives 0.481.
+    - Human-human from the first two humans on each item gives 0.497.
+
+    Three margins are thin. The upper bound is 0.054492, which is 0.000008
+    under the point where it prints as 0.055, so a percentile rule other
+    than numpy's default can move it. An n_boot of 1,000 or 2,000 in place
+    of 5,000 is caught by that bound alone. And the sign rests on the third
+    decimal. With the subtraction reversed the result prints as -0.001, from
+    -0.054 to 0.055. The full-precision pins close all three.
+    """
+    human, gpt4 = mt_bench_splits()
+    frame, judge_labels = mt_bench_baseline(human, gpt4)
+    assert_mt_bench_is_the_published_data(human, gpt4, frame, judge_labels)
+    reference = baseline_reference(
+        frame, judge_labels, n_boot=MT_BENCH_BOOT, seed=MT_BENCH_SEED
+    )
+    assert three_decimals(reference_figures(reference)) == PUBLISHED_ALL_COMPARISONS
+    assert reference_figures(reference) == pytest.approx(
+        Q5_ALL_COMPARISONS, abs=1e-9
+    )
+
+    result = validate_with_baseline(
+        frame, judge_labels, ties="category",
+        n_boot=MT_BENCH_BOOT, seed=MT_BENCH_SEED,
+    )
+
+    assert three_decimals(baseline_figures(result)) == PUBLISHED_ALL_COMPARISONS
+    assert baseline_figures(result) == pytest.approx(
+        Q5_ALL_COMPARISONS, abs=1e-9
+    )
+    assert result.summary() == SUMMARY_MT_BENCH_ALL_COMPARISONS
+
+
+def test_baseline_reproduces_the_published_decisive_only_figures():
+    """The decisive-only row of analysis/mt-bench.md, coded by the winner's
+    alphabetical position, under ties="drop".
+
+    The package gets all 761 items with their ties and has to set aside the
+    same ones q5 did. The too-few-humans rule takes 225 items with fewer
+    than two decisive human labels, and the judge-tie rule then takes 83
+    the judge called a tie, which leaves 453 items in 78 clusters. The
+    write-up reports judge-human 0.737, human-human 0.692, and a difference
+    of +0.045 from +0.002 to +0.088. Its separate intervals, 0.667 to 0.800
+    and 0.622 to 0.757, overlap, so only the interval on the difference
+    separates the two figures.
+
+    ties="drop" also sets the headline's coding. 293 of the
+    761 headline items have a tie from the first human or the judge, and
+    they leave the headline too.
+
+    These are the inputs on which a wrong implementation would still match.
+
+    - Rule order, on the figures. Whichever rule runs first, the same 453
+      items remain. The counts catch a reversed order, which reads 193
+      judge ties and then 115 items with too few humans. No item here lacks
+      a judge label, so the place of that rule shows only in the rule-order
+      test.
+    - A judge tie counted as a missing judge label. The figures are the
+      same. The counts catch it, since baseline_n_judge_ties would be zero.
+    - Clusters in sorted order. The 78 question_ids appear in sorted order.
+    - A seed ignored in favour of default_rng(0), or a confidence argument
+      ignored. The seed-1 and confidence-0.90 tests catch them.
+    - A rule for undefined resamples. All 5,000 resamples define both
+      alphas here.
+    - Items without a judge label, and items graded by one human. Neither
+      occurs here.
+    - Which of gpt4_pair's two tie strings counts as a tie, and ties spelled
+      with another case or spacing. Both of gpt4_pair's strings become
+      "tie" before the call, so the package never sees any of these.
+
+    These are the inputs that do tell the implementations apart.
+
+    - Items with one decisive human label kept for judge-human. 91 of the
+      225 have exactly one decisive label and a decisive judge label, and
+      keeping them moves judge-human from 0.737 to 0.719.
+    - The judge's tie kept as a label. That puts the 83 items back and
+      moves both figures.
+    - Ties kept as a category, which is the other MT-Bench test.
+    - Headline ties kept as a label, or counted with the items that have no
+      label. The pinned summary and n_dropped_ties catch both.
+
+    One margin is thin. The upper bound on judge-human alpha is 0.800456,
+    which is 0.000044 under the point where it prints as 0.801.
+    """
+    human, gpt4 = mt_bench_splits()
+    frame, judge_labels = mt_bench_baseline(human, gpt4)
+    assert_mt_bench_is_the_published_data(human, gpt4, frame, judge_labels)
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "drop")
+    assert (kept_labels.size, *counts) == (453, 0, 225, 83)
+    assert kept["cluster_id"].nunique() == 78
+    assert headline_ties(frame, judge_labels) == 293
+    reference = baseline_reference(
+        kept, kept_labels, n_boot=MT_BENCH_BOOT, seed=MT_BENCH_SEED
+    )
+    assert three_decimals(reference_figures(reference)) == PUBLISHED_DECISIVE_ONLY
+    assert reference_figures(reference) == pytest.approx(
+        Q5_DECISIVE_ONLY, abs=1e-9
+    )
+    judge_low, judge_high = reference["judge_human_ci"]
+    human_low, human_high = reference["human_human_ci"]
+    assert three_decimals((judge_low, judge_high)) == ("0.667", "0.800")
+    assert three_decimals((human_low, human_high)) == ("0.622", "0.757")
+    assert judge_low < human_high
+
+    result = validate_with_baseline(
+        frame, judge_labels, ties="drop",
+        n_boot=MT_BENCH_BOOT, seed=MT_BENCH_SEED,
+    )
+
+    assert (
+        result.baseline_n_items,
+        result.baseline_n_judge_ties,
+        result.baseline_n_too_few_humans,
+    ) == (453, 83, 225)
+    assert (result.n_dropped_ties, result.n_dropped) == (293, 0)
+    assert three_decimals(baseline_figures(result)) == PUBLISHED_DECISIVE_ONLY
+    assert baseline_figures(result) == pytest.approx(Q5_DECISIVE_ONLY, abs=1e-9)
+    assert result.summary() == SUMMARY_MT_BENCH_DECISIVE_ONLY
+
+
+def test_baseline_summary_when_the_interval_includes_zero():
+    frame, judge_labels = judge_like_a_fourth_human()
+    reference = baseline_reference(frame, judge_labels)
+    low, high = reference["difference_ci"]
+    assert low < 0 < high
+    assert three_decimals(reference_figures(reference)) == (
+        "0.408", "0.427", "-0.019", "-0.106", "0.074"
+    )
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_INCLUDES_ZERO
+
+
+def test_baseline_summary_when_the_interval_sits_above_zero():
+    frame, judge_labels = judge_more_reliable_than_the_humans()
+    reference = baseline_reference(frame, judge_labels)
+    assert reference["difference_ci"][0] > 0
+    assert reference["judge_human_ci"][0] > reference["human_human_ci"][1]
+    assert three_decimals(reference_figures(reference)) == (
+        "0.414", "0.115", "0.299", "0.237", "0.357"
+    )
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_ABOVE_ZERO
+
+
+def test_baseline_summary_when_the_interval_sits_below_zero():
+    frame, judge_labels = judge_less_reliable_than_the_humans()
+    reference = baseline_reference(frame, judge_labels)
+    assert reference["difference_ci"][1] < 0
+    assert three_decimals(reference_figures(reference)) == (
+        "0.153", "0.551", "-0.398", "-0.569", "-0.246"
+    )
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_BELOW_ZERO
+
+
+def test_baseline_interval_resamples_clusters():
+    """The interval on the difference is as wide as the clusters make it.
+
+    On this fixture the reference interval on the difference is 0.449 wide
+    when clusters are drawn, 0.198 when items are, and 0.148 when rows are.
+    An implementation that draws items or rows cannot print 0.449, so this
+    fails whichever of the two it does.
+    """
+    frame, judge_labels = judge_that_guesses_in_half_the_clusters()
+    clusters = baseline_reference(frame, judge_labels, unit="cluster_id")
+    items = baseline_reference(frame, judge_labels, unit="item_id")
+    rows = baseline_reference(frame, judge_labels, unit="row")
+    assert interval_width(items) < interval_width(clusters) / 2
+    assert interval_width(rows) < interval_width(clusters) / 2
+    assert clusters["difference_ci"][0] < 0 < clusters["difference_ci"][1]
+    assert items["difference_ci"][1] < 0
+    assert rows["difference_ci"][1] < 0
+    assert f"{interval_width(clusters):.3f}" == "0.449"
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert f"{result.baseline_ci_high - result.baseline_ci_low:.3f}" == "0.449"
+
+
+def test_baseline_verdict_reads_the_difference():
+    """Both alphas come from the same draws, so what they share cancels in
+    the difference. Their separate intervals can overlap while the
+    difference is well measured. The write-up makes the same point about
+    leaderboard ratings. A verdict read off the overlap would call these two
+    the same, and the interval on the difference says they differ.
+    """
+    frame, judge_labels = judge_a_little_ahead_in_every_cluster()
+    reference = baseline_reference(frame, judge_labels)
+    judge_low, judge_high = reference["judge_human_ci"]
+    human_low, human_high = reference["human_human_ci"]
+    assert judge_low < human_high
+    assert human_low < judge_high
+    assert reference["difference_ci"][0] > 0
+    assert three_decimals(reference_figures(reference)) == (
+        "0.436", "0.362", "0.074", "0.036", "0.105"
+    )
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_OVERLAPPING_INTERVALS
+
+
+def test_baseline_calls_a_verdict_on_few_clusters_provisional():
+    """An interval that excludes zero on fewer than THIN_SLICE clusters gets
+    a sentence after the verdict saying how many clusters it rests on and
+    that the verdict is provisional. On 29 clusters it appears, and on 30
+    it does not.
+    """
+    few, few_labels = judge_ahead_on_29_clusters()
+    enough, enough_labels = judge_ahead_on_30_clusters()
+    on_few = baseline_reference(few, few_labels)
+    on_enough = baseline_reference(enough, enough_labels)
+    assert (few["cluster_id"].nunique(), enough["cluster_id"].nunique()) == (
+        THIN_SLICE - 1, THIN_SLICE
+    )
+    assert on_few["difference_ci"][0] > 0
+    assert on_enough["difference_ci"][0] > 0
+
+    few_result = validate_with_baseline(few, few_labels, ties="category")
+    enough_result = validate_with_baseline(enough, enough_labels, ties="category")
+
+    assert few_result.summary() == SUMMARY_29_CLUSTERS
+    assert enough_result.summary() == SUMMARY_30_CLUSTERS
+
+
+def test_baseline_counts_clusters_after_items_are_set_aside():
+    """The thin-cluster count is taken on the items that remain. This frame
+    spans 30 clusters and the rules leave 29, so the summary carries the
+    29-cluster sentence. Counting before the rules would give 30 and leave
+    it out.
+    """
+    frame, judge_labels = judge_ahead_on_30_clusters_with_one_unjudged()
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (10, 0, 0)
+    assert (frame["cluster_id"].nunique(), kept["cluster_id"].nunique()) == (
+        THIN_SLICE, THIN_SLICE - 1
+    )
+    reference = baseline_reference(kept, kept_labels)
+    assert reference["difference_ci"][0] > 0
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_30_CLUSTERS_ONE_UNJUDGED
+
+
+def test_baseline_summary_names_the_tie_coding():
+    """Ties are on both sides, so the two codings see different data. Each
+    summary names its coding, and the drop summary gives the count each
+    rule set aside and says the judge's ties pick its items.
+    """
+    frame, judge_labels = ties_on_both_sides()
+    assert (
+        int((frame["rating"] == TIE).sum()), int((judge_labels == TIE).sum())
+    ) == (131, 29)
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "drop")
+    assert counts == (0, 30, 23)
+    assert headline_ties(frame, judge_labels) == 64
+    as_category = kref_figures(frame, judge_labels)
+    as_dropped = kref_figures(kept, kept_labels)
+    assert abs(as_category[0] - as_dropped[0]) > 0.1
+    assert abs(as_category[1] - as_dropped[1]) > 0.1
+
+    kept_result = validate_with_baseline(frame, judge_labels, ties="category")
+    dropped_result = validate_with_baseline(frame, judge_labels, ties="drop")
+
+    assert (kept_result.n_dropped_ties, dropped_result.n_dropped_ties) == (
+        0, 64
+    )
+    assert kept_result.summary() == SUMMARY_TIES_AS_CATEGORY
+    assert dropped_result.summary() == SUMMARY_TIES_DROPPED
+
+
+def test_baseline_sets_aside_items_the_judge_did_not_label():
+    """Twelve baseline items have no judge label. They leave both figures
+    and are counted, and both alphas come from the other 84 items.
+    """
+    frame, judge_labels = judge_silent_on_some_items()
+    silent = judge_labels.index[judge_labels.isna()]
+    labelled = frame[~frame["item_id"].isin(silent)].reset_index(drop=True)
+    expected = kref_figures(labelled, judge_labels.drop(silent))
+    assert silent.size == 12
+    assert three_decimals(
+        (kref_human_human(frame), expected[1])
+    ) == ("0.308", "0.209")
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert (
+        result.baseline_n_no_judge_label,
+        result.baseline_n_too_few_humans,
+        result.baseline_n_items,
+    ) == (12, 0, 84)
+    assert (result.baseline_judge_human, result.baseline_human_human) == (
+        pytest.approx(expected, abs=1e-9)
+    )
+    assert result.summary() == SUMMARY_JUDGE_SILENT
+
+
+def test_baseline_drop_sets_aside_items_left_with_one_decisive_human():
+    """Under ties="drop" an item with one decisive human label and one tie
+    has no human pair, and it leaves judge-human alpha as well. Keeping it
+    there would score the judge on items the humans never agreed on.
+
+    This is the one drop fixture with no judge ties, so its summary is the
+    one that pins the judge-ties sentence as absent.
+    """
+    frame, judge_labels = one_decisive_human_and_a_tie()
+    one_label = frame.loc[frame["rating"] == TIE, "item_id"]
+    on_them = frame[frame["item_id"].isin(one_label)]
+    assert (one_label.nunique(), len(on_them)) == (12, 24)
+    assert set(judge_labels) == {"first", "second"}
+    expected = kref_figures(
+        frame[~frame["item_id"].isin(one_label)].reset_index(drop=True),
+        judge_labels.drop(one_label),
+    )
+    kept_anyway = kref_figures(
+        frame[frame["rating"] != TIE].reset_index(drop=True), judge_labels
+    )
+    assert three_decimals((expected[0], kept_anyway[0])) == ("0.417", "0.323")
+    assert kept_anyway[1] == pytest.approx(expected[1], abs=1e-12)
+
+    result = validate_with_baseline(frame, judge_labels, ties="drop")
+
+    assert (
+        result.baseline_n_items,
+        result.baseline_n_too_few_humans,
+        result.baseline_n_judge_ties,
+    ) == (84, 12, 0)
+    assert (result.baseline_judge_human, result.baseline_human_human) == (
+        pytest.approx(expected, abs=1e-9)
+    )
+    assert result.summary() == SUMMARY_ONE_DECISIVE_HUMAN
+
+
+def test_baseline_drops_resamples_that_leave_an_alpha_undefined():
+    """A draw that leaves either alpha undefined leaves the interval, and
+    the summary says how many did and which way that pushes the interval.
+
+    Here only human-human is undefined on those draws. An implementation
+    that dropped a draw only when both alphas were undefined would keep
+    them, and a NaN in the difference would reach the percentiles.
+    """
+    frame, judge_labels = one_cluster_where_every_human_says_first()
+    reference = baseline_reference(frame, judge_labels)
+    assert (
+        reference["n_undefined"],
+        reference["n_human_human_undefined"],
+        reference["n_judge_human_undefined"],
+    ) == (68, 68, 0)
+    assert reference["n_usable"] / BASELINE_BOOT >= USABLE_SHARE
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.baseline_n_boot_usable == 1932
+    assert result.summary() == SUMMARY_UNDEFINED_RESAMPLES
+
+
+def test_baseline_refuses_an_interval_past_the_usable_share():
+    """Past the usable share there is no interval on the difference and no
+    verdict, and the summary says why. The point figures still stand.
+    """
+    frame, judge_labels = two_clusters_where_every_human_says_first()
+    reference = baseline_reference(frame, judge_labels)
+    assert (
+        reference["n_undefined"],
+        reference["n_human_human_undefined"],
+        reference["n_judge_human_undefined"],
+    ) == (591, 591, 0)
+    assert reference["n_usable"] / BASELINE_BOOT < USABLE_SHARE
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.baseline_n_boot_usable == 1409
+    assert np.isnan(result.baseline_ci_low)
+    assert np.isnan(result.baseline_ci_high)
+    assert result.summary() == SUMMARY_NO_INTERVAL
+
+
+def test_baseline_bootstrap_follows_the_seed():
+    """One call at seed 1. The bounds come from baseline_reference at seed
+    1, and they differ from the seed-0 bounds, so an implementation that
+    ignores the seed fails here.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    at_seed_0 = baseline_reference(frame, judge_labels, seed=0)
+    at_seed_1 = baseline_reference(frame, judge_labels, seed=1)
+    assert at_seed_1["difference_ci"] == pytest.approx(SEED_1_BOUNDS, abs=1e-9)
+    assert abs(at_seed_1["difference_ci"][0] - at_seed_0["difference_ci"][0]) > 1e-3
+    assert abs(at_seed_1["difference_ci"][1] - at_seed_0["difference_ci"][1]) > 1e-3
+
+    result = validate_with_baseline(frame, judge_labels, ties="category", seed=1)
+
+    assert (result.baseline_ci_low, result.baseline_ci_high) == pytest.approx(
+        SEED_1_BOUNDS, abs=1e-9
+    )
+
+
+def test_baseline_interval_follows_the_confidence_level():
+    """One call at confidence=0.90. The bounds come from baseline_reference
+    at 0.90, and they sit inside the 0.95 bounds, so an implementation that
+    ignores the confidence level fails here.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    at_95 = baseline_reference(frame, judge_labels)["difference_ci"]
+    at_90 = baseline_reference(frame, judge_labels, confidence=0.90)
+    assert at_90["difference_ci"] == pytest.approx(CONFIDENCE_90_BOUNDS, abs=1e-9)
+    assert at_95[0] < at_90["difference_ci"][0]
+    assert at_90["difference_ci"][1] < at_95[1]
+
+    result = validate_with_baseline(
+        frame, judge_labels, ties="category", confidence=0.90
+    )
+
+    assert (result.baseline_ci_low, result.baseline_ci_high) == pytest.approx(
+        CONFIDENCE_90_BOUNDS, abs=1e-9
+    )
+
+
+def test_baseline_sets_aside_items_graded_by_one_human():
+    """Under ties="category" an item with one human label has no human pair,
+    and it leaves judge-human alpha as well. It counts as too few humans.
+    """
+    frame, judge_labels = some_items_graded_by_one_human()
+    labels_per_item = frame.groupby("item_id").size()
+    assert int((labels_per_item == 1).sum()) == 8
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (0, 8, 0)
+    expected = kref_figures(kept, kept_labels)
+    kept_anyway = kref_figures(frame, judge_labels)
+    assert three_decimals((expected[0], kept_anyway[0])) == (
+        "0.427", "0.419"
+    )
+    assert kept_anyway[1] == pytest.approx(expected[1], abs=1e-12)
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert (
+        result.baseline_n_no_judge_label,
+        result.baseline_n_too_few_humans,
+        result.baseline_n_items,
+    ) == (0, 8, 136)
+    assert (result.baseline_judge_human, result.baseline_human_human) == (
+        pytest.approx(expected, abs=1e-9)
+    )
+    assert result.summary() == SUMMARY_ONE_HUMAN
+
+
+def test_baseline_counts_each_item_under_the_first_rule_it_fails():
+    """Under ties="drop", four items have no judge label and too few
+    decisive humans, and they count as having no judge label. Six items
+    have too few decisive humans and a judge tie, and they count as too few
+    humans. Any other order of the rules moves one of those groups.
+    """
+    frame, judge_labels = judge_silent_among_ties()
+    decisive = frame[frame["rating"] != TIE].groupby("item_id")["rater_id"]
+    too_few = (
+        decisive.nunique().reindex(judge_labels.index, fill_value=0) < 2
+    ).to_numpy()
+    silent = judge_labels.isna().to_numpy()
+    tied = (judge_labels == TIE).to_numpy()
+    assert (int((silent & too_few).sum()), int((too_few & tied).sum())) == (4, 6)
+    assert baseline_items(frame, judge_labels, "drop")[2] == (4, 26, 23)
+
+    result = validate_with_baseline(frame, judge_labels, ties="drop")
+
+    assert (
+        result.baseline_n_no_judge_label,
+        result.baseline_n_too_few_humans,
+        result.baseline_n_judge_ties,
+        result.baseline_n_items,
+    ) == (4, 26, 23, 91)
+
+
+def test_baseline_reads_ties_whatever_their_case_and_spacing():
+    """Ties spelled "Tie" and " tie " are ties. Under ties="drop" they are
+    set aside, headline and baseline alike. Under ties="category" every
+    figure equals the figure on the same data with each tie spelled "tie".
+    """
+    respelled, respelled_labels = ties_spelled_two_ways()
+    plain, plain_labels = ties_on_both_sides()
+    human_spellings = set(respelled.loc[is_tie(respelled["rating"]), "rating"])
+    judge_spellings = set(respelled_labels[is_tie(respelled_labels)])
+    assert human_spellings == judge_spellings == {"Tie", " tie "}
+    assert TIE not in set(respelled["rating"]) | set(respelled_labels)
+    assert three_decimals(kref_figures(respelled, respelled_labels)) == (
+        "0.144", "0.071"
+    )
+    assert three_decimals(kref_figures(plain, plain_labels)) == ("0.149", "0.122")
+    assert headline_ties(respelled, respelled_labels) == 64
+
+    dropped = validate_with_baseline(respelled, respelled_labels, ties="drop")
+    kept = validate_with_baseline(respelled, respelled_labels, ties="category")
+    plain_dropped = validate_with_baseline(plain, plain_labels, ties="drop")
+    plain_kept = validate_with_baseline(plain, plain_labels, ties="category")
+
+    assert (
+        dropped.n_dropped_ties,
+        dropped.baseline_n_too_few_humans,
+        dropped.baseline_n_judge_ties,
+        dropped.baseline_n_items,
+    ) == (64, 30, 23, 91)
+    assert every_figure(dropped) == pytest.approx(
+        every_figure(plain_dropped), abs=1e-12
+    )
+    assert every_figure(kept) == pytest.approx(
+        every_figure(plain_kept), abs=1e-12
+    )
+
+
+def test_baseline_keeps_the_interval_at_exactly_the_usable_share():
+    """1,800 usable draws of 2,000 is exactly 90%, which keeps the interval
+    and the verdict. 1,799 is under it and refuses both. Same data, two
+    seeds, so nothing but the count of usable draws differs.
+    """
+    frame, judge_labels = six_clusters_where_everyone_says_first()
+    clusters = frame.groupby("cluster_id", sort=False)
+    labels_in = clusters["rating"].agg(lambda r: frozenset(r))
+    judged_in = clusters["item_id"].agg(
+        lambda items: frozenset(judge_labels.loc[pd.unique(items)])
+    )
+    assert list(labels_in.index) == [f"c{c}" for c in range(8)]
+    assert set(labels_in.iloc[:6]) == set(judged_in.iloc[:6]) == {
+        frozenset({"first"})
+    }
+    assert list(labels_in.iloc[6:]) == [frozenset({"first", "second"})] * 2
+    on_the_line = baseline_reference(frame, judge_labels, seed=1)
+    under_the_line = baseline_reference(frame, judge_labels, seed=20)
+    assert (on_the_line["n_usable"], under_the_line["n_usable"]) == (1800, 1799)
+    assert (
+        on_the_line["n_usable"]
+        >= USABLE_SHARE * BASELINE_BOOT
+        > under_the_line["n_usable"]
+    )
+
+    kept = validate_with_baseline(frame, judge_labels, ties="category", seed=1)
+    refused = validate_with_baseline(frame, judge_labels, ties="category", seed=20)
+
+    assert (kept.baseline_n_boot_usable, refused.baseline_n_boot_usable) == (
+        1800, 1799
+    )
+    assert kept.summary() == SUMMARY_ON_THE_LINE
+    assert refused.summary() == SUMMARY_UNDER_THE_LINE
+
+
+def test_baseline_ignores_a_row_with_a_missing_rating():
+    """A missing rating is no label. Under each coding every figure, count
+    and summary is the one the tie fixture gives without the extra row.
+    """
+    frame, judge_labels = ties_with_a_missing_rating()
+    plain, plain_labels = ties_on_both_sides()
+    added = frame.iloc[len(plain):]
+    assert (len(added), added["rater_id"].tolist()) == (1, ["h3"])
+    assert added["rating"].isna().all()
+    assert (frame.iloc[:len(plain)].to_numpy() == plain.to_numpy()).all()
+    as_label = frame.assign(rating=frame["rating"].fillna("missing"))
+    as_tie = frame.assign(rating=frame["rating"].fillna(TIE))
+    assert baseline_items(frame, judge_labels, "drop")[2] == (0, 30, 23)
+    assert baseline_items(as_label, judge_labels, "drop")[2] == (0, 29, 23)
+    assert three_decimals(
+        (kref_human_human(plain), kref_human_human(as_label),
+         kref_human_human(as_tie))
+    ) == ("0.122", "0.121", "0.124")
+
+    kept = validate_with_baseline(frame, judge_labels, ties="category")
+    dropped = validate_with_baseline(frame, judge_labels, ties="drop")
+    plain_kept = validate_with_baseline(plain, plain_labels, ties="category")
+    plain_dropped = validate_with_baseline(plain, plain_labels, ties="drop")
+
+    assert kept.summary() == SUMMARY_TIES_AS_CATEGORY
+    assert dropped.summary() == SUMMARY_TIES_DROPPED
+    assert (
+        kept.baseline_n_too_few_humans, kept.baseline_n_items,
+        dropped.baseline_n_too_few_humans, dropped.baseline_n_judge_ties,
+        dropped.baseline_n_items,
+    ) == (0, 144, 30, 23, 91)
+    assert every_figure(kept) == pytest.approx(
+        every_figure(plain_kept), abs=1e-12
+    )
+    assert every_figure(dropped) == pytest.approx(
+        every_figure(plain_dropped), abs=1e-12
+    )
+
+
+def test_baseline_counts_no_label_before_a_headline_tie():
+    """A headline item with no label on one side and a tie on the other
+    counts in n_dropped, once, and not in n_dropped_ties.
+    """
+    frame, judge_labels = headline_items_with_a_tie_and_no_label()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    tie_then_none = int(np.flatnonzero(item_ids == "i1")[0])
+    none_then_tie = int(np.flatnonzero(item_ids == "i4")[0])
+    assert human[tie_then_none] == TIE
+    assert pd.isna(judge[tie_then_none])
+    assert pd.isna(human[none_then_tie])
+    assert judge[none_then_tie] == TIE
+    missing = (pd.Series(human).isna() | pd.Series(judge).isna()).to_numpy()
+    assert list(item_ids[missing]) == ["i1", "i4"]
+    assert headline_ties(frame, judge_labels) == 62
+
+    result = validate_with_baseline(frame, judge_labels, ties="drop")
+
+    assert (result.n_dropped, result.n_dropped_ties) == (2, 62)
+
+
+def test_baseline_summary_counts_one_item_in_the_singular():
+    frame, judge_labels = one_item_under_each_rule()
+    assert baseline_items(frame, judge_labels, "drop")[2] == (1, 1, 1)
+    assert int(judge_labels.isna().sum()) == 1
+    assert headline_ties(frame, judge_labels) == 1
+
+    result = validate_with_baseline(frame, judge_labels, ties="drop")
+
+    assert (result.n_dropped, result.n_dropped_ties) == (1, 1)
+    assert result.summary() == SUMMARY_ONE_OF_EACH
+
+
+def test_baseline_summary_when_both_intervals_refuse():
+    frame, judge_labels = three_items_two_of_them_unanimous()
+    human, judge, _ = headline_inputs(frame, judge_labels)
+    headline_alone = judge_validation(
+        human, judge, n_boot=BASELINE_BOOT, seed=BASELINE_SEED
+    )
+    reference = baseline_reference(frame, judge_labels)
+    assert headline_alone.n_boot_usable / BASELINE_BOOT < USABLE_SHARE
+    assert reference["n_usable"] / BASELINE_BOOT < USABLE_SHARE
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_BOTH_REFUSE
+
+
+# The headline alone, with no baseline. Its head has two ways to have no
+# interval. With n_boot=0 nothing was drawn, and the sentence is the one
+# judge_validation prints today. When the draws were made and too few of
+# them were usable, the head says how many were undefined and which way
+# that biases an interval from the rest, in the form of the baseline's
+# refusal sentence.
+
+def test_headline_summary_without_resamples():
+    """n_boot=0 draws nothing. This passes on the code as it stands."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, _ = headline_inputs(frame, judge_labels)
+    assert (pd.Series(human).isna() | pd.Series(judge).isna()).sum() == 0
+
+    result = judge_validation(human, judge, n_boot=0)
+
+    assert (result.n_boot, result.n_boot_usable) == (0, 0)
+    assert result.summary() == HEADLINE_WITHOUT_RESAMPLES
+
+
+def test_headline_summary_when_its_interval_is_refused():
+    """The three-item fixture on its own. A draw that picks only i0 and i1
+    holds one label on both sides, so alpha is undefined there, and 591 of
+    2,000 draws do that. The count is taken here from the same index matrix
+    the package draws, apart from the package.
+    """
+    frame, judge_labels = three_items_two_of_them_unanimous()
+    human, judge, _ = headline_inputs(frame, judge_labels)
+    draws = np.random.default_rng(BASELINE_SEED).integers(
+        0, 3, size=(BASELINE_BOOT, 3)
+    )
+    only_unanimous_items = (draws < 2).all(axis=1)
+    assert int(only_unanimous_items.sum()) == 591
+    assert (BASELINE_BOOT - 591) / BASELINE_BOOT < USABLE_SHARE
+
+    result = judge_validation(human, judge, n_boot=BASELINE_BOOT, seed=BASELINE_SEED)
+
+    assert (result.n_boot, result.n_boot_usable) == (BASELINE_BOOT, 1409)
+    assert result.summary() == HEADLINE_REFUSED
+
+
+# Refusals. Each message is compared whole.
+
+def test_baseline_refuses_a_baseline_without_ties():
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(human, judge, item_ids=item_ids, human_baseline=frame)
+
+    assert str(excinfo.value) == (
+        "ties must be 'category' or 'drop' when human_baseline is given, got "
+        "None. The two codings give different alphas, so the choice has to be "
+        "made and stated."
+    )
+
+
+def test_baseline_refuses_ties_without_a_baseline():
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, _ = headline_inputs(frame, judge_labels)
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(human, judge, ties="category")
+
+    assert str(excinfo.value) == (
+        "ties applies only with a human_baseline, got ties='category' and no "
+        "human_baseline."
+    )
+
+
+def test_baseline_refuses_item_ids_without_a_baseline():
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(human, judge, item_ids=item_ids)
+
+    assert str(excinfo.value) == (
+        "item_ids applies only with a human_baseline, got item_ids and no "
+        "human_baseline."
+    )
+
+
+def test_baseline_refuses_repeated_item_ids():
+    """Item i5's rows leave the baseline, so every baseline item is still
+    named in item_ids and the repeated id is the only defect."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    item_ids = item_ids.copy()
+    item_ids[5] = item_ids[3]
+    baseline = frame[frame["item_id"] != "i5"].reset_index(drop=True)
+    assert (item_ids[3], item_ids[5]) == ("i3", "i3")
+    assert set(baseline["item_id"]) <= set(item_ids)
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=baseline,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "item_ids must name each item once, got 'i3' more than once. The "
+        "judge's label on a baseline item is found by its id."
+    )
+
+
+def test_baseline_refuses_a_baseline_item_that_item_ids_does_not_name():
+    """Items i5 and i9 are in the baseline and not in item_ids. The message
+    names i5, the first of them in the baseline's order."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(
+        frame, judge_labels.drop(["i5", "i9"])
+    )
+    assert set(frame["item_id"]) - set(item_ids) == {"i5", "i9"}
+    assert len(set(item_ids)) == len(item_ids)
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=frame,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "human_baseline names item 'i5', and item_ids does not. The usual "
+        "cause is ids of different types, such as 5 in one and '5' in the "
+        "other. An item the judge never graded still goes in item_ids, with "
+        "no judge label."
+    )
+
+
+def test_baseline_refuses_a_rater_grading_one_item_twice():
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    repeat = frame[(frame["item_id"] == "i0") & (frame["rater_id"] == "h1")]
+    doubled = pd.concat([frame, repeat], ignore_index=True)
+    assert int(doubled.duplicated(["item_id", "rater_id"]).sum()) == 1
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=doubled,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "human_baseline has duplicate rater/item pairs, starting with item "
+        "'i0' rated twice by 'h1'. Two rows for one rater on one item count "
+        "that rater twice. Keep one row per rater and item."
+    )
+
+
+def test_baseline_refuses_levels_other_than_nominal():
+    """Numeric labels, so the headline is valid at every level and only the
+    baseline can be refused. The headline alone runs at both levels first,
+    on every item."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    as_number = {"first": 1, "second": 2}
+    frame = frame.assign(rating=frame["rating"].map(as_number))
+    judge_labels = judge_labels.map(as_number)
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+
+    ordinal_headline = judge_validation(human, judge, level="ordinal", n_boot=0)
+    interval_headline = judge_validation(human, judge, level="interval", n_boot=0)
+    assert (ordinal_headline.n_items, ordinal_headline.n_dropped) == (144, 0)
+    assert (interval_headline.n_items, interval_headline.n_dropped) == (144, 0)
+
+    with pytest.raises(ValueError) as ordinal:
+        judge_validation(
+            human, judge, level="ordinal", item_ids=item_ids,
+            human_baseline=frame, ties="category",
+        )
+    with pytest.raises(ValueError) as interval:
+        judge_validation(
+            human, judge, level="interval", item_ids=item_ids,
+            human_baseline=frame, ties="category",
+        )
+
+    assert str(ordinal.value) == (
+        "human_baseline supports level='nominal' only, got level='ordinal'. "
+        "Ordinal and interval baselines are not implemented yet."
+    )
+    assert str(interval.value) == (
+        "human_baseline supports level='nominal' only, got level='interval'. "
+        "Ordinal and interval baselines are not implemented yet."
+    )
+
+
+# --------------------------------------------------------------------------
+# judge_validation against a human baseline, the branches the tests above
+# do not reach
+#
+# Mutation testing of the implementation found five branches that no test
+# above reaches. The first five tests here pin them as the code has them.
+# They are a refusal for a baseline with no item_ids, a refusal for item_ids
+# of the wrong length, "graded it" when exactly one item has too few humans,
+# the refusal when the items that remain sit in one cluster, and the
+# summary at n_boot=0.
+#
+# The rest are written before the code and fail until it changes. When
+# human-human alpha is undefined, the summary names the cause, in the words
+# JudgeValidation._undefined uses for its own two causes. A human_baseline
+# that is not a DataFrame, lacks a column or is empty is refused in the
+# words bradley_terry uses for the same three. An item whose rows carry more
+# than one cluster_id is refused, because the interval moves an item with
+# its cluster and such an item has no one cluster to move with.
+# --------------------------------------------------------------------------
+
+def one_item_graded_by_one_human():
+    """judge_like_a_fourth_human with h1 and h2 removed from i0, so i0 holds
+    one human label and every other item holds three.
+
+    The property the test relies on is that under ties="category" the
+    too-few-humans rule sets aside exactly one item and no other rule sets
+    anything aside. Its sentence is the one place a summary says "graded
+    it".
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    thinned = (frame["item_id"] == "i0") & (frame["rater_id"] != "h0")
+    return frame[~thinned].reset_index(drop=True), judge_labels
+
+
+def judge_silent_on_a_whole_cluster():
+    """Two clusters of 20 items, humans and judge right 80% of the time, and
+    no judge label on any item of c0.
+
+    The property the test relies on is that the frame spans two clusters,
+    the no-judge-label rule sets aside all 20 items of c0, and the 20 items
+    that remain sit in c1 alone. Both alphas are defined on those items,
+    judge-human 0.502 and human-human 0.631, so the difference has a value
+    and only the interval is missing.
+    """
+    frame, judge_labels = graded_items(
+        [0.8, 0.8], [0.8, 0.8], items_per_cluster=20, seed=3
+    )
+    judge_labels = judge_labels.astype(object)
+    judge_labels.loc[
+        pd.unique(frame.loc[frame["cluster_id"] == "c0", "item_id"])
+    ] = None
+    return frame, judge_labels
+
+
+def both_alphas_defined():
+    """judge_like_a_fourth_human, for a call with n_boot=0.
+
+    The property the test relies on is that both alphas are defined on its
+    144 items, judge-human 0.408 and human-human 0.427, so the difference
+    has a value and the interval is the only thing missing.
+    """
+    return judge_like_a_fourth_human()
+
+
+def one_item_left_with_humans_to_compare():
+    """judge_like_a_fourth_human with h1 and h2 kept only on i0, so i0 is
+    the one item with more than one human label.
+
+    The property the test relies on is that under ties="category" the
+    too-few-humans rule sets aside the other 143 items and one item
+    remains. Its three humans do not all agree, so one item is the only
+    reason human-human alpha is undefined. The headline pairs h0 with the
+    judge on all 144 items and has an alpha of its own.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    thinned = (frame["item_id"] != "i0") & (frame["rater_id"] != "h0")
+    return frame[~thinned].reset_index(drop=True), judge_labels
+
+
+def every_human_says_first():
+    """Three clusters of ten items, every human label "first", and the
+    judge alternating between "first" and "second".
+
+    The property the test relies on is that every item keeps three human
+    labels, so no rule sets anything aside, and every human label is the
+    same, so identical labels are the only reason human-human alpha is
+    undefined. The judge's labels vary, so the headline has an alpha.
+    """
+    return clusters_where_every_human_says_first(["c0", "c1", "c2"])
+
+
+def items_in_two_clusters():
+    """judge_like_a_fourth_human with h2's row on i8 moved to c5 and h1's
+    row on i12 moved to c7.
+
+    i8 sits in c1 and i12 in c2, so each of the two now has rows in two
+    clusters. The property the test relies on is that they are the only
+    such items, and that i8 comes first in the baseline's order while i12
+    comes first in sorted order. Nothing else about the call is wrong.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    frame = frame.copy()
+    frame.loc[(frame["item_id"] == "i8") & (frame["rater_id"] == "h2"),
+              "cluster_id"] = "c5"
+    frame.loc[(frame["item_id"] == "i12") & (frame["rater_id"] == "h1"),
+              "cluster_id"] = "c7"
+    return frame, judge_labels
+
+
+def every_item_left_with_one_decisive_human():
+    """judge_like_a_fourth_human with h1 and h2 saying tie on every item.
+
+    The property the test relies on is that under ties="drop" each item
+    keeps one decisive human label, h0's, so the too-few-humans rule sets
+    aside all 144 items and no baseline item remains. Neither h0 nor the
+    judge ever says tie, so the headline keeps all 144 of its items.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    frame = frame.copy()
+    frame.loc[frame["rater_id"] != "h0", "rating"] = TIE
+    return frame, judge_labels
+
+
+# As the code has them now. The figures are what baseline_reference and
+# kref_figures give on each fixture.
+
+SUMMARY_ONE_ITEM_TOO_FEW_HUMANS = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, on "
+    "143 items, the judge agrees with the human labels at alpha 0.408 and "
+    "the humans agree with each other at alpha 0.432. Judge-human minus "
+    "human-human is -0.024 (95% CI: -0.110 to +0.069, resampling 24 "
+    "clusters). Ties count as a label of their own on both sides. 1 "
+    "baseline item was set aside because fewer than two humans graded it. "
+    "The interval includes zero, so the data cannot show that the judge "
+    "agrees with a human any more or less than a second human does. That "
+    "does not mean it agrees equally well."
+)
+
+SUMMARY_ONE_CLUSTER = (
+    "Judge and human agree at alpha 0.594 (95% CI: 0.188 to 0.900, nominal,"
+    " 20 items). Plain accuracy is 80.0%. 20 items were set aside because "
+    "one side had no label. Against the human baseline, on 20 items, the "
+    "judge agrees with the human labels at alpha 0.502 and the humans agree"
+    " with each other at alpha 0.631. Judge-human minus human-human is "
+    "-0.129. Ties count as a label of their own on both sides. 20 baseline "
+    "items were set aside because the judge gave no label. There is no "
+    "interval on the difference, and so no verdict. The items that remain "
+    "sit in one cluster, and resampling one cluster draws the same items "
+    "every time."
+)
+
+SUMMARY_BASELINE_WITHOUT_RESAMPLES = (
+    "Judge and human agree at alpha 0.363 (nominal, 144 items). No interval"
+    " was computed, so nothing here is placed against sampling error. Plain"
+    " accuracy is 68.1%. Against the human baseline, on 144 items, the "
+    "judge agrees with the human labels at alpha 0.408 and the humans agree"
+    " with each other at alpha 0.427. Judge-human minus human-human is "
+    "-0.019. Ties count as a label of their own on both sides. No interval "
+    "was computed on the difference, so there is no verdict."
+)
+
+# Written before the code. The headline and the sentences after the first
+# baseline sentence are what the code says now. The first baseline
+# sentence names the cause in the words JudgeValidation._undefined uses.
+
+SUMMARY_UNDEFINED_ON_ONE_ITEM = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, "
+    "human-human agreement is undefined (nominal, 1 item). One item cannot "
+    "carry a reliability estimate, so there is no difference to report and "
+    "no interval around it. Have two or more humans grade more items and "
+    "run this again. Ties count as a label of their own on both sides. 143 "
+    "baseline items were set aside because fewer than two humans graded "
+    "them."
+)
+
+SUMMARY_UNDEFINED_ON_IDENTICAL_LABELS = (
+    "Judge and human agree at alpha -0.311 (95% CI: -0.475 to -0.180, "
+    "nominal, 30 items). Plain accuracy is 50.0%. Against the human "
+    "baseline, human-human agreement is undefined (nominal, 30 items). "
+    "Every human label that could be compared was identical, so there is no"
+    " disagreement to divide by and no difference to report. This comes "
+    "from humans who used one label throughout. It is not perfect "
+    "agreement. Ties count as a label of their own on both sides."
+)
+
+SUMMARY_NO_ITEM_REMAINS = (
+    "Judge and human agree at alpha 0.363 (95% CI: 0.211 to 0.505, nominal,"
+    " 144 items). Plain accuracy is 68.1%. Against the human baseline, "
+    "every item was set aside, so there is no difference to report and no "
+    "verdict. Ties are set aside as no label on both sides. 144 baseline "
+    "items were set aside because fewer than two humans gave a decisive "
+    "label."
+)
+
+
+# Pinned as the code has them now.
+
+def test_baseline_refuses_a_baseline_without_item_ids():
+    """The same call with item_ids runs, so the missing item_ids is the only
+    defect."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    judge_validation(
+        human, judge, item_ids=item_ids, human_baseline=frame,
+        ties="category", n_boot=0,
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(human, judge, human_baseline=frame, ties="category")
+
+    assert str(excinfo.value) == (
+        "item_ids is required with a human_baseline. It names the item at "
+        "each position of human and judge, which is how the judge's label on "
+        "each baseline item is found."
+    )
+
+
+def test_baseline_refuses_item_ids_of_the_wrong_length():
+    """One id too many, added at the end. Every baseline item is still named
+    once, so the length is the only defect."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    item_ids = np.append(item_ids, "i999")
+    assert (len(item_ids), len(human)) == (145, 144)
+    assert set(frame["item_id"]) <= set(item_ids)
+    assert len(set(item_ids)) == len(item_ids)
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=frame,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "item_ids must be the same length as human and judge, got 145 and 144"
+    )
+
+
+def test_baseline_summary_says_graded_it_for_one_item():
+    frame, judge_labels = one_item_graded_by_one_human()
+    labels_per_item = frame.groupby("item_id", sort=False).size()
+    assert list(labels_per_item.index[labels_per_item != 3]) == ["i0"]
+    assert labels_per_item["i0"] == 1
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (0, 1, 0)
+    reference = baseline_reference(kept, kept_labels)
+    assert three_decimals(reference_figures(reference)) == (
+        "0.408", "0.432", "-0.024", "-0.110", "0.069"
+    )
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_ONE_ITEM_TOO_FEW_HUMANS
+
+
+def test_baseline_refuses_an_interval_on_one_cluster():
+    """Resampling one cluster draws the same items every time, so an
+    interval would have no width and a verdict would rest on nothing."""
+    frame, judge_labels = judge_silent_on_a_whole_cluster()
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (20, 0, 0)
+    assert frame["cluster_id"].nunique() == 2
+    assert list(pd.unique(kept["cluster_id"])) == ["c1"]
+    assert three_decimals(kref_figures(kept, kept_labels)) == ("0.502", "0.631")
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert np.isnan(result.baseline_ci_low)
+    assert np.isnan(result.baseline_ci_high)
+    assert result.summary() == SUMMARY_ONE_CLUSTER
+
+
+def test_baseline_summary_without_resamples():
+    frame, judge_labels = both_alphas_defined()
+    assert three_decimals(kref_figures(frame, judge_labels)) == (
+        "0.408", "0.427"
+    )
+
+    result = validate_with_baseline(
+        frame, judge_labels, ties="category", n_boot=0
+    )
+
+    assert np.isnan(result.baseline_ci_low)
+    assert np.isnan(result.baseline_ci_high)
+    assert result.summary() == SUMMARY_BASELINE_WITHOUT_RESAMPLES
+
+
+# Written before the code. These fail until it changes.
+
+def test_baseline_summary_names_one_item_as_the_cause():
+    frame, judge_labels = one_item_left_with_humans_to_compare()
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (0, 143, 0)
+    assert list(kept_labels.index) == ["i0"]
+    assert kept["rating"].nunique() == 2
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_UNDEFINED_ON_ONE_ITEM
+
+
+def test_baseline_summary_names_identical_labels_as_the_cause():
+    frame, judge_labels = every_human_says_first()
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "category")
+    assert counts == (0, 0, 0)
+    assert (frame.groupby("item_id").size() == 3).all()
+    assert set(frame["rating"]) == {"first"}
+    assert set(judge_labels) == {"first", "second"}
+
+    result = validate_with_baseline(frame, judge_labels, ties="category")
+
+    assert result.summary() == SUMMARY_UNDEFINED_ON_IDENTICAL_LABELS
+
+
+def test_baseline_summary_when_no_item_remains():
+    frame, judge_labels = every_item_left_with_one_decisive_human()
+    h0 = frame["rater_id"] == "h0"
+    assert set(frame.loc[~h0, "rating"]) == {TIE}
+    assert TIE not in set(frame.loc[h0, "rating"])
+    assert frame.loc[h0, "item_id"].nunique() == 144
+    assert TIE not in set(judge_labels)
+    kept, kept_labels, counts = baseline_items(frame, judge_labels, "drop")
+    assert counts == (0, 144, 0)
+    assert (len(kept), kept_labels.size) == (0, 0)
+    assert headline_ties(frame, judge_labels) == 0
+
+    result = validate_with_baseline(frame, judge_labels, ties="drop")
+
+    assert result.summary() == SUMMARY_NO_ITEM_REMAINS
+
+
+def test_baseline_refuses_a_baseline_that_is_not_a_frame():
+    """The rows as a dict of columns, the usual slip. Every column is there,
+    so the type is the only defect."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    as_dict = frame.to_dict("list")
+    assert set(as_dict) == {"item_id", "cluster_id", "rater_id", "rating"}
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=as_dict,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == "human_baseline must be a pandas DataFrame"
+
+
+def test_baseline_refuses_a_baseline_missing_columns():
+    """cluster_id and rater_id are dropped. The message lists both, in the
+    order the columns are expected."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    thin = frame.drop(columns=["rater_id", "cluster_id"])
+    assert list(thin.columns) == ["item_id", "rating"]
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=thin,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "human_baseline is missing required column(s): cluster_id, rater_id. "
+        "Expected item_id, cluster_id, rater_id, rating, where cluster_id "
+        "groups items that are not independent of each other."
+    )
+
+
+def test_baseline_refuses_an_empty_baseline():
+    """Every column is there and no row is."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    empty = frame.iloc[:0]
+    assert list(empty.columns) == ["item_id", "cluster_id", "rater_id", "rating"]
+    assert len(empty) == 0
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=empty,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == "human_baseline must not be empty"
+
+
+def test_baseline_refuses_an_item_in_two_clusters():
+    """The message names i8, the first split item in the baseline's order,
+    which sorted order would not pick."""
+    frame, judge_labels = items_in_two_clusters()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    clusters_per_item = frame.groupby("item_id", sort=False)["cluster_id"].nunique()
+    split = list(clusters_per_item.index[clusters_per_item > 1])
+    assert split == ["i8", "i12"]
+    assert sorted(split) == ["i12", "i8"]
+    assert set(frame["item_id"]) <= set(item_ids)
+    assert len(set(item_ids)) == len(item_ids)
+    assert not frame.duplicated(["item_id", "rater_id"]).any()
+
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=frame,
+            ties="category",
+        )
+
+    assert str(excinfo.value) == (
+        "human_baseline puts item 'i8' in more than one cluster. The interval "
+        "resamples whole clusters, so every row for an item needs the same "
+        "cluster_id."
+    )
