@@ -20,8 +20,7 @@ its own numbers, and sets its own seed where one applies.
 
 The scripts need evalaudit 0.4.0 installed from PyPI. Each one checks the
 version and exits if evalaudit is imported from this repository's working
-tree. The repository's `.venv` holds an editable install whose metadata
-reports 0.2.1, so it fails that check.
+tree.
 
 `q1_check_v021.py` needs a second environment with evalaudit 0.2.1 from PyPI.
 

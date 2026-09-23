@@ -1,8 +1,9 @@
 """Comparing two systems.
 
-The mistake this module exists to stop: running an unpaired test on paired
-data. Most evals score both systems on the same items, and that pairing
-removes the item-to-item difficulty that otherwise swamps the difference.
+This module exists to stop one mistake, which is running an unpaired test
+on paired data. Most evals score both systems on the same items, and that
+pairing removes the item-to-item difficulty that otherwise swamps the
+difference.
 Ignore it and the interval comes out several times too wide.
 """
 
@@ -597,9 +598,9 @@ def _score_diff_ci(
     """Score interval for a difference of independent proportions.
 
     Mee (1984), with the constrained estimates solved as in Farrington and
-    Manning (1990). Same construction as the paired case: the bounds are the
-    two differences the data would just barely reject, so the interval and
-    the p-value are one procedure rather than two.
+    Manning (1990). It is built the same way as the paired case. The bounds
+    are the two differences the data would just barely reject, so the
+    interval and the p-value are one procedure rather than two.
 
     Miettinen and Nurminen (1985) give the same interval with the variance
     multiplied by N / (N - 1). That factor is left out here on purpose. The
@@ -608,10 +609,10 @@ def _score_diff_ci(
     bounds slightly wider than the test and break the agreement that is the
     reason for using a score interval at all. Measured over 9213 tables the
     correction produced 4 disagreements where this version produces none,
-    and it bought no coverage in exchange: both sit within 0.0005 of each
-    other across five simulated settings, with Miettinen-Nurminen intervals
-    about 0.3 to 1 percent wider. Anyone wanting that variant should use the
-    factor in both places, not one.
+    and it bought no coverage in exchange. The two covered within 0.0005 of
+    each other across five simulated settings, with Miettinen-Nurminen
+    intervals about 0.3 to 1 percent wider. Anyone wanting that variant
+    should use the factor in both places, not one.
 
     Newcombe's square-and-add interval is the usual alternative and it is a
     fine interval. It came out of this package because it is built from two

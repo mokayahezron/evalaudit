@@ -27,9 +27,9 @@ import evalaudit
 INIT = pathlib.Path(evalaudit.__file__)
 REPO_ROOT = INIT.parent.parent
 
-# Any dotted numeric triple. Deliberately blunt: it catches "0.1.0" whether
-# it was assigned to __version__, parked in a fallback, or left in a comment
-# for later. A real version number has no business in this file at all.
+# Any dotted numeric triple. It is deliberately blunt, and catches "0.1.0"
+# whether it was assigned to __version__, parked in a fallback, or left in a
+# comment for later. A real version number has no business in this file at all.
 _VERSION_SHAPED = re.compile(r"\d+\.\d+\.\d+")
 
 

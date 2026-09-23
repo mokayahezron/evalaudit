@@ -610,7 +610,7 @@ def _slice_table(human, judge, slices, level, confidence, n_boot, seed):
 def position_bias(
     comparisons: pd.DataFrame, seed: Optional[int] = None
 ) -> PositionBias:
-    """Does the judge favour whichever output it sees first.
+    """Does the judge favour whichever output it sees first?
 
     Parameters
     ----------
@@ -893,7 +893,7 @@ def length_bias(
     lengths,
     human_preferences: Optional[Sequence] = None,
 ) -> LengthBias:
-    """Does the judge go for the longer answer.
+    """Does the judge go for the longer answer?
 
     Parameters
     ----------

@@ -497,8 +497,8 @@ def test_interval_agrees_with_test(n_a_only, n_b_only, n, significant):
 
 
 def test_significant_p_always_clears_zero():
-    """Sweep the tables: a significant p must never carry an interval that
-    contains zero.
+    """Sweep the tables and check that a significant p never carries an
+    interval that contains zero.
 
     This is the direction that holds for every table, since the reported
     p-value is conservative against the statistic the interval inverts. If
@@ -914,3 +914,19 @@ def test_wilcoxon_counts_nothing_when_every_item_ties():
     assert r.n == 0
     assert r.p_value == pytest.approx(1.0)
     assert r.difference == pytest.approx(0.0)
+
+
+# --------------------------------------------------------------------------
+# Counts of one
+# --------------------------------------------------------------------------
+
+def test_one_changed_item_is_counted_in_the_singular():
+    """One item, and it changed. The summary said "1 of 1 items changed"."""
+    r = compare_paired([1], [0])
+    assert (r.method, r.n, r.n_discordant) == ("mcnemar", 1, 1)
+    assert r.summary() == (
+        "Difference 100.0% (95% CI: -58.7% to 100.0%, paired, n=1). The "
+        "interval includes zero, so the data cannot show that either system "
+        "is better. That does not mean the two are level. 1 of 1 item changed "
+        "between systems."
+    )

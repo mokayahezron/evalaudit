@@ -26,7 +26,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from ._types import _MIN_USABLE_SHARE, BTResult
+from ._types import _MIN_USABLE_SHARE, BTResult, _plural
 
 __all__ = ["bradley_terry", "to_elo"]
 
@@ -52,7 +52,7 @@ _MAX_NEWTON = 100
 _NEWTON_TOL = 1e-11
 
 # Ceiling on the working array the bootstrap allocates, in floats. Resamples
-# run in blocks sized to fit under it. A block is not a resample: every
+# run in blocks sized to fit under it. A block is not a resample. Every
 # resample inside a block is still fitted in the same pass as the others.
 _BLOCK_BUDGET = 4_000_000
 
@@ -520,12 +520,12 @@ def _clusters(used: pd.DataFrame, resample: str):
         first = used[missing].iloc[0]
         raise ValueError(
             f"item_id is missing on {int(missing.sum())} of {len(used)} "
-            f"comparisons, the first between {first['model_a']!r} and "
-            f"{first['model_b']!r}. The bootstrap resamples whole items, so "
-            f"it needs to know which item every comparison belongs to. Fill "
-            f"in the item ids, or pass resample='comparisons' to resample "
-            f"comparisons one at a time, which treats every judgement as "
-            f"independent."
+            f"{_plural('comparison', len(used))}, the first between "
+            f"{first['model_a']!r} and {first['model_b']!r}. The bootstrap "
+            f"resamples whole items, so it needs to know which item every "
+            f"comparison belongs to. Fill in the item ids, or pass "
+            f"resample='comparisons' to resample comparisons one at a time, "
+            f"which treats every judgement as independent."
         )
 
     codes, uniques = pd.factorize(ids, sort=False)
@@ -637,8 +637,8 @@ def _components(played: np.ndarray, models) -> tuple:
 def _separated_sets(beat: np.ndarray, models):
     """A set that never lost outside itself, and one that never won.
 
-    Ford's condition: the maximum exists and is unique when every model is
-    reachable from every other through a chain of wins. When it is not, some
+    By Ford's condition, the maximum exists and is unique when every model
+    is reachable from every other through a chain of wins. When it is not, some
     group of models never lost to anything outside it, and its ratings run
     off to infinity. Both ends are returned because they read as different
     findings. One model that never lost and one that never won are the two

@@ -2,8 +2,9 @@
 
 Every public function returns one of these. Each carries the numbers and a
 ``summary()`` that states, in plain English, what the numbers do and do not
-support. The summary is the point of the library: scipy already computes
-McNemar, but nothing tells a product manager their result does not hold.
+support. The summary is the point of the library. statsmodels already
+computes McNemar, but nothing tells a product manager their result does not
+hold.
 """
 
 from __future__ import annotations
@@ -61,7 +62,8 @@ class ScoreCI:
                 f"{_pct(self.estimate)} pass rate "
                 f"({conf} CI: {_pct(self.ci_low)}-{_pct(self.ci_high)}, n={self.n})."
             )
-            span = f"{self.width * 100:.0f} points"
+            points = f"{self.width * 100:.0f}"
+            span = f"{points} {_plural('point', float(points))}"
         else:
             head = (
                 f"Mean score {self.estimate:.3f} "
@@ -80,8 +82,8 @@ class ScoreCI:
         )
         if self.n < 30:
             tail += (
-                f" With only {self.n} observations this estimate is weak "
-                f"regardless of the point value."
+                f" With only {self.n} {_plural('observation', self.n)} this "
+                f"estimate is weak regardless of the point value."
             )
         return head + tail
 
@@ -153,7 +155,8 @@ class ComparisonResult:
             )
         elif self.n_discordant is not None:
             verdict += (
-                f" {self.n_discordant} of {self.n} items changed between systems."
+                f" {self.n_discordant} of {self.n} {_plural('item', self.n)} "
+                f"changed between systems."
             )
 
         return head + verdict
@@ -190,7 +193,8 @@ class KappaResult:
 
         head = (
             f"{name} kappa {self.kappa:.3f} "
-            f"({self.n_items} items, {self.n_raters} raters, "
+            f"({self.n_items} {_plural('item', self.n_items)}, "
+            f"{self.n_raters} raters, "
             f"{self.n_categories} categories). "
             f"Raters agreed on {_pct(self.p_observed)} of ratings, "
             f"and {_pct(self.p_expected)} was expected by chance."
@@ -216,7 +220,7 @@ class KappaResult:
 _MIN_USABLE_SHARE = 0.90
 
 # Krippendorff's own thresholds. Above 0.800 is reliable, 0.667 to 0.800
-# supports tentative conclusions, below 0.667 supports none.
+# supports tentative conclusions, and below 0.667 supports none.
 _ALPHA_RELIABLE = 0.800
 _ALPHA_FLOOR = 0.667
 
@@ -361,8 +365,8 @@ class AgreementResult:
             )
 
         carried = (
-            f"{self.n_overlapping_items} of {self.n_items} items "
-            f"graded more than once"
+            f"{self.n_overlapping_items} of {self.n_items} "
+            f"{_plural('item', self.n_items)} graded more than once"
         )
 
         if self.alpha != self.alpha:  # NaN
@@ -395,9 +399,9 @@ class AgreementResult:
     def _undefined(self, carried: str) -> str:
         """Why there is no alpha. Two causes, and they are opposite news.
 
-        Checked in the same order as the dropout notes: agreement first,
-        because a rubric everyone applied identically is a finding, and a
-        thin overlap is a scheduling problem.
+        Checked in the same order as the dropout notes, with agreement
+        first, because a rubric everyone applied identically is a finding and
+        a thin overlap is a scheduling problem.
         """
         if self._no_variance:
             return (
@@ -420,11 +424,16 @@ class AgreementResult:
         if self.n_boot == 0:
             return " An interval was not requested."
         dropped = self.n_boot - self.n_boot_usable
+        those = (
+            "That resample is the unanimous one" if dropped == 1
+            else "Those resamples are the unanimous ones"
+        )
         return (
-            f" No interval: {dropped} of {self.n_boot} resamples came back "
-            f"undefined, above the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this "
-            f"reports through. Those resamples are the unanimous ones, so "
-            f"percentiles of the rest would understate the upper bound."
+            f" No interval: {dropped} of {self.n_boot} "
+            f"{_plural('resample', self.n_boot)} came back undefined, above "
+            f"the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports through. "
+            f"{those}, so percentiles of the rest would understate the upper "
+            f"bound."
         )
 
     def _verdict(self) -> str:
@@ -512,9 +521,9 @@ class BTResult:
     is separable. ``separable_pairs`` is the separable rows of ``pairs``.
 
     A pair is separable when the interval on its gap excludes zero.
-    ``n_separable`` against ``n_pairs`` is the number worth reporting. A six
-    model leaderboard has fifteen pairs, and published boards routinely rank
-    all six off data that orders a few of them.
+    ``n_separable`` against ``n_pairs`` is the number worth reporting. A
+    six-model leaderboard has fifteen pairs, and published boards routinely
+    rank all six off data that orders a few of them.
 
     A pair that does not separate is one the data has not established an
     order for, in either direction. The data does not show those two models
@@ -679,9 +688,12 @@ class BTResult:
             return self._no_interval_sentence()
 
         conf = f"{self.confidence * 100:.0f}%"
+        # The verb agrees with the separable count, as in "1 of 15 pairs
+        # is". A single pair takes "is" whether it separates or not.
+        verb = "is" if 1 in (self.n_separable, self.n_pairs) else "are"
         head = (
-            f" {self.n_separable} of {self.n_pairs} pairs "
-            f"{'is' if self.n_pairs == 1 else 'are'} separable at {conf}, "
+            f" {self.n_separable} of {self.n_pairs} "
+            f"{_plural('pair', self.n_pairs)} {verb} separable at {conf}, "
             f"meaning the interval on the gap between the two ratings "
             f"excludes zero."
         )
@@ -739,13 +751,13 @@ class BTResult:
             )
         dropped = self.n_boot - self.n_boot_usable
         return (
-            f" No interval: {dropped} of {self.n_boot} resamples came back "
-            f"undefined, above the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this "
-            f"reports through. A resample that misses a comparison can leave "
-            f"a model unbeaten inside it, and those resamples are the ones "
-            f"with the widest ratings, so percentiles of the rest would "
-            f"understate the spread. Without an interval no pair can be "
-            f"called separable."
+            f" No interval: {dropped} of {self.n_boot} "
+            f"{_plural('resample', self.n_boot)} came back undefined, above "
+            f"the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports through. "
+            f"A resample that misses a comparison can leave a model unbeaten "
+            f"inside it, and those resamples are the ones with the widest "
+            f"ratings, so percentiles of the rest would understate the "
+            f"spread. Without an interval no pair can be called separable."
         )
 
     def _reference_sentence(self) -> str:
@@ -779,6 +791,11 @@ _BASELINE_TIE_WORDS = {
     "category": " Ties count as a label of their own on both sides.",
     "drop": " Ties are set aside as no label on both sides.",
 }
+
+
+def _the_resamples(n: int) -> str:
+    """How a sentence points back at the n resamples it just counted."""
+    return "That is the resample" if n == 1 else "Those are the resamples"
 
 
 def _set_aside(n: int, what: str, because: str) -> str:
@@ -944,14 +961,16 @@ class JudgeValidation:
             # The resamples were drawn and too few came back defined. Saying
             # nothing was computed would hide which ones are missing. They
             # are the unanimous ones, so the gap leans one way.
+            undefined = self.n_boot - self.n_boot_usable
             head = (
                 f"Judge and human agree at alpha {self.agreement:.3f} "
                 f"({self.level}, {self.n_items} items). There is no interval "
-                f"on that alpha. {self.n_boot - self.n_boot_usable} of "
-                f"{self.n_boot} resamples left it undefined, above the "
-                f"{(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports through. "
-                f"Those are the resamples where every label was the same, so "
-                f"percentiles of the rest would understate the upper bound."
+                f"on that alpha. {undefined} of {self.n_boot} "
+                f"{_plural('resample', self.n_boot)} left it undefined, above "
+                f"the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports "
+                f"through. {_the_resamples(undefined)} where every label was "
+                f"the same, so percentiles of the rest would understate the "
+                f"upper bound."
             )
         return head + accuracy + dropped
 
@@ -1089,12 +1108,15 @@ class JudgeValidation:
         dropped = self.n_boot - self.baseline_n_boot_usable
         if not dropped:
             return ""
+        # The interval stands, so at least ten resamples were drawn and only
+        # the number left out can be one.
+        them = "it" if dropped == 1 else "them"
         return (
             f" {dropped} of {self.n_boot} resamples left an alpha undefined, "
             f"and the interval comes from the other "
-            f"{self.baseline_n_boot_usable}. Those are the resamples where "
-            f"every human label was the same, so leaving them out shifts the "
-            f"interval in the judge's favour."
+            f"{self.baseline_n_boot_usable}. {_the_resamples(dropped)} where "
+            f"every human label was the same, so leaving {them} out shifts "
+            f"the interval in the judge's favour."
         )
 
     def _baseline_refusal(self) -> str:
@@ -1112,11 +1134,12 @@ class JudgeValidation:
             )
         dropped = self.n_boot - self.baseline_n_boot_usable
         return head + (
-            f" {dropped} of {self.n_boot} resamples left an alpha undefined, "
-            f"above the {(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports "
-            f"through. Those are the resamples where every human label was "
-            f"the same, so an interval from the rest would lean in the "
-            f"judge's favour."
+            f" {dropped} of {self.n_boot} {_plural('resample', self.n_boot)} "
+            f"left an alpha undefined, above the "
+            f"{(1 - _MIN_USABLE_SHARE) * 100:.0f}% this reports through. "
+            f"{_the_resamples(dropped)} where every human label was the "
+            f"same, so an interval from the rest would lean in the judge's "
+            f"favour."
         )
 
     def _baseline_verdict(self) -> str:
@@ -1277,7 +1300,8 @@ class PositionBias:
         head = (
             f"Each pair was judged once, so this reports the position-A win "
             f"rate. Position A won {_pct(self.position_a_rate)} of "
-            f"{self.n_decisive} judgements ({conf} CI: {_pct(self.ci_low)} "
+            f"{self.n_decisive} {_plural('judgement', self.n_decisive)} "
+            f"({conf} CI: {_pct(self.ci_low)} "
             f"to {_pct(self.ci_high)}, exact binomial p={self.p_value:.4f})."
         )
 
@@ -1301,19 +1325,25 @@ class PositionBias:
         )
 
         stray = ""
-        if self.n_both_orders:
+        n = self.n_both_orders
+        if n:
+            verb = "was" if n == 1 else "were"
             stray = (
-                f" {self.n_both_orders} pairs were also run in the reverse "
+                f" {n} {_plural('pair', n)} {verb} also run in the reverse "
                 f"order, too few to change which analysis applies."
             )
         return head + verdict + caveat + stray
 
     def _both_orders(self, conf: str) -> str:
+        # The verb follows the pairs run both ways and the noun follows all
+        # the pairs, as in "1 of 2 pairs was run".
+        were = "was" if self.n_both_orders == 1 else "were"
         head = (
-            f"{self.n_both_orders} of {self.n_pairs} pairs were run in both "
-            f"orders, so this reports the consistency rate. The judge named "
-            f"the same output under both orderings on "
-            f"{_pct(self.consistency_rate)} of {self.n_pairs_scored} pairs "
+            f"{self.n_both_orders} of {self.n_pairs} "
+            f"{_plural('pair', self.n_pairs)} {were} run in both orders, so "
+            f"this reports the consistency rate. The judge named the same "
+            f"output under both orderings on {_pct(self.consistency_rate)} of "
+            f"{self.n_pairs_scored} {_plural('pair', self.n_pairs_scored)} "
             f"({conf} CI: {_pct(self.ci_low)} to {_pct(self.ci_high)})."
         )
 
@@ -1324,7 +1354,8 @@ class PositionBias:
             )
 
         direction = (
-            f" Of the {self.n_decisive} pairs it flipped on, {self.n_a_wins} "
+            f" Of the {self.n_decisive} {_plural('pair', self.n_decisive)} "
+            f"it flipped on, {self.n_a_wins} "
             f"went to whichever output was shown first "
             f"({_pct(self.position_a_rate)}, {conf} CI: "
             f"{_pct(self.position_a_ci_low)} to "
@@ -1350,11 +1381,13 @@ class PositionBias:
         return head + direction + verdict
 
     def _ties(self) -> str:
-        if not self.n_ties:
+        n = self.n_ties
+        if not n:
             return ""
+        were, are, a = ("was", "is", "a ") if n == 1 else ("were", "are", "")
         return (
-            f" {self.n_ties} judgements were ties and are left out of the "
-            f"rates above."
+            f" {n} {_plural('judgement', n)} {were} {a}{_plural('tie', n)} "
+            f"and {are} left out of the rates above."
         )
 
     def __str__(self) -> str:  # pragma: no cover
@@ -1423,14 +1456,17 @@ class LengthBias:
         conf = f"{self.confidence * 100:.0f}%"
         if self.coefficient != self.coefficient:  # NaN
             return (
-                f"No judge preference model: {self.note} ({self.n} pairs). "
+                f"No judge preference model: {self.note} "
+                f"({self.n} {_plural('pair', self.n)}). "
                 f"The judge picked the longer answer on "
                 f"{_pct(self.longer_rate)} of pairs."
             )
 
+        step = f"{self.sd_difference:.0f}"
         head = (
-            f"Judge preference against length: {self.sd_difference:.0f} "
-            f"characters of extra length multiplies the odds the judge picks "
+            f"Judge preference against length: {step} "
+            f"{_plural('character', float(step))} of extra length "
+            f"multiplies the odds the judge picks "
             f"that answer by {self.odds_ratio_per_sd:.2f} ({conf} CI: "
             f"{np.exp(self.ci_low * self.sd_difference):.2f} to "
             f"{np.exp(self.ci_high * self.sd_difference):.2f}, "
@@ -1473,20 +1509,23 @@ class LengthBias:
         if self.disagreement_coefficient != self.disagreement_coefficient:
             return (
                 f" No disagreement model: {self.disagreement_note} "
-                f"({self.n_disagreements} disagreements)."
+                f"({self.n_disagreements} "
+                f"{_plural('disagreement', self.n_disagreements)})."
             )
 
+        step = f"{self.disagreement_sd_difference:.0f}"
+        n = self.n_disagreements
         head = (
             f" Judge-human disagreement against the same length difference, "
             f"oriented by what the humans picked: "
-            f"{self.disagreement_sd_difference:.0f} characters multiplies "
+            f"{step} {_plural('character', float(step))} multiplies "
             f"the odds the judge breaks with them by "
             f"{self.disagreement_odds_ratio_per_sd:.2f} ({conf} CI: "
             f"{np.exp(self.disagreement_ci_low * self.disagreement_sd_difference):.2f}"
             f" to "
             f"{np.exp(self.disagreement_ci_high * self.disagreement_sd_difference):.2f}"
             f", p={self.disagreement_p_value:.4f}, "
-            f"{self.n_disagreements} disagreements)."
+            f"{n} {_plural('disagreement', n)})."
         )
 
         if self.disagreement_ci_low <= 0 <= self.disagreement_ci_high:
@@ -1585,12 +1624,15 @@ class PowerResult:
 
     def _required_size(self) -> str:
         target = (
-            f"To detect a {_points(self.difference)} point difference at "
+            f"To detect a {_points(self.difference)}-point difference at "
             f"{_rate(self.power)} power and a {_rate(self.alpha)} "
             f"significance level"
         )
         if self.paired:
-            head = f"{target} you need roughly {self.n:,} paired comparisons."
+            head = (
+                f"{target} you need roughly {self.n:,} paired "
+                f"{_plural('comparison', self.n)}."
+            )
             return (
                 head
                 + self._discordant_sentence()
@@ -1635,20 +1677,23 @@ class PowerResult:
 
     def _smallest_finding(self) -> str:
         against = "" if self.paired else f" against a {_rate(self.baseline)} baseline"
+        points = _points(self.difference)
         return (
             f" At {_rate(self.power)} power and a {_rate(self.alpha)} "
             f"significance level{against} the smallest difference it could "
-            f"have found is {_points(self.difference)} points. A smaller "
-            f"difference could still reach significance here, with a chance "
-            f"below {_rate(self.power)}."
+            f"have found is {points} {_plural('point', float(points))}. A "
+            f"smaller difference could still reach significance here, with a "
+            f"chance below {_rate(self.power)}."
         )
 
     def _out_of_reach(self) -> str:
         if self.paired:
             if self.has_difference:
+                points = _points(self.difference)
                 needed = (
                     f" Reaching {_rate(self.power)} power here would take a "
-                    f"difference of {_points(self.difference)} points."
+                    f"difference of {points} "
+                    f"{_plural('point', float(points))}."
                 )
             else:
                 needed = (
@@ -1663,7 +1708,7 @@ class PowerResult:
             )
         return (
             f" A {_rate(self.baseline)} baseline leaves at most a "
-            f"{_points(1.0 - self.baseline)} point difference before the pass "
+            f"{_points(1.0 - self.baseline)}-point difference before the pass "
             f"rate hits 100%, and even that difference does not reach "
             f"{_rate(self.power)} power with this many items. So no "
             f"difference of any size reaches that power here. A null result "
@@ -1677,11 +1722,13 @@ class PowerResult:
     def _discordant_sentence(self) -> str:
         if not self.paired or self.n_discordant is None:
             return ""
+        n = self.n_discordant
+        those = "that one" if n == 1 else "those"
         return (
             f" At a {_rate(self.discordance_rate)} discordance rate that is "
-            f"about {self.n_discordant:,} discordant pairs, and McNemar reads "
-            f"only those. The rest of the items agree across both systems and "
-            f"carry no information about which one is better."
+            f"about {n:,} discordant {_plural('pair', n)}, and McNemar reads "
+            f"only {those}. The rest of the items agree across both systems "
+            f"and carry no information about which one is better."
         )
 
     def _reference_sentence(self) -> str:
@@ -1689,7 +1736,7 @@ class PowerResult:
             return ""
         unit = "comparisons" if self.paired else "items"
         return (
-            f" To find a {_points(self.reference_difference)} point "
+            f" To find a {_points(self.reference_difference)}-point "
             f"difference you would have needed roughly "
             f"{self.n_for_reference:,} {unit}, and this eval ran {self.n:,}."
         )
@@ -1708,7 +1755,7 @@ class PowerResult:
     def _floor_sentence(self) -> str:
         return (
             " This is the standard normal approximation for McNemar, and it "
-            "runs a little ahead of the continuity corrected and exact forms "
+            "runs a little ahead of the continuity-corrected and exact forms "
             "evalaudit actually uses. Read the number as a floor on what the "
             "eval could have found. The true reach is slightly worse."
         )
@@ -1716,7 +1763,7 @@ class PowerResult:
     def _pairing_sentence(self) -> str:
         return (
             " Running both systems on the same items would cut this sharply. "
-            "Pairing removes the item to item difficulty that an independent "
+            "Pairing removes the item-to-item difficulty that an independent "
             "comparison has to absorb, and most evals can pair."
         )
 
@@ -1743,7 +1790,7 @@ _JUDGE_THRESHOLD = _ALPHA_FLOOR
 class AuditConfig:
     """What the audit is being asked to check, and what it may assume.
 
-    Everything here has a default that suits a two system pass rate eval, so
+    Everything here has a default that suits a two-system pass-rate eval, so
     a first run needs none of it. The three worth setting are ``claim``,
     which puts the sentence being audited at the top of the report,
     ``effect_of_interest``, which is the difference the decision actually
@@ -1771,7 +1818,7 @@ class AuditConfig:
 
     ``agreement_threshold`` is 0.667, which is Krippendorff's own published
     line: above 0.800 is reliable, 0.667 to 0.800 supports tentative
-    conclusions, below 0.667 supports none. ``rater_agreement`` already
+    conclusions, and below 0.667 supports none. ``rater_agreement`` already
     reads its verdict off those same cutoffs, so the audit is repeating the
     module rather than inventing a rule.
 

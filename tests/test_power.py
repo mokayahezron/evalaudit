@@ -9,7 +9,7 @@ statsmodels and against the two sample size figures every textbook prints
 for it, 97 per group for 0.40 against 0.60 and 388 per group for 0.50
 against 0.60. The paired arithmetic is checked against Connor's published
 formula written in its odds ratio parameterisation, which is a different
-algebraic route to the same number, and against the one sample binomial
+algebraic route to the same number, and against the one-sample binomial
 formula it collapses to when every pair is discordant.
 
 Simulation. Data is generated at the reported detectable difference and run
@@ -51,8 +51,8 @@ def _z(alpha, power):
 @pytest.mark.parametrize(
     "baseline, mde, expected_per_group",
     [
-        # The two figures every sample size table prints for the two
-        # proportion test at 5% and 80%.
+        # The two figures every sample size table prints for the
+        # two-proportion test at 5% and 80%.
         (0.40, 0.20, 97),
         (0.50, 0.10, 388),
     ],
@@ -86,7 +86,7 @@ def test_independent_power_matches_statsmodels(baseline, mde, n_per_group):
     """The power function agrees with statsmodels to the far tail.
 
     statsmodels adds the probability of rejecting on the wrong side, which
-    the closed form sample size formula leaves out. That term is under 1e-5
+    the closed-form sample size formula leaves out. That term is under 1e-5
     at any setting a real eval runs, and leaving it out is what makes the
     two entry points exact inverses of each other.
     """
@@ -188,7 +188,7 @@ def test_paired_sample_size_matches_connor(rate, mde, power):
 def test_paired_collapses_to_one_sample_binomial_when_all_pairs_discordant():
     """With every pair discordant McNemar is a sign test on n items.
 
-    The sample size then has to be the one sample binomial figure for
+    The sample size then has to be the one-sample binomial figure for
     testing a half, n = [z + z_beta sqrt(1 - d^2)]^2 / d^2.
     """
     za, zb = _z(0.05, 0.8)
@@ -251,7 +251,7 @@ _SIM_SEED = 11
 def _mcnemar_p_values(n_a_only, n_b_only):
     """compare_paired's decision rule, vectorised over many tables.
 
-    Exact binomial below 25 discordant pairs, continuity corrected
+    Exact binomial below 25 discordant pairs, continuity-corrected
     chi-square at 25 and above, p=1 on an empty table. Held to the shipped
     function by test_vectorised_mcnemar_reproduces_compare_paired, which is
     what licenses using it in place of 200,000 calls.
@@ -362,14 +362,14 @@ def test_paired_simulated_power_is_near_nominal(n, rate):
 def test_paired_nominal_power_runs_ahead_of_the_shipped_test(n, rate):
     """The normal approximation promises more than McNemar delivers, by this much.
 
-    evalaudit runs the continuity corrected chi-square above 25 discordant
+    evalaudit runs the continuity-corrected chi-square above 25 discordant
     pairs and the exact binomial below it, and both are conservative. So
     real power at the reported difference lands under the power that was
     asked for, and the reported difference is a floor on what the eval
     could have found rather than a promise.
 
     The gap is named rather than left open. Asserting only that power falls
-    short passes on an implementation that is wildly under powered, which
+    short passes on an implementation that is wildly underpowered, which
     turns a known and documented shortfall into cover for a real bug.
 
     The band is 0.010 to 0.025 against a nominal 0.800. Measured over
@@ -379,7 +379,7 @@ def test_paired_nominal_power_runs_ahead_of_the_shipped_test(n, rate):
     upper edge about 9.5 above it. The band excludes zero, so an
     implementation whose nominal power actually matches the shipped test
     fails here, and it excludes a gap past 2.5 points, so an implementation
-    that quietly under powers fails too.
+    that quietly underpowers fails too.
     """
     r = detectable_effect(n, discordance_rate=rate)
     achieved = _paired_rejection_rate(n, rate, r.difference)
@@ -453,7 +453,7 @@ def test_default_rate_is_the_conservative_direction():
     measured = detectable_effect(500, discordance_rate=0.05)
     assert assumed.difference > measured.difference
 
-    # 0.02 rather than 0.05, because a five point difference cannot occur at
+    # 0.02 rather than 0.05, because a five-point difference cannot occur at
     # all when only 5% of pairs are discordant.
     assumed_n = min_sample_size(0.02)
     measured_n = min_sample_size(0.02, discordance_rate=0.05)
@@ -464,7 +464,7 @@ def test_detectable_difference_grows_with_the_discordance_rate():
     """The counterintuitive direction, pinned.
 
     More disagreement between the two systems means more noise in the
-    per item comparison, not more signal.
+    per-item comparison, not more signal.
     """
     rates = [0.02, 0.05, 0.1, 0.3, 0.6]
     got = [detectable_effect(2000, discordance_rate=r).difference for r in rates]
@@ -478,7 +478,7 @@ def test_sample_size_grows_with_the_discordance_rate():
 
 
 def test_discordant_pairs_are_the_effective_sample():
-    """500 items at a 2.4% discordance rate is a 12 item study."""
+    """500 items at a 2.4% discordance rate is a 12-item study."""
     r = detectable_effect(500, discordance_rate=12 / 500)
     assert r.n == 500
     assert r.n_discordant == 12
@@ -551,7 +551,7 @@ def test_independent_roundtrip(baseline, mde):
 # min_sample_size takes a ceiling. detectable_effect(n) returns the
 # difference whose power at n is exactly the target, so solving that
 # difference back for a sample size lands on n itself, give or take
-# floating point noise of order 1e-10. Noise a hair below n still ceils to
+# floating-point noise of order 1e-10. Noise a hair below n still ceils to
 # n. Noise a hair above ceils to n+1. Nothing else is reachable, since
 # landing on n-1 would take an error of a whole item, roughly ten orders of
 # magnitude past what the arithmetic produces.
@@ -604,7 +604,7 @@ def test_independent_functions_are_exact_inverses(alpha, power):
     """Compared per group, which sidesteps the parity of the total.
 
     min_sample_size splits evenly, so the totals it can return are all even
-    and an odd total could never come back unchanged. The per group figure
+    and an odd total could never come back unchanged. The per-group figure
     is the quantity the arithmetic actually solves for.
     """
     for baseline in (0.2, 0.3, 0.5, 0.7, 0.9):
@@ -854,7 +854,7 @@ def test_power_must_be_a_proportion(bad):
 
 
 def test_power_below_alpha_is_refused():
-    """A two sided test rejects at the alpha rate when nothing is there.
+    """A two-sided test rejects at the alpha rate when nothing is there.
 
     Asking for power under alpha asks for less than chance, which no sample
     size answers.
@@ -961,14 +961,14 @@ def test_detectable_effect_summary_prices_a_five_point_difference():
 
 
 def test_reference_price_is_dropped_when_it_cannot_be_computed():
-    """A 5 point difference needs at least 5% discordance to be possible."""
+    """A 5-point difference needs at least 5% discordance to be possible."""
     r = detectable_effect(500, discordance_rate=0.024)
     assert r.n_for_reference is None
-    assert "5 point" not in r.summary()
+    assert "5-point" not in r.summary()
 
 
 def test_reference_price_is_quoted_at_the_boundary():
-    """At exactly 5% discordance a 5 point difference is still reachable.
+    """At exactly 5% discordance a 5-point difference is still reachable.
 
     The line the summary draws has to be the line min_sample_size draws, and
     that line is above the rate rather than at it. See
@@ -976,7 +976,7 @@ def test_reference_price_is_quoted_at_the_boundary():
     """
     r = detectable_effect(2000, discordance_rate=_REFERENCE_DIFFERENCE)
     assert r.n_for_reference is not None
-    assert "5 point" in r.summary()
+    assert "5-point" in r.summary()
 
 
 def test_min_sample_size_summary_states_the_requirement():
@@ -984,7 +984,7 @@ def test_min_sample_size_summary_states_the_requirement():
     text = r.summary()
     assert f"{r.n:,}" in text
     assert "80% power" in text
-    assert "5 point" in text
+    assert "5-point" in text
 
 
 def test_paired_summary_says_the_baseline_does_not_enter():
@@ -1023,3 +1023,85 @@ def test_result_carries_back_every_input():
     assert (r.n, r.baseline, r.power, r.alpha) == (333, 0.72, 0.85, 0.02)
     assert r.paired is True
     assert r.discordance_rate == 0.4
+
+
+# --------------------------------------------------------------------------
+# Counts of one
+#
+# A figure that prints as 1 takes the singular. Each test builds the
+# smallest input that reaches its sentence, asserts what puts it on that
+# branch, and compares the whole summary.
+# --------------------------------------------------------------------------
+
+def test_one_paired_comparison_is_counted_in_the_singular():
+    """A 90-point difference at a 50% significance level and 51% power,
+    with every pair discordant, needs one pair. It said "1 paired
+    comparisons" and "1 discordant pairs"."""
+    r = min_sample_size(0.9, alpha=0.5, power=0.51, discordance_rate=1.0)
+    assert (r.n, r.n_discordant) == (1, 1)
+    assert r.summary() == (
+        "To detect a 90-point difference at 51% power and a 50% significance "
+        "level you need roughly 1 paired comparison. At a 100% discordance "
+        "rate that is about 1 discordant pair, and McNemar reads only that "
+        "one. The rest of the items agree across both systems and carry no "
+        "information about which one is better. The baseline pass rate does "
+        "not enter a paired binary calculation. Two systems can both pass 50% "
+        "of items and disagree on none of them or on all of them, and it is "
+        "the disagreement that sets the number above."
+    )
+
+
+def test_one_discordant_pair_is_counted_in_the_singular():
+    """Two pairs at a 50% discordance rate, the smallest eval there is. It
+    said "about 1 discordant pairs, and McNemar reads only those"."""
+    r = detectable_effect(2, discordance_rate=0.5)
+    assert (r.n, r.n_discordant, r.attainable) == (2, 1, False)
+    assert r.summary() == (
+        "This eval ran 2 paired comparisons. No difference reaches 80% power "
+        "at this size. A difference can never exceed the discordance rate, "
+        "which here is 50%, so no difference of any size reaches 80% power "
+        "here. A null result from this eval says little about the systems. At "
+        "a 50% discordance rate that is about 1 discordant pair, and McNemar "
+        "reads only that one. The rest of the items agree across both systems "
+        "and carry no information about which one is better."
+    )
+
+
+def test_a_reach_that_prints_as_one_point_is_singular():
+    """746 pairs at a 1.05% discordance rate reach a difference that rounds
+    to 1.0 point. It said "is 1 points". The reach is a measure rather than
+    a count, and it takes the singular all the same."""
+    r = detectable_effect(746, discordance_rate=0.0105)
+    assert r.attainable
+    assert round(r.difference * 100, 1) == 1.0
+    assert r.summary() == (
+        "This eval ran 746 paired comparisons. At 80% power and a 5% "
+        "significance level the smallest difference it could have found is 1 "
+        "point. A smaller difference could still reach significance here, "
+        "with a chance below 80%. At a 1.1% discordance rate that is about 8 "
+        "discordant pairs, and McNemar reads only those. The rest of the "
+        "items agree across both systems and carry no information about which "
+        "one is better. This is the standard normal approximation for "
+        "McNemar, and it runs a little ahead of the continuity-corrected and "
+        "exact forms evalaudit actually uses. Read the number as a floor on "
+        "what the eval could have found. The true reach is slightly worse."
+    )
+
+
+def test_an_unreachable_difference_of_one_point_is_singular():
+    """69 pairs at a 0.1% discordance rate would need a difference that
+    rounds to 1.0 point, which is past the rate. It said "a difference of
+    1 points"."""
+    r = detectable_effect(69, discordance_rate=0.001)
+    assert r.has_difference and not r.attainable
+    assert round(r.difference * 100, 1) == 1.0
+    assert r.summary() == (
+        "This eval ran 69 paired comparisons. Reaching 80% power here would "
+        "take a difference of 1 point. A difference can never exceed the "
+        "discordance rate, which here is 0.1%, so no difference of any size "
+        "reaches 80% power here. A null result from this eval says little "
+        "about the systems. At a 0.1% discordance rate that is about 0 "
+        "discordant pairs, and McNemar reads only those. The rest of the "
+        "items agree across both systems and carry no information about which "
+        "one is better."
+    )

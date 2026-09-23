@@ -9,7 +9,7 @@ files are its `human` split (3,355 rows) and its `gpt4_pair` split (2,400
 rows).
 
 The dataset is licensed under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The license is
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The licence is
 stated in the dataset card at that revision.
 
 The dataset is described in this paper.

@@ -37,7 +37,7 @@ _NOTE_ONE_ITEM = "only one item left with two or more ratings"
 
 # Ceiling on the working array the bootstrap allocates, in floats. The
 # resample loop runs in blocks sized to fit under it. Blocks are not
-# resamples: every resample inside a block is still computed in one pass.
+# resamples. Every resample inside a block is still computed in one pass.
 _BLOCK_BUDGET = 4_000_000
 
 
@@ -71,8 +71,8 @@ def rater_agreement(
         Nominal coverage of the bootstrap interval, default 0.95.
     bootstrap_ci
         Set False to skip the interval. Then ``ci_low`` and ``ci_high`` are
-        NaN and nothing in the result will name an outlier rater, since
-        there is no sampling error to judge one against.
+        NaN. With or without it, the summary lists alpha with each rater
+        left out and names no rater.
     n_boot
         Bootstrap resamples. The interval resamples the items graded more
         than once, not every item in the frame. Items graded once contribute
@@ -253,8 +253,8 @@ class _Units:
     def is_degenerate(self) -> bool:
         """True when every pairable rating is the same value.
 
-        Alpha has no denominator then. That is not perfect agreement, it is
-        a scale nobody varied, and the two call for different responses.
+        Alpha has no denominator then. This comes from a scale nobody varied.
+        It is not perfect agreement, and the two call for different responses.
         """
         if self.n_units == 0:
             return False
@@ -444,7 +444,7 @@ def _expected_batch(units, marginals, totals) -> np.ndarray:
 def _dropout_table(data: pd.DataFrame, level: str, alpha: float) -> pd.DataFrame:
     """Alpha recomputed without each rater, and why it is missing when it is.
 
-    A NaN here has three possible causes and they call for opposite
+    A NaN here has four possible causes and they call for different
     responses, so each gets its own note. Losing the overlap means the
     design depended on that rater. Losing the variance means the graders who
     remain agreed on everything, which is a finding rather than a fault.

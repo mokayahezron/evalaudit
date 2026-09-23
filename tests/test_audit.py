@@ -70,13 +70,13 @@ def _scores(n, k, seed):
 
 @pytest.fixture
 def undecided_scores():
-    """A 5 point margin on 120 items. The interval crosses zero."""
+    """A 5-point margin on 120 items. The interval crosses zero."""
     return {"new": _scores(120, 66, 7), "old": _scores(120, 60, 8)}
 
 
 @pytest.fixture
 def decided_scores():
-    """A 20 point margin on 300 items.
+    """A 20-point margin on 300 items.
 
     The interval clears zero and the eval was large enough to find a margin
     this size with room to spare. The smallest difference it could have
@@ -556,7 +556,7 @@ def test_without_a_stated_effect_the_margin_is_not_the_effect_at_issue(
     undecided_scores
 ):
     """This test used to pin the old rule, that with no stated effect the
-    observed 5 point margin became the effect at issue. Power computed on an
+    observed 5-point margin became the effect at issue. Power computed on an
     observed effect is a function of the p-value, so the audit no longer
     does that. It reports the design's reach and says nothing about the
     margin."""
@@ -576,7 +576,7 @@ def test_stated_effect_of_interest_overrides_the_observed_margin(
     margin.
 
     With one, the decided margin clears zero, so power cannot challenge it.
-    The undecided margin's interval includes zero, and a stated 50 point
+    The undecided margin's interval includes zero, and a stated 50-point
     effect sits inside the eval's reach.
     """
     plain = audit(scores=decided_scores, config={"seed": 1})
@@ -1008,7 +1008,7 @@ def test_length_reuses_its_summary(judge_good, length_biased):
 # Ranking. The part that decides whether the report is worth reading.
 # --------------------------------------------------------------------------
 
-# The two tests below used to run on decided_scores with a stated five point
+# The two tests below used to run on decided_scores with a stated five-point
 # effect, where power came back critical over a margin that clears zero. That
 # is the defect the power section above pins, so they run on a margin whose
 # interval includes zero. No direction is claimed, which keeps compare at a
@@ -1151,7 +1151,7 @@ def test_detail_puts_the_lead_first_and_the_action_last():
     The order is the contract. Every finding in the report is built by
     handing this function a sentence that frames the numbers, and framing
     only works before the reader meets them. The length finding leans on
-    this hardest: when the two fits sign differently the lead is the only
+    this hardest. When the two fits sign differently the lead is the only
     thing standing between a title and an odds ratio that point opposite
     ways, and it is worth nothing if it arrives after them.
     """
@@ -1747,7 +1747,7 @@ SCORE_POINTS_AT_THE_DIFFERENCE = (
 
 def test_score_intervals_do_not_rule_on_the_margin(established_underpowered):
     """Each score interval spans about 10 points and the paired comparison
-    resolves a 5 point margin. A score sentence telling the reader to treat
+    resolves a 5-point margin. A score sentence telling the reader to treat
     differences under 10 points as unresolved contradicted the finding
     above it in the same report."""
     r = audit(scores=established_underpowered, config={"seed": 1})
@@ -1791,6 +1791,18 @@ def test_the_compare_action_names_the_bound_nearer_zero(fixture_name, request):
         "supports."
     ) in f.detail
     assert "lower bound" not in f.detail
+
+
+def test_the_compare_lead_says_the_interval_excludes_zero(decided_scores):
+    """The lead on a margin that clears zero, written out so that rewording
+    it fails here and gets read. It used to say the margin "survives the
+    fit"."""
+    f = _one(audit(scores=decided_scores, config={"seed": 1}), "compare")
+    assert not f.result.crosses_zero
+    assert f.detail.startswith(
+        "This is the margin between new and old, and its interval excludes "
+        "zero. "
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2098,9 +2110,9 @@ POWER_RULED_OUT_TITLE = (
 
 @pytest.fixture
 def null_margin_inside_the_effect():
-    """1,200 paired items and a 1.0 point margin, interval -3.0 to +5.0.
+    """1,200 paired items and a 1.0-point margin, interval -3.0 to +5.0.
 
-    A stated 5.5 point effect lies outside that interval in both directions,
+    A stated 5.5-point effect lies outside that interval in both directions,
     so the data rules it out. The design reaches 5.7 points at 80% power,
     so the old code called this critical and said no conclusion about an
     effect this size could be drawn in either direction.
@@ -2119,8 +2131,8 @@ def test_the_null_power_title_does_not_call_the_effect_undetectable(
 
 
 def test_a_null_margin_can_rule_the_effect_out_one_way(undecided_scores):
-    """The interval runs from -8.3 to +18.1. A 10 point lead for old is
-    outside it and a 10 point lead for new is inside it."""
+    """The interval runs from -8.3 to +18.1. A 10-point lead for old is
+    outside it and a 10-point lead for new is inside it."""
     r = audit(scores=undecided_scores,
               config={"seed": 1, "effect_of_interest": 0.10})
     margin = _one(r, "compare").result

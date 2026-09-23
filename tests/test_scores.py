@@ -451,3 +451,39 @@ def test_confidence_level_affects_width():
     b99 = score_ci(xs, method="bootstrap", confidence=0.99, seed=1)
 
     assert b90.width < b95.width < b99.width
+
+
+# --------------------------------------------------------------------------
+# Counts of one
+#
+# A figure that prints as 1 takes the singular. Each test builds the
+# smallest input that reaches its sentence, asserts what puts it on that
+# branch, and compares the whole summary.
+# --------------------------------------------------------------------------
+
+def test_one_observation_is_counted_in_the_singular():
+    """One score. The small-sample hedge said "1 observations"."""
+    r = score_ci([1])
+    assert (r.n, r.method) == (1, "wilson")
+    assert r.summary() == (
+        "100.0% pass rate (95% CI: 20.7%-100.0%, n=1). The interval spans 79 "
+        "points. To compare this score with another, read the interval on the "
+        "difference, which compare_paired and compare_independent report. Two "
+        "score intervals that overlap do not show the systems are level. With "
+        "only 1 observation this estimate is weak regardless of the point "
+        "value."
+    )
+
+
+def test_a_width_that_prints_as_one_point_is_singular():
+    """253 fails, the fewest items whose interval is under 1.5 points wide,
+    so the width prints as 1. It said "spans 1 points". The width is a
+    measure rather than a count, and it takes the singular all the same."""
+    r = score_ci([0] * 253)
+    assert f"{r.width * 100:.0f}" == "1"
+    assert r.summary() == (
+        "0.0% pass rate (95% CI: 0.0%-1.5%, n=253). The interval spans 1 "
+        "point. To compare this score with another, read the interval on the "
+        "difference, which compare_paired and compare_independent report. Two "
+        "score intervals that overlap do not show the systems are level."
+    )
