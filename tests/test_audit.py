@@ -1950,10 +1950,10 @@ def test_a_both_orders_frame_with_nothing_scored_is_undefined(
     assert f.title == POSITION_UNDEFINED_TITLE
     assert f.detail == (
         f"{POSITION_UNDEFINED_LEAD} 2 of 3 pairs were run in both orders, so "
-        f"this would report the consistency rate. Every pair run both ways "
-        f"had a tie in at least one of its two judgements, so no pair could "
-        f"be scored and there is no rate to report. Nothing here tests "
-        f"position. {POSITION_UNDEFINED_ACTION}"
+        f"this would report the consistency rate. In every pair run both "
+        f"ways, the judge called a tie every time in at least one of the two "
+        f"orders, so no pair could be scored and there is no rate to report. "
+        f"Nothing here tests position. {POSITION_UNDEFINED_ACTION}"
     )
 
 

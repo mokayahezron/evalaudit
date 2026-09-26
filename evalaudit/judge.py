@@ -719,6 +719,14 @@ def position_bias(
     the two rates into one number would average quantities with different
     denominators and different meanings.
 
+    In the both-orders design each pair is scored on its first two decisive
+    judgements that are reverses of each other. A pair's ties are set aside
+    before that couple is looked for, so a pair judged more than once in an
+    order is scored on a later couple when an earlier one held a tie.
+    Judgements after the couple are not used. A pair judged once in each
+    order is scored on those two judgements, or not at all when either is a
+    tie.
+
     The randomised branch cannot tell whether the order really was
     randomised. If the same system sat in position A every time, a position-A
     win rate above a half is exactly what a better system produces, and the
@@ -726,10 +734,10 @@ def position_bias(
 
     Some frames leave nothing to score. In the randomised design that is a
     frame where every judgement is a tie. In the both-orders design it is a
-    frame where every pair run both ways has a tie in at least one of its two
-    judgements. The rates, intervals and p-value are then NaN, and the
-    summary says there is no rate to report. It gives no verdict and does
-    not count the ties.
+    frame where, in every pair run both ways, the judge called a tie every
+    time in at least one of the two orders. The rates, intervals and p-value
+    are then NaN, and the summary says there is no rate to report. It gives
+    no verdict and does not count the ties.
     """
     data = _clean_comparisons(comparisons)
     design, n_both_orders = _detect_design(data)
@@ -815,7 +823,12 @@ def _has_both_orders(rows: pd.DataFrame) -> bool:
 
 
 def _reversed_couple(rows: pd.DataFrame):
-    """The first two rows of a pair that are reverses, or None."""
+    """The first two rows of a pair that are reverses, or None.
+
+    The search stops at the first row whose reverse has already appeared and
+    pairs it with the earliest row of that reverse, so later rows are not
+    used. The both-orders branch passes only the decisive rows.
+    """
     seen = {}
     for position, (a, b) in enumerate(zip(rows["option_a"], rows["option_b"])):
         if (b, a) in seen:
@@ -866,6 +879,13 @@ def _both_orders_result(data: pd.DataFrame, n_both_orders: int) -> PositionBias:
     A flip has a direction. If the judge picked whatever was in front of it
     in both presentations, that is position. If the flips split evenly across
     the two positions, the judge is unsteady and that is a different fault.
+
+    Each pair is scored on its first two decisive judgements that are
+    reverses. Its ties are set aside before that couple is looked for, so a
+    pair judged more than once in an order is not dropped for a tie in its
+    first couple when a later couple has none. A pair judged once in each
+    order is scored on those two judgements, or not at all if either is a
+    tie.
     """
     n_consistent = 0
     n_scored = 0
@@ -873,8 +893,10 @@ def _both_orders_result(data: pd.DataFrame, n_both_orders: int) -> PositionBias:
     n_first = 0
 
     for _, rows in data.groupby("pair_id", sort=False):
-        couple = _reversed_couple(rows)
-        if couple is None or couple["winner"].isna().any():
+        # Ties go before the couple is formed, so a tied early couple cannot
+        # hide a decisive later one.
+        couple = _reversed_couple(rows[rows["winner"].notna()])
+        if couple is None:
             continue
 
         n_scored += 1
