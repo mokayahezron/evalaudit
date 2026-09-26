@@ -5149,6 +5149,534 @@ def test_baseline_refuses_an_item_in_two_clusters():
 
 
 # --------------------------------------------------------------------------
+# judge_validation against a human baseline, missing ids
+#
+# Written before the code. A missing value, meaning anything pd.isna() is
+# true for, is refused in the item_id, cluster_id and rater_id columns of
+# the baseline and in item_ids. Every row is checked, rated or not. A
+# missing rating is still allowed, since it is no label. The checks run in
+# the order item_id, cluster_id, rater_id, item_ids, and the first with a
+# missing value refuses. The message gives how many are missing, out of how
+# many rows or positions, and where the first one is. In the frame that is
+# its index label, printed with !r. In item_ids it is the position,
+# counting from 0.
+#
+# Every check on the baseline, these and the older ones, runs before the
+# headline bootstrap. A bad frame is refused before anything is resampled.
+#
+# The fixture's columns hold pandas strings, which turn None and pd.NA into
+# NaN. with_missing makes a column hold plain objects before it places a
+# value, so the value placed is the value the package sees.
+# --------------------------------------------------------------------------
+
+WHY_AN_ITEM_ID = (
+    "Every row needs one, since item_id is how a rating finds the judge's "
+    "label and the other humans on its item."
+)
+WHY_A_CLUSTER_ID = (
+    "Every row needs one, since the interval resamples whole clusters."
+)
+WHY_A_RATER_ID = (
+    "Every row needs one, since without it one rater counted twice on an item "
+    "cannot be caught."
+)
+WHY_AN_ID_IN_ITEM_IDS = (
+    "Every position needs one, since the judge's label on a baseline item is "
+    "found by its id."
+)
+
+MISSING_VALUES = [
+    pytest.param(np.nan, id="nan"),
+    pytest.param(None, id="None"),
+    pytest.param(pd.NA, id="NA"),
+]
+
+
+def baseline_refusal(human, judge, item_ids, baseline):
+    """The message judge_validation refuses this baseline with."""
+    with pytest.raises(ValueError) as excinfo:
+        judge_validation(
+            human, judge, item_ids=item_ids, human_baseline=baseline,
+            ties="category",
+        )
+    return str(excinfo.value)
+
+
+def fourth_human_call():
+    """The four arguments of a call on judge_like_a_fourth_human that runs."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    return human, judge, item_ids, frame
+
+
+def with_missing(frame, column, labels, value):
+    """A copy of frame with value in column at each index label.
+
+    The column is made to hold plain objects first, so the value placed is
+    the value the package sees.
+    """
+    frame = frame.astype({column: object})
+    frame.loc[labels, column] = value
+    return frame
+
+
+def call_with_no_item_id(labels):
+    """judge_like_a_fourth_human with None for item_id at these index
+    labels."""
+    human, judge, item_ids, frame = fourth_human_call()
+    return human, judge, item_ids, with_missing(frame, "item_id", labels, None)
+
+
+def call_with_no_cluster_id(labels, value):
+    """judge_like_a_fourth_human with value for cluster_id at these index
+    labels."""
+    human, judge, item_ids, frame = fourth_human_call()
+    return (
+        human, judge, item_ids,
+        with_missing(frame, "cluster_id", labels, value),
+    )
+
+
+def call_with_no_rater_id(labels):
+    """judge_like_a_fourth_human in reverse row order with its index kept,
+    and NaN for rater_id at these index labels.
+
+    The row at index 7 sits at position 424, so a label and a position
+    cannot be mistaken for each other. The first missing rater_id in row
+    order is the one with the highest label.
+    """
+    human, judge, item_ids, frame = fourth_human_call()
+    reversed_rows = frame.iloc[::-1]
+    return (
+        human, judge, item_ids,
+        with_missing(reversed_rows, "rater_id", labels, np.nan),
+    )
+
+
+def call_with_no_id_in_item_ids(positions):
+    """judge_like_a_fourth_human with None in item_ids at these positions.
+
+    The items those positions named leave the baseline, so every baseline
+    item is still named in item_ids and the missing ids are the only
+    defect.
+    """
+    human, judge, item_ids, frame = fourth_human_call()
+    item_ids = item_ids.copy()
+    gone = set(item_ids[positions])
+    item_ids[positions] = None
+    baseline = frame[~frame["item_id"].isin(gone)].reset_index(drop=True)
+    return human, judge, item_ids, baseline
+
+
+def call_with_no_id_in_integer_item_ids(positions, value):
+    """call_with_no_id_in_item_ids with integer ids, where i5 becomes 5, and
+    value in item_ids at these positions.
+
+    pandas turns None and pd.NA into NaN in an index of strings and keeps
+    them as they are in an index of integers. Integer ids are how each of
+    the three missing values reaches the package as itself.
+    """
+    human, judge, item_ids, frame = fourth_human_call()
+    item_ids = np.array([int(i[1:]) for i in item_ids], dtype=object)
+    frame = frame.assign(item_id=frame["item_id"].str[1:].astype(int))
+    gone = set(item_ids[positions])
+    item_ids[positions] = value
+    baseline = frame[~frame["item_id"].isin(gone)].reset_index(drop=True)
+    return human, judge, item_ids, baseline
+
+
+def test_baseline_refuses_a_row_with_no_item_id():
+    human, judge, item_ids, frame = call_with_no_item_id([4])
+    assert frame.loc[4, "item_id"] is None
+    assert (len(frame), int(frame["item_id"].isna().sum())) == (432, 1)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no item_id in 1 of 432 rows, at index 4. "
+        + WHY_AN_ITEM_ID
+    )
+
+
+def test_baseline_refuses_rows_with_no_item_id():
+    human, judge, item_ids, frame = call_with_no_item_id([4, 30])
+    assert list(frame.index[frame["item_id"].isna()]) == [4, 30]
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no item_id in 2 of 432 rows, the first at index 4. "
+        + WHY_AN_ITEM_ID
+    )
+
+
+@pytest.mark.parametrize("missing", MISSING_VALUES)
+def test_baseline_refuses_a_row_with_no_cluster_id(missing):
+    """Row 17 is i5's third row, so no rule reads its cluster_id first."""
+    human, judge, item_ids, frame = call_with_no_cluster_id([17], missing)
+    assert list(frame.index[frame["item_id"] == "i5"]) == [15, 16, 17]
+    assert type(frame.loc[17, "cluster_id"]) is type(missing)
+    assert (len(frame), int(frame["cluster_id"].isna().sum())) == (432, 1)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no cluster_id in 1 of 432 rows, at index 17. "
+        + WHY_A_CLUSTER_ID
+    )
+
+
+@pytest.mark.parametrize("missing", MISSING_VALUES)
+def test_baseline_refuses_rows_with_no_cluster_id(missing):
+    human, judge, item_ids, frame = call_with_no_cluster_id([17, 40], missing)
+    assert type(frame.loc[40, "cluster_id"]) is type(missing)
+    assert list(frame.index[frame["cluster_id"].isna()]) == [17, 40]
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no cluster_id in 2 of 432 rows, the first at "
+        "index 17. " + WHY_A_CLUSTER_ID
+    )
+
+
+def test_baseline_refuses_a_missing_cluster_id_on_an_items_first_row():
+    """i0 keeps two rows, h0's at index 0 and h1's at index 1, and only
+    h1's carries a cluster_id. An item takes its cluster from its first row
+    that remains, which here has none.
+
+    np.bincount raises ValueError of its own on a negative cluster code, so
+    a bare pytest.raises(ValueError) would pass without this refusal. The
+    whole message is compared for that reason.
+    """
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    dropped = (frame["item_id"] == "i0") & (frame["rater_id"] == "h2")
+    frame = frame[~dropped].reset_index(drop=True)
+    frame.loc[0, "cluster_id"] = np.nan
+    first_item = frame[frame["item_id"] == "i0"]
+    assert list(first_item.index) == [0, 1]
+    assert first_item["cluster_id"].isna().tolist() == [True, False]
+    assert (len(frame), int(frame["cluster_id"].isna().sum())) == (431, 1)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no cluster_id in 1 of 431 rows, at index 0. "
+        + WHY_A_CLUSTER_ID
+    )
+
+
+def test_baseline_refuses_a_missing_cluster_id_on_an_items_second_row():
+    """The same item as the test above, with the cluster_id missing from
+    h1's row at index 1 and present on h0's row at index 0."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    dropped = (frame["item_id"] == "i0") & (frame["rater_id"] == "h2")
+    frame = frame[~dropped].reset_index(drop=True)
+    frame.loc[1, "cluster_id"] = np.nan
+    first_item = frame[frame["item_id"] == "i0"]
+    assert list(first_item.index) == [0, 1]
+    assert first_item["cluster_id"].isna().tolist() == [False, True]
+    assert (len(frame), int(frame["cluster_id"].isna().sum())) == (431, 1)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no cluster_id in 1 of 431 rows, at index 1. "
+        + WHY_A_CLUSTER_ID
+    )
+
+
+def test_baseline_refuses_a_row_with_no_rater_id():
+    human, judge, item_ids, frame = call_with_no_rater_id([7])
+    assert frame.index.get_loc(7) == 424
+    assert (len(frame), int(frame["rater_id"].isna().sum())) == (432, 1)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no rater_id in 1 of 432 rows, at index 7. "
+        + WHY_A_RATER_ID
+    )
+
+
+def test_baseline_refuses_rows_with_no_rater_id():
+    """Both missing rater_ids are on i2. Counted as one rater named NaN,
+    they would read as that rater grading i2 twice. Index 8 comes before
+    index 7 in the frame's row order, so 8 is the first."""
+    human, judge, item_ids, frame = call_with_no_rater_id([7, 8])
+    assert frame.loc[[7, 8], "item_id"].tolist() == ["i2", "i2"]
+    assert frame.index.get_loc(8) < frame.index.get_loc(7)
+    assert int(frame["rater_id"].isna().sum()) == 2
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no rater_id in 2 of 432 rows, the first at index "
+        "8. " + WHY_A_RATER_ID
+    )
+
+
+@pytest.mark.parametrize("column, message", [
+    pytest.param(
+        "item_id",
+        "human_baseline has no item_id in 1 of 432 rows, at index 7. "
+        + WHY_AN_ITEM_ID,
+        id="item_id",
+    ),
+    pytest.param(
+        "cluster_id",
+        "human_baseline has no cluster_id in 1 of 432 rows, at index 7. "
+        + WHY_A_CLUSTER_ID,
+        id="cluster_id",
+    ),
+    pytest.param(
+        "rater_id",
+        "human_baseline has no rater_id in 1 of 432 rows, at index 7. "
+        + WHY_A_RATER_ID,
+        id="rater_id",
+    ),
+])
+def test_baseline_refuses_a_missing_id_on_a_row_with_no_rating(column, message):
+    """A row with no rating is no label, and it still needs its ids. Index 7
+    is h1's row on i2. It is the only row with no rating and the only row
+    missing the id, so a check that read only rated rows would pass the
+    frame."""
+    human, judge, item_ids, frame = fourth_human_call()
+    assert frame.loc[7, ["item_id", "cluster_id", "rater_id"]].tolist() == [
+        "i2", "c0", "h1"
+    ]
+    frame.loc[7, ["rating", column]] = np.nan
+    assert list(frame.index[frame["rating"].isna()]) == [7]
+    assert list(frame.index[frame[column].isna()]) == [7]
+
+    assert baseline_refusal(human, judge, item_ids, frame) == message
+
+
+def test_baseline_refuses_item_ids_with_a_missing_id():
+    human, judge, item_ids, frame = call_with_no_id_in_item_ids([5])
+    assert item_ids[5] is None
+    assert sum(i is None for i in item_ids) == 1
+    assert set(frame["item_id"]) <= set(item_ids)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "item_ids has no id in 1 of 144 positions, at position 5 counting "
+        "from 0. " + WHY_AN_ID_IN_ITEM_IDS
+    )
+
+
+def test_baseline_refuses_item_ids_with_missing_ids():
+    """Two missing ids are also a repeated value in item_ids, and the
+    missing id is the refusal that names the cause."""
+    human, judge, item_ids, frame = call_with_no_id_in_item_ids([5, 9])
+    assert [p for p, i in enumerate(item_ids) if i is None] == [5, 9]
+    assert set(frame["item_id"]) <= set(item_ids)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "item_ids has no id in 2 of 144 positions, the first at position 5 "
+        "counting from 0. " + WHY_AN_ID_IN_ITEM_IDS
+    )
+
+
+@pytest.mark.parametrize("missing", MISSING_VALUES)
+def test_baseline_refuses_integer_item_ids_with_a_missing_id(missing):
+    human, judge, item_ids, frame = call_with_no_id_in_integer_item_ids(
+        [5], missing
+    )
+    assert type(item_ids[5]) is type(missing)
+    assert int(pd.isna(item_ids).sum()) == 1
+    assert set(frame["item_id"]) <= set(item_ids)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "item_ids has no id in 1 of 144 positions, at position 5 counting "
+        "from 0. " + WHY_AN_ID_IN_ITEM_IDS
+    )
+
+
+@pytest.mark.parametrize("missing", MISSING_VALUES)
+def test_baseline_refuses_integer_item_ids_with_missing_ids(missing):
+    human, judge, item_ids, frame = call_with_no_id_in_integer_item_ids(
+        [5, 9], missing
+    )
+    assert type(item_ids[5]) is type(missing)
+    assert type(item_ids[9]) is type(missing)
+    assert list(np.flatnonzero(pd.isna(item_ids))) == [5, 9]
+    assert set(frame["item_id"]) <= set(item_ids)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "item_ids has no id in 2 of 144 positions, the first at position 5 "
+        "counting from 0. " + WHY_AN_ID_IN_ITEM_IDS
+    )
+
+
+def test_baseline_refuses_a_missing_item_id_before_a_missing_id_in_item_ids():
+    """i7 leaves the baseline and item_ids has NaN where it named i7. The
+    row at index 4 has NaN for item_id. pandas matches the two NaNs, so
+    without the check on item_id that row would find a judge label at
+    position 7."""
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    item_ids = item_ids.copy()
+    item_ids[7] = np.nan
+    frame = frame[frame["item_id"] != "i7"].astype({"item_id": object})
+    frame.loc[4, "item_id"] = np.nan
+    assert pd.Index(item_ids).get_indexer(frame["item_id"])[4] == 7
+    assert (len(frame), int(frame["item_id"].isna().sum())) == (429, 1)
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no item_id in 1 of 429 rows, at index 4. "
+        + WHY_AN_ITEM_ID
+    )
+
+
+def test_baseline_counts_one_row_in_the_singular():
+    human, judge, item_ids, frame = call_with_no_cluster_id([0], np.nan)
+    frame = frame.iloc[:1]
+    assert len(frame) == 1
+
+    assert baseline_refusal(human, judge, item_ids, frame) == (
+        "human_baseline has no cluster_id in 1 of 1 row, at index 0. "
+        + WHY_A_CLUSTER_ID
+    )
+
+
+# The order. Each call below is refused by a check on the baseline, and the
+# headline bootstrap is replaced by one that fails the test if it runs.
+
+
+def call_not_a_frame():
+    human, judge, item_ids, frame = fourth_human_call()
+    return human, judge, item_ids, frame.to_dict("list")
+
+
+def call_missing_columns():
+    human, judge, item_ids, frame = fourth_human_call()
+    return human, judge, item_ids, frame.drop(columns=["rater_id", "cluster_id"])
+
+
+def call_on_an_empty_frame():
+    human, judge, item_ids, frame = fourth_human_call()
+    return human, judge, item_ids, frame.iloc[:0]
+
+
+def call_with_an_item_in_two_clusters():
+    frame, judge_labels = items_in_two_clusters()
+    human, judge, item_ids = headline_inputs(frame, judge_labels)
+    return human, judge, item_ids, frame
+
+
+def call_with_item_ids_too_long():
+    human, judge, item_ids, frame = fourth_human_call()
+    return human, judge, np.append(item_ids, "i999"), frame
+
+
+def call_with_a_repeated_item_id():
+    human, judge, item_ids, frame = fourth_human_call()
+    item_ids = item_ids.copy()
+    item_ids[5] = item_ids[3]
+    return (
+        human, judge, item_ids,
+        frame[frame["item_id"] != "i5"].reset_index(drop=True),
+    )
+
+
+def call_with_an_item_that_item_ids_does_not_name():
+    frame, judge_labels = judge_like_a_fourth_human()
+    human, judge, item_ids = headline_inputs(
+        frame, judge_labels.drop(["i5", "i9"])
+    )
+    return human, judge, item_ids, frame
+
+
+def call_with_a_rater_grading_one_item_twice():
+    human, judge, item_ids, frame = fourth_human_call()
+    repeat = frame[(frame["item_id"] == "i0") & (frame["rater_id"] == "h1")]
+    return (
+        human, judge, item_ids,
+        pd.concat([frame, repeat], ignore_index=True),
+    )
+
+
+BASELINE_REFUSALS = [
+    pytest.param(
+        call_not_a_frame,
+        "human_baseline must be a pandas DataFrame",
+        id="not a frame",
+    ),
+    pytest.param(
+        call_missing_columns,
+        "human_baseline is missing required column(s): cluster_id, rater_id. "
+        "Expected item_id, cluster_id, rater_id, rating, where cluster_id "
+        "groups items that are not independent of each other.",
+        id="missing columns",
+    ),
+    pytest.param(
+        call_on_an_empty_frame,
+        "human_baseline must not be empty",
+        id="empty",
+    ),
+    pytest.param(
+        call_with_an_item_in_two_clusters,
+        "human_baseline puts item 'i8' in more than one cluster. The interval "
+        "resamples whole clusters, so every row for an item needs the same "
+        "cluster_id.",
+        id="item in two clusters",
+    ),
+    pytest.param(
+        call_with_item_ids_too_long,
+        "item_ids must be the same length as human and judge, got 145 and 144",
+        id="item_ids wrong length",
+    ),
+    pytest.param(
+        call_with_a_repeated_item_id,
+        "item_ids must name each item once, got 'i3' more than once. The "
+        "judge's label on a baseline item is found by its id.",
+        id="repeated item_id",
+    ),
+    pytest.param(
+        call_with_an_item_that_item_ids_does_not_name,
+        "human_baseline names item 'i5', and item_ids does not. The usual "
+        "cause is ids of different types, such as 5 in one and '5' in the "
+        "other. An item the judge never graded still goes in item_ids, with "
+        "no judge label.",
+        id="item not in item_ids",
+    ),
+    pytest.param(
+        call_with_a_rater_grading_one_item_twice,
+        "human_baseline has duplicate rater/item pairs, starting with item "
+        "'i0' rated twice by 'h1'. Two rows for one rater on one item count "
+        "that rater twice. Keep one row per rater and item.",
+        id="rater grades an item twice",
+    ),
+    pytest.param(
+        lambda: call_with_no_item_id([4]),
+        "human_baseline has no item_id in 1 of 432 rows, at index 4. "
+        + WHY_AN_ITEM_ID,
+        id="no item_id",
+    ),
+    pytest.param(
+        lambda: call_with_no_cluster_id([17], pd.NA),
+        "human_baseline has no cluster_id in 1 of 432 rows, at index 17. "
+        + WHY_A_CLUSTER_ID,
+        id="no cluster_id",
+    ),
+    pytest.param(
+        lambda: call_with_no_rater_id([7]),
+        "human_baseline has no rater_id in 1 of 432 rows, at index 7. "
+        + WHY_A_RATER_ID,
+        id="no rater_id",
+    ),
+    pytest.param(
+        lambda: call_with_no_id_in_item_ids([5]),
+        "item_ids has no id in 1 of 144 positions, at position 5 counting "
+        "from 0. " + WHY_AN_ID_IN_ITEM_IDS,
+        id="no id in item_ids",
+    ),
+]
+
+
+def no_headline_bootstrap(*args, **kwargs):
+    raise AssertionError(
+        "the headline bootstrap ran before the baseline was checked"
+    )
+
+
+@pytest.mark.parametrize("build, message", BASELINE_REFUSALS)
+def test_baseline_is_checked_before_anything_is_resampled(
+    build, message, monkeypatch
+):
+    call = build()
+    monkeypatch.setattr("evalaudit.judge._bootstrap", no_headline_bootstrap)
+
+    assert baseline_refusal(*call) == message
+
+
+# --------------------------------------------------------------------------
 # Counts of one
 #
 # A count of one takes the singular noun, and a sentence that goes on about

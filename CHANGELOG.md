@@ -47,7 +47,10 @@ v0.4.0 tag and against this tree.
   human judgements the figures reproduce `analysis/mt-bench.md` to the third
   decimal. The new arguments are refused, each with its own message, in the
   combinations that cannot work, such as `ties` or `item_ids` without a
-  baseline.
+  baseline. Missing values in `item_id`, `cluster_id`, `rater_id` or
+  `item_ids` are refused, and the message names the column, the count and
+  where the first one is. Every check on the baseline runs before anything
+  is resampled.
 
 - `JudgeValidation.n_dropped_ties`, `JudgeValidation.ties`, eleven fields
   that start with `baseline_`, and the properties `has_baseline` and
