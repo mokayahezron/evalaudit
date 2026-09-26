@@ -28,6 +28,7 @@ from ._types import (
     JudgeValidation,
     LengthBias,
     PositionBias,
+    _plural,
 )
 from .agreement import (
     _LEVELS,
@@ -44,6 +45,25 @@ __all__ = ["judge_validation", "position_bias", "length_bias"]
 _COMPARISON_COLUMNS = ("pair_id", "option_a", "option_b", "winner")
 _BASELINE_COLUMNS = ("item_id", "cluster_id", "rater_id", "rating")
 _TIE_CODINGS = ("category", "drop")
+
+# Why each id has to be there, for the refusal when one is missing.
+_WHY_AN_ID = {
+    "item_id": (
+        "Every row needs one, since item_id is how a rating finds the judge's "
+        "label and the other humans on its item."
+    ),
+    "cluster_id": (
+        "Every row needs one, since the interval resamples whole clusters."
+    ),
+    "rater_id": (
+        "Every row needs one, since without it one rater counted twice on an "
+        "item cannot be caught."
+    ),
+}
+_WHY_AN_ID_IN_ITEM_IDS = (
+    "Every position needs one, since the judge's label on a baseline item is "
+    "found by its id."
+)
 
 # A pair counts as run in both orders when two of its rows are exact
 # reverses. The design is read as both-orders when at least this share of
@@ -112,9 +132,9 @@ def judge_validation(
         The id of the item at each position of ``human`` and ``judge``. It
         goes with ``human_baseline`` and is refused without one, because it
         is how the judge's label on each baseline item is found. Each id
-        appears once. Every item in the baseline has to be named here,
-        including items the judge never graded, which go in with no judge
-        label.
+        appears once, and none is missing. Every item in the baseline has to
+        be named here, including items the judge never graded, which go in
+        with no judge label.
     human_baseline
         A frame with ``item_id``, ``cluster_id``, ``rater_id`` and
         ``rating``, one row per human rating. Supplying it answers the
@@ -124,10 +144,11 @@ def judge_validation(
         interval on their difference. ``cluster_id`` groups items that are
         not independent of each other, such as comparisons that share a
         prompt, and the interval resamples whole clusters. Give every item
-        its own cluster when there is no such grouping. Every row for an
-        item has to carry the same ``cluster_id``, and the frame has to have
-        at least one row. A row with a missing rating is no label. Nominal
-        labels only for now.
+        its own cluster when there is no such grouping. Every row needs an
+        ``item_id``, a ``cluster_id`` and a ``rater_id``, whether or not it
+        carries a rating. Every row for an item has to carry the same
+        ``cluster_id``, and the frame has to have at least one row. A row
+        with a missing rating is no label. Nominal labels only for now.
     ties
         ``"category"`` or ``"drop"``, and required with ``human_baseline``.
         ``"category"`` keeps a tie as a label of its own, and ``"drop"`` sets
@@ -198,6 +219,13 @@ def judge_validation(
     if human_raw.size == 0:
         raise ValueError("human and judge must not be empty")
 
+    # Every check on the baseline runs here, so a bad frame is refused
+    # before anything is resampled.
+    if human_baseline is not None:
+        baseline_rows, baseline_ids = _checked_baseline(
+            human_baseline, item_ids, judge_raw.size
+        )
+
     if slices is None:
         slice_raw = None
     else:
@@ -237,7 +265,8 @@ def judge_validation(
     baseline = {}
     if human_baseline is not None:
         baseline = _baseline(
-            human_baseline, item_ids, judge_raw, ties, confidence, n_boot, seed
+            baseline_rows, baseline_ids, judge_raw, ties, confidence, n_boot,
+            seed,
         )
 
     return JudgeValidation(
@@ -315,20 +344,29 @@ def _one_tie_spelling(labels: np.ndarray) -> np.ndarray:
     return out
 
 
-def _baseline(frame, item_ids, judge, ties, confidence, n_boot, seed) -> dict:
-    """Judge-human and human-human alpha on the same items, and an interval
-    on their difference that resamples clusters.
+def _checked_baseline(frame, item_ids, n_positions):
+    """Every check on the baseline and item_ids, before anything is
+    resampled.
 
-    Returns the baseline fields of JudgeValidation. ``judge`` is the judge's
-    labels by position, with ties already spelled one way.
+    Returns the four baseline columns and item_ids as an index, for
+    _baseline. ``n_positions`` is the length of human and judge.
     """
     data = _clean_baseline(frame)
     ids = pd.Index(np.asarray(list(item_ids), dtype=object))
-    if ids.size != judge.size:
+    if ids.size != n_positions:
         raise ValueError(
             f"item_ids must be the same length as human and judge, got "
-            f"{ids.size} and {judge.size}"
+            f"{ids.size} and {n_positions}"
         )
+    # Before the repeat check, which would call two missing ids one id
+    # named twice.
+    missing = ids.isna()
+    if missing.any():
+        first = int(np.flatnonzero(missing)[0])
+        raise ValueError(_no_id(
+            "item_ids has no id", missing, "position",
+            f"position {first} counting from 0", _WHY_AN_ID_IN_ITEM_IDS,
+        ))
     repeated = ids.duplicated()
     if repeated.any():
         raise ValueError(
@@ -347,12 +385,7 @@ def _baseline(frame, item_ids, judge, ties, confidence, n_boot, seed) -> dict:
             f"goes in item_ids, with no judge label."
         )
 
-    rating = data["rating"].astype(object)
-    present = rating.notna().to_numpy()
-    tie = _ties_in(rating.to_numpy())
-    rating = rating.where(~tie, _TIE)
-
-    rated = data[present]
+    rated = data[data["rating"].notna()]
     repeat = rated.duplicated(subset=["item_id", "rater_id"])
     if repeat.any():
         first = rated[repeat].iloc[0]
@@ -362,6 +395,30 @@ def _baseline(frame, item_ids, judge, ties, confidence, n_boot, seed) -> dict:
             f"Two rows for one rater on one item count that rater twice. Keep "
             f"one row per rater and item."
         )
+    return data, ids
+
+
+def _no_id(opening, missing, noun, where, why) -> str:
+    """The refusal for missing ids. It says how many are missing, out of how
+    many, and where the first one is."""
+    k, n = int(missing.sum()), missing.size
+    first = "at" if k == 1 else "the first at"
+    return f"{opening} in {k} of {n} {_plural(noun, n)}, {first} {where}. {why}"
+
+
+def _baseline(data, ids, judge, ties, confidence, n_boot, seed) -> dict:
+    """Judge-human and human-human alpha on the same items, and an interval
+    on their difference that resamples clusters.
+
+    Returns the baseline fields of JudgeValidation. ``data`` and ``ids``
+    come from _checked_baseline. ``judge`` is the judge's labels by
+    position, with ties already spelled one way.
+    """
+    position = ids.get_indexer(data["item_id"])
+    rating = data["rating"].astype(object)
+    present = rating.notna().to_numpy()
+    tie = _ties_in(rating.to_numpy())
+    rating = rating.where(~tie, _TIE)
 
     # The three rules, by item and in order. Each item counts under the
     # first one it fails, so each later rule only sees what the earlier
@@ -447,9 +504,22 @@ def _clean_baseline(frame) -> pd.DataFrame:
             f"other."
         )
 
-    data = frame.loc[:, list(_BASELINE_COLUMNS)].reset_index(drop=True)
+    data = frame.loc[:, list(_BASELINE_COLUMNS)]
     if data.empty:
         raise ValueError("human_baseline must not be empty")
+
+    # groupby skips a missing id and factorize codes it -1, so past here one
+    # would be let through without a word or crash np.bincount. Every row is
+    # checked, rated or not, and the message gives the frame's own index
+    # label, which is what the caller sees when they print it.
+    for column in ("item_id", "cluster_id", "rater_id"):
+        missing = data[column].isna().to_numpy()
+        if missing.any():
+            label = data.index[missing].tolist()[0]
+            raise ValueError(_no_id(
+                f"human_baseline has no {column}", missing, "row",
+                f"index {label!r}", _WHY_AN_ID[column],
+            ))
 
     # The interval moves an item with its cluster, and an item in two
     # clusters has no one cluster to move with.
@@ -461,7 +531,7 @@ def _clean_baseline(frame) -> pd.DataFrame:
             f"cluster. The interval resamples whole clusters, so every row for "
             f"an item needs the same cluster_id."
         )
-    return data
+    return data.reset_index(drop=True)
 
 
 def _baseline_interval(judge_human, judge_cluster, human_human, human_cluster,
