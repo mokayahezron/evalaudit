@@ -1280,7 +1280,8 @@ class PositionBias:
         inverts the exact binomial test, so the verdict and the p-value
         printed beside it cannot disagree about a half. A Wilson interval
         here disagreed with that p-value in 188 of the 20,300 (n, k) cells up
-        to n=200, always on the permissive side.
+        to n=200, always on the permissive side. When nothing was scored
+        there is no interval, the summary prints none, and this is False.
         """
         if self.design == "both_orders":
             low, high = self.position_a_ci_low, self.position_a_ci_high
@@ -1291,9 +1292,15 @@ class PositionBias:
         return not (low <= 0.5 <= high)
 
     def summary(self) -> str:
+        # With nothing scored there is no rate, so there is no verdict and
+        # no count of ties left out of it.
         conf = f"{self.confidence * 100:.0f}%"
         if self.design == "both_orders":
+            if self.n_pairs_scored == 0:
+                return self._both_orders_unscored()
             return self._both_orders(conf) + self._ties()
+        if self.n_decisive == 0:
+            return self._randomised_unscored()
         return self._randomised(conf) + self._ties()
 
     def _randomised(self, conf: str) -> str:
@@ -1323,28 +1330,48 @@ class PositionBias:
             "cannot confirm. If the same system sat in position A each time, "
             "the same number appears when that system is simply better."
         )
+        return head + verdict + caveat + self._stray()
 
-        stray = ""
+    def _randomised_unscored(self) -> str:
+        return (
+            "Each pair was judged once, so this would report the position-A "
+            "win rate. Every judgement was a tie, so there is no rate to "
+            "report and nothing here tests position." + self._stray()
+        )
+
+    def _stray(self) -> str:
         n = self.n_both_orders
-        if n:
-            verb = "was" if n == 1 else "were"
-            stray = (
-                f" {n} {_plural('pair', n)} {verb} also run in the reverse "
-                f"order, too few to change which analysis applies."
-            )
-        return head + verdict + caveat + stray
+        if not n:
+            return ""
+        verb = "was" if n == 1 else "were"
+        return (
+            f" {n} {_plural('pair', n)} {verb} also run in the reverse "
+            f"order, too few to change which analysis applies."
+        )
 
-    def _both_orders(self, conf: str) -> str:
+    def _both_orders_opening(self, reports: str) -> str:
         # The verb follows the pairs run both ways and the noun follows all
         # the pairs, as in "1 of 2 pairs was run".
         were = "was" if self.n_both_orders == 1 else "were"
-        head = (
+        return (
             f"{self.n_both_orders} of {self.n_pairs} "
             f"{_plural('pair', self.n_pairs)} {were} run in both orders, so "
-            f"this reports the consistency rate. The judge named the same "
-            f"output under both orderings on {_pct(self.consistency_rate)} of "
-            f"{self.n_pairs_scored} {_plural('pair', self.n_pairs_scored)} "
-            f"({conf} CI: {_pct(self.ci_low)} to {_pct(self.ci_high)})."
+            f"this {reports} the consistency rate."
+        )
+
+    def _both_orders_unscored(self) -> str:
+        return self._both_orders_opening("would report") + (
+            " Every pair run both ways had a tie in at least one of its two "
+            "judgements, so no pair could be scored and there is no rate to "
+            "report. Nothing here tests position."
+        )
+
+    def _both_orders(self, conf: str) -> str:
+        head = self._both_orders_opening("reports") + (
+            f" The judge named the same output under both orderings on "
+            f"{_pct(self.consistency_rate)} of {self.n_pairs_scored} "
+            f"{_plural('pair', self.n_pairs_scored)} ({conf} CI: "
+            f"{_pct(self.ci_low)} to {_pct(self.ci_high)})."
         )
 
         if self.n_decisive == 0:

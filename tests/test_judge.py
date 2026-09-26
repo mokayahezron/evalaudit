@@ -1568,6 +1568,88 @@ def test_a_tied_judgement_removes_its_pair_from_the_consistency_rate():
 
 
 # --------------------------------------------------------------------------
+# position_bias with nothing to score
+#
+# When every judgement that could count is a tie there is no rate, no
+# interval and no verdict. The summary printed "nan%" and went on to a
+# verdict, so these compare the whole summary.
+# --------------------------------------------------------------------------
+
+def test_a_randomised_frame_of_ties_reports_no_rate():
+    """Three pairs judged once, each a tie. It said "Position A won nan% of
+    0 judgements" and then that the interval includes 50%, when there was
+    no interval."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "x", "y", None),
+            ("p1", "u", "v", None),
+            ("p2", "s", "t", None),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert r.design == "randomised"
+    assert np.isnan(r.estimate)
+    assert r.n_decisive == 0
+    assert not r.has_position_effect
+    assert r.summary() == (
+        "Each pair was judged once, so this would report the position-A win "
+        "rate. Every judgement was a tie, so there is no rate to report and "
+        "nothing here tests position."
+    )
+
+
+def test_a_randomised_frame_of_ties_still_counts_a_pair_run_in_reverse():
+    """Three pairs, every judgement a tie, and one pair also run in the
+    reverse order. One of three is under half, so the design stays
+    randomised, and the summary still mentions the pair run both ways."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "x", "y", None), ("p0", "y", "x", None),
+            ("p1", "u", "v", None),
+            ("p2", "s", "t", None),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert r.design == "randomised"
+    assert r.n_decisive == 0
+    assert r.n_both_orders == 1
+    assert r.summary() == (
+        "Each pair was judged once, so this would report the position-A win "
+        "rate. Every judgement was a tie, so there is no rate to report and "
+        "nothing here tests position. 1 pair was also run in the reverse "
+        "order, too few to change which analysis applies."
+    )
+
+
+def test_a_both_orders_frame_with_a_tie_in_every_pair_reports_no_rate():
+    """Two pairs run both ways, each with a tie on one side, and one pair
+    judged once with a winner. The single pair is set aside under this
+    design, so no pair is scored. It said "on nan% of 0 pairs" and "It never
+    flipped"."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "x", "y", "x"), ("p0", "y", "x", None),
+            ("p1", "u", "v", None), ("p1", "v", "u", "u"),
+            ("p2", "s", "t", "s"),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert r.design == "both_orders"
+    assert r.n_pairs_scored == 0
+    assert r.n_both_orders == 2
+    assert not r.has_position_effect
+    assert r.summary() == (
+        "2 of 3 pairs were run in both orders, so this would report the "
+        "consistency rate. Every pair run both ways had a tie in at least one "
+        "of its two judgements, so no pair could be scored and there is no "
+        "rate to report. Nothing here tests position."
+    )
+
+
+# --------------------------------------------------------------------------
 # position_bias input handling
 # --------------------------------------------------------------------------
 

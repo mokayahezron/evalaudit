@@ -723,6 +723,13 @@ def position_bias(
     randomised. If the same system sat in position A every time, a position-A
     win rate above a half is exactly what a better system produces, and the
     summary says so.
+
+    Some frames leave nothing to score. In the randomised design that is a
+    frame where every judgement is a tie. In the both-orders design it is a
+    frame where every pair run both ways has a tie in at least one of its two
+    judgements. The rates, intervals and p-value are then NaN, and the
+    summary says there is no rate to report. It gives no verdict and does
+    not count the ties.
     """
     data = _clean_comparisons(comparisons)
     design, n_both_orders = _detect_design(data)

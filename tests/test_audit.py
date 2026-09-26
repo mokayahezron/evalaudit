@@ -1884,6 +1884,80 @@ def test_a_defined_low_judge_agreement_keeps_the_threshold_title(judge_poor):
 
 
 # --------------------------------------------------------------------------
+# Position bias with nothing to score is undefined
+# --------------------------------------------------------------------------
+
+POSITION_UNDEFINED_TITLE = "Position bias is undefined on this data"
+POSITION_UNDEFINED_LEAD = (
+    "This asks whether the judge is reading position rather than quality, "
+    "and this data gives nothing to measure it on."
+)
+POSITION_UNDEFINED_ACTION = (
+    "Until the judge picks a side on some pairs, the eval has not shown "
+    "whether position moves it. If it calls most pairs a tie, check whether "
+    "the rubric makes a tie too easy an answer."
+)
+
+
+@pytest.fixture
+def comparisons_all_ties():
+    """Three pairs judged once, each a tie. Nothing to count."""
+    return pd.DataFrame(
+        [("p0", "x", "y", None), ("p1", "u", "v", None),
+         ("p2", "s", "t", None)],
+        columns=["pair_id", "option_a", "option_b", "winner"],
+    )
+
+
+@pytest.fixture
+def comparisons_tie_in_every_couple():
+    """Two pairs run both ways, each with a tie on one side, and one pair
+    judged once with a winner, which the both-orders design sets aside."""
+    return pd.DataFrame(
+        [("p0", "x", "y", "x"), ("p0", "y", "x", None),
+         ("p1", "u", "v", None), ("p1", "v", "u", "u"),
+         ("p2", "s", "t", "s")],
+        columns=["pair_id", "option_a", "option_b", "winner"],
+    )
+
+
+def test_a_randomised_frame_of_ties_is_undefined(comparisons_all_ties):
+    """It was the info finding saying the data cannot show a position
+    effect, a verdict on no data."""
+    f = _one(audit(comparisons=comparisons_all_ties, config={"seed": 1}),
+             "position")
+    assert f.result.design == "randomised"
+    assert f.severity == "warning"
+    assert f.title == POSITION_UNDEFINED_TITLE
+    assert f.detail == (
+        f"{POSITION_UNDEFINED_LEAD} Each pair was judged once, so this would "
+        f"report the position-A win rate. Every judgement was a tie, so there "
+        f"is no rate to report and nothing here tests position. "
+        f"{POSITION_UNDEFINED_ACTION}"
+    )
+
+
+def test_a_both_orders_frame_with_nothing_scored_is_undefined(
+    comparisons_tie_in_every_couple
+):
+    """It was the same info finding, on a frame where no pair was scored."""
+    f = _one(
+        audit(comparisons=comparisons_tie_in_every_couple, config={"seed": 1}),
+        "position",
+    )
+    assert f.result.design == "both_orders"
+    assert f.severity == "warning"
+    assert f.title == POSITION_UNDEFINED_TITLE
+    assert f.detail == (
+        f"{POSITION_UNDEFINED_LEAD} 2 of 3 pairs were run in both orders, so "
+        f"this would report the consistency rate. Every pair run both ways "
+        f"had a tie in at least one of its two judgements, so no pair could "
+        f"be scored and there is no rate to report. Nothing here tests "
+        f"position. {POSITION_UNDEFINED_ACTION}"
+    )
+
+
+# --------------------------------------------------------------------------
 # Agreement and judge verdicts read the interval
 #
 # The threshold decision comes from whether the interval on alpha clears the

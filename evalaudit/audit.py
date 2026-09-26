@@ -948,6 +948,25 @@ def _position_finding(comparisons, cfg: AuditConfig):
 
     result = position_bias(comparisons, seed=cfg.seed)
 
+    # Nothing scored holds in both designs, since the randomised branch
+    # counts each decisive judgement as a scored pair.
+    if result.n_pairs_scored == 0:
+        return Finding(
+            check="position",
+            severity="warning",
+            title="Position bias is undefined on this data",
+            detail=_detail(
+                "This asks whether the judge is reading position rather than "
+                "quality, and this data gives nothing to measure it on.",
+                result,
+                "Until the judge picks a side on some pairs, the eval has not "
+                "shown whether position moves it. If it calls most pairs a "
+                "tie, check whether the rubric makes a tie too easy an "
+                "answer.",
+            ),
+            result=result,
+        )
+
     if result.has_position_effect:
         return Finding(
             check="position",
