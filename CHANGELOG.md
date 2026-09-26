@@ -17,10 +17,11 @@ the published wheels and the commit each wheel matches.
 ## [Unreleased]
 
 `judge_validation` can now measure the judge against a second human. The
-rest is text. Several printed sentences change, most of them for hyphens and
-plurals, and no number does. Anything that matches on the old sentences will
-stop matching. Every entry was checked by running the same calls against the
-v0.4.0 tag and against this tree.
+rest is text, apart from one `audit` finding that changes severity. Several
+printed sentences change, most of them for hyphens and plurals, and no
+number does. Anything that matches on the old sentences will stop matching.
+Every entry was checked by running the same calls against the v0.4.0 tag
+and against this tree.
 
 ### Changed
 
@@ -142,6 +143,35 @@ v0.4.0 tag and against this tree.
   - The `ValueError` from `detectable_effect` and `min_sample_size` when
     power does not exceed alpha. "A two sided test" now reads "A two-sided
     test".
+
+- **Breaking.** `PositionBias.summary()` printed a rate, an interval and a
+  verdict when nothing could be scored.
+
+  - Randomised design. On three pairs judged once, each a tie, it printed
+    "Each pair was judged once, so this reports the position-A win rate.
+    Position A won nan% of 0 judgements (95% CI: nan% to nan%, exact
+    binomial p=nan). The interval includes 50%, so the data cannot show
+    that position moved the judge." and went on to the caveat about
+    randomised order. It now reads "Each pair was judged once, so this
+    would report the position-A win rate. Every judgement was a tie, so
+    there is no rate to report and nothing here tests position."
+  - Both orders. On two pairs run both ways, each with a tie on one side,
+    and one pair judged once, it printed "2 of 3 pairs were run in both
+    orders, so this reports the consistency rate. The judge named the same
+    output under both orderings on nan% of 0 pairs (95% CI: nan% to nan%).
+    It never flipped, so there is no direction to test and nothing here
+    points at position." It now reads "2 of 3 pairs were run in both
+    orders, so this would report the consistency rate. Every pair run both
+    ways had a tie in at least one of its two judgements, so no pair could
+    be scored and there is no rate to report. Nothing here tests position."
+
+  The randomised summary ended "3 judgements were ties and are left out of
+  the rates above." and the both-orders one ended the same way with 2.
+  There are no rates for the ties to be left out of, so that sentence is
+  gone from both. The `audit` position finding on this data was an info
+  finding titled "The data cannot show a position effect in the pairwise
+  judgements". It is now a warning titled "Position bias is undefined on
+  this data", and it carries the new summary.
 
 - The `rater_agreement` docstring said that without an interval nothing in
   the result would name an outlier rater. Since 0.4.0 the summary lists
