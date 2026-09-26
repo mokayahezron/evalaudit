@@ -1643,9 +1643,113 @@ def test_a_both_orders_frame_with_a_tie_in_every_pair_reports_no_rate():
     assert not r.has_position_effect
     assert r.summary() == (
         "2 of 3 pairs were run in both orders, so this would report the "
-        "consistency rate. Every pair run both ways had a tie in at least one "
-        "of its two judgements, so no pair could be scored and there is no "
-        "rate to report. Nothing here tests position."
+        "consistency rate. In every pair run both ways, the judge called a "
+        "tie every time in at least one of the two orders, so no pair could "
+        "be scored and there is no rate to report. Nothing here tests "
+        "position."
+    )
+
+
+# --------------------------------------------------------------------------
+# position_bias on a pair judged more than once in an order
+#
+# A pair's ties are set aside before its couple is formed, so it is scored
+# on its first two remaining judgements that are reverses. The couple used
+# to be formed first and the pair skipped if either side was a tie, which
+# dropped a pair with a tied first couple and a decisive later one.
+# --------------------------------------------------------------------------
+
+def test_a_tied_first_couple_does_not_hide_a_decisive_later_one():
+    """x/y tie, y/x tie, then x/y and y/x both name x. The pair was
+    skipped, and the summary said it had a tie in one of its two
+    judgements. It had four, and the last two decide it."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "x", "y", None), ("p0", "y", "x", None),
+            ("p0", "x", "y", "x"), ("p0", "y", "x", "x"),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert r.design == "both_orders"
+    assert r.n_pairs_scored == 1
+    assert r.consistency_rate == 1.0
+    assert r.n_ties == 2
+    assert r.summary() == (
+        "1 of 1 pair was run in both orders, so this reports the consistency "
+        "rate. The judge named the same output under both orderings on "
+        "100.0% of 1 pair (95% CI: 20.7% to 100.0%). It never flipped, so "
+        "there is no direction to test and nothing here points at position. "
+        "2 judgements were ties and are left out of the rates above."
+    )
+
+
+def test_a_pair_scored_on_a_later_couple_changes_the_figures():
+    """Two ordinary consistent pairs, and a third whose first reversed
+    couple is two ties and whose next couple flips to the output shown
+    first. The old rule scored 2 pairs at 100.0% and said it never
+    flipped."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "u", "v", "u"), ("p0", "v", "u", "u"),
+            ("p1", "s", "t", "t"), ("p1", "t", "s", "t"),
+            ("p2", "x", "y", None), ("p2", "y", "x", None),
+            ("p2", "x", "y", "x"), ("p2", "y", "x", "y"),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert r.n_pairs_scored == 3
+    assert r.n_decisive == 1
+    assert r.summary() == (
+        "3 of 3 pairs were run in both orders, so this reports the "
+        "consistency rate. The judge named the same output under both "
+        "orderings on 66.7% of 3 pairs (95% CI: 20.8% to 93.9%). Of the 1 "
+        "pair it flipped on, 1 went to whichever output was shown first "
+        "(100.0%, 95% CI: 2.5% to 100.0%, exact binomial p=1.0000). That "
+        "share is not clear of 50% at this many flips, so the data cannot "
+        "show that the flips have a direction. That does not mean the judge "
+        "is free of position bias. Inconsistency is its own problem and does "
+        "not become position bias without a direction. 2 judgements were "
+        "ties and are left out of the rates above."
+    )
+
+
+def test_a_pair_judged_twice_each_way_is_scored_on_its_first_couple():
+    """No ties. The first couple names x both times and the second flips.
+    Only the first couple counts, so the pair is consistent."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "x", "y", "x"), ("p0", "y", "x", "x"),
+            ("p0", "x", "y", "x"), ("p0", "y", "x", "y"),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert r.n_pairs_scored == 1
+    assert r.consistency_rate == 1.0
+    assert r.n_decisive == 0
+
+
+def test_a_pair_tied_every_time_in_one_order_stays_unscored():
+    """Twice in each order, and every y/x judgement a tie. Setting the
+    ties aside leaves no couple, so the pair cannot be scored."""
+    frame = pd.DataFrame(
+        [
+            ("p0", "x", "y", "x"), ("p0", "y", "x", None),
+            ("p0", "x", "y", "x"), ("p0", "y", "x", None),
+        ],
+        columns=COMPARISON_COLUMNS,
+    )
+    r = position_bias(frame)
+    assert r.design == "both_orders"
+    assert r.n_pairs_scored == 0
+    assert r.summary() == (
+        "1 of 1 pair was run in both orders, so this would report the "
+        "consistency rate. In every pair run both ways, the judge called a "
+        "tie every time in at least one of the two orders, so no pair could "
+        "be scored and there is no rate to report. Nothing here tests "
+        "position."
     )
 
 

@@ -1361,9 +1361,9 @@ class PositionBias:
 
     def _both_orders_unscored(self) -> str:
         return self._both_orders_opening("would report") + (
-            " Every pair run both ways had a tie in at least one of its two "
-            "judgements, so no pair could be scored and there is no rate to "
-            "report. Nothing here tests position."
+            " In every pair run both ways, the judge called a tie every time "
+            "in at least one of the two orders, so no pair could be scored "
+            "and there is no rate to report. Nothing here tests position."
         )
 
     def _both_orders(self, conf: str) -> str:

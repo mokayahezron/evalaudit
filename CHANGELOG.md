@@ -16,12 +16,16 @@ the published wheels and the commit each wheel matches.
 
 ## [Unreleased]
 
-`judge_validation` can now measure the judge against a second human. The
-rest is text, apart from one `audit` finding that changes severity. Several
-printed sentences change, most of them for hyphens and plurals, and no
-number does. Anything that matches on the old sentences will stop matching.
-Every entry was checked by running the same calls against the v0.4.0 tag
-and against this tree.
+`judge_validation` can now measure the judge against a second human. Most
+of the rest is text. Several printed sentences change, most of them for
+hyphens and plurals, and one `audit` finding changes severity. Figures
+change in one case. In the both-orders design, `position_bias` now scores a
+pair judged more than once in an order when its first two reversed
+judgements held a tie and a later two did not. That moves the count of
+pairs scored, the consistency rate and its interval, and the figures on the
+flips. A pair judged once in each order scores as before. Anything that
+matches on the old sentences will stop matching. Every entry was checked by
+running the same calls against the v0.4.0 tag and against this tree.
 
 ### Changed
 
@@ -161,9 +165,10 @@ and against this tree.
     output under both orderings on nan% of 0 pairs (95% CI: nan% to nan%).
     It never flipped, so there is no direction to test and nothing here
     points at position." It now reads "2 of 3 pairs were run in both
-    orders, so this would report the consistency rate. Every pair run both
-    ways had a tie in at least one of its two judgements, so no pair could
-    be scored and there is no rate to report. Nothing here tests position."
+    orders, so this would report the consistency rate. In every pair run
+    both ways, the judge called a tie every time in at least one of the two
+    orders, so no pair could be scored and there is no rate to report.
+    Nothing here tests position."
 
   The randomised summary ended "3 judgements were ties and are left out of
   the rates above." and the both-orders one ended the same way with 2.
@@ -172,6 +177,26 @@ and against this tree.
   finding titled "The data cannot show a position effect in the pairwise
   judgements". It is now a warning titled "Position bias is undefined on
   this data", and it carries the new summary.
+
+- **Breaking.** In the both-orders design, `position_bias` formed each
+  pair's couple, its first two judgements that are reverses, before looking
+  at ties, and dropped the pair if either was a tie. A pair judged more than
+  once in an order was dropped for a tied first couple even when a later
+  couple had no tie, and the summary did not say so. Ties are now set aside
+  first, so the pair is scored on its first two decisive judgements that are
+  reverses. On two consistent pairs and a third judged x/y and y/x as ties
+  and then x/y for x and y/x for y, it printed "The judge named the same
+  output under both orderings on 100.0% of 2 pairs (95% CI: 34.2% to
+  100.0%). It never flipped, so there is no direction to test and nothing
+  here points at position." It now reads "The judge named the same output
+  under both orderings on 66.7% of 3 pairs (95% CI: 20.8% to 93.9%). Of the
+  1 pair it flipped on, 1 went to whichever output was shown first (100.0%,
+  95% CI: 2.5% to 100.0%, exact binomial p=1.0000)." and goes on to say the
+  data cannot show that the flips have a direction. `n_pairs_scored` goes
+  from 2 to 3 and `n_decisive` from 0 to 1. A pair judged once in each
+  order scores as before, since setting its ties aside leaves a couple
+  exactly when neither judgement was a tie. The `audit` position finding
+  carries the new figures.
 
 - The `rater_agreement` docstring said that without an interval nothing in
   the result would name an outlier rater. Since 0.4.0 the summary lists
