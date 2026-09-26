@@ -132,7 +132,7 @@ Two rules the library follows throughout:
 | Module | Question |
 |---|---|
 | `agreement` | Do your graders agree? Which grader is the outlier? Which items are ambiguous rather than hard? |
-| `judge` | Does your LLM judge track your humans, and on which slices does it stop? Is it biased by position or length? |
+| `judge` | Does your LLM judge track your humans, and on which slices does it stop? Does it agree with a human as well as a second human does? Is it biased by position or length? |
 | `pairwise` | On a blind pairwise leaderboard, which pairs of models are actually separable and how many are not? Do the Elo gaps survive their intervals? |
 | `power` | Could this many comparisons ever have detected the effect you care about? |
 | `scores` | Is there an interval around your headline number, and how wide? |
@@ -325,7 +325,8 @@ Python 3.9+, numpy, scipy, pandas. Nothing else.
 Upgrading from an earlier version? The
 [changelog](https://github.com/mokayahezron/evalaudit/blob/main/CHANGELOG.md)
 lists every change a caller can see, with what to do about each breaking one.
-0.3.0 breaks several, so read it before you upgrade.
+0.3.0, 0.4.0 and 0.5.0 each change what some calls print, so read the
+changelog before upgrading.
 
 [What MT-Bench establishes, and what it does not](analysis/mt-bench.md)
 runs these checks over the public MT-Bench human judgements, on the

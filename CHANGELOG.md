@@ -3,18 +3,20 @@
 Every change to evalaudit that a caller can see is recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version numbers follow [semantic versioning](https://semver.org/). Before 1.0
-a minor version can break things, and 0.3.0 and 0.4.0 both do.
+a minor version can break things, and 0.3.0, 0.4.0 and 0.5.0 all do.
 
 An entry marked **Breaking** changes what a call that worked on the previous
 release returns, raises or prints. The mark goes on the entry wherever it
 sits, under Changed, Fixed or Removed.
 
 Every release is dated by the day PyPI received its upload, in UTC. 0.3.0 is
-the first release with a tag, and 0.4.0 has one too. The entries below 0.3.0
-were reconstructed after the fact, and their contents were checked against
-the published wheels and the commit each wheel matches.
+the first release with a tag, and 0.4.0 and 0.5.0 have one too. The entries
+below 0.3.0 were reconstructed after the fact, and their contents were
+checked against the published wheels and the commit each wheel matches.
 
 ## [Unreleased]
+
+## [0.5.0] - 2026-09-26
 
 `judge_validation` can now measure the judge against a second human. Most
 of the rest is text. Several printed sentences change, most of them for
@@ -828,7 +830,8 @@ hour after the upload. It reported `__version__` as 0.1.0.
 
 - Nothing.
 
-[Unreleased]: https://github.com/mokayahezron/evalaudit/compare/v0.4.0...main
+[Unreleased]: https://github.com/mokayahezron/evalaudit/compare/v0.5.0...main
+[0.5.0]: https://github.com/mokayahezron/evalaudit/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mokayahezron/evalaudit/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mokayahezron/evalaudit/compare/809a650...v0.3.0
 [0.2.1]: https://github.com/mokayahezron/evalaudit/compare/242e354...809a650
