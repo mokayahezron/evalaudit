@@ -325,8 +325,8 @@ Python 3.9+, numpy, scipy, pandas. Nothing else.
 Upgrading from an earlier version? The
 [changelog](https://github.com/mokayahezron/evalaudit/blob/main/CHANGELOG.md)
 lists every change a caller can see, with what to do about each breaking one.
-0.3.0, 0.4.0 and 0.5.0 each change what some calls print, so read the
-changelog before upgrading.
+0.3.0, 0.4.0 and 0.5.0 each change what some calls return or print, so read
+the changelog before upgrading.
 
 [What MT-Bench establishes, and what it does not](analysis/mt-bench.md)
 runs these checks over the public MT-Bench human judgements, on the
