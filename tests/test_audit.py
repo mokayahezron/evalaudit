@@ -2130,6 +2130,114 @@ def test_a_judge_whose_interval_clears_the_line_tracks_the_humans(judge_good):
 
 
 # --------------------------------------------------------------------------
+# The judge's band sentence says what the lines were set for
+#
+# Krippendorff's lines were set for human coders. Without a baseline the
+# judge's summary now says so after its band sentence and points at
+# human_baseline, and it no longer says "The judge is not a stand-in for the
+# humans at this level." below 0.667. The audit carries that summary word
+# for word, so every judge finding with a band carries the new sentences.
+# Rater agreement reads the same lines about human coders, so its findings
+# do not.
+# --------------------------------------------------------------------------
+
+JUDGE_LINES = (
+    "These lines were set for human coders, and how closely a judge has to "
+    "agree depends on the decision it is used for. Passing human_baseline "
+    "measures the judge against a second human instead."
+)
+RETIRED_STAND_IN = "The judge is not a stand-in for the humans at this level."
+
+# (fixture, config, title). Every judge finding that prints a band sentence.
+JUDGE_FINDINGS_WITH_A_BAND = [
+    ("judge_slice_failure", {"seed": 3},
+     "The judge comes apart on one slice of the data"),
+    ("judge_poor", {"seed": 3},
+     "Judge-human agreement is below the working threshold"),
+    ("judge_mediocre", {"seed": 3}, JUDGE_NOT_SHOWN_TITLE),
+    ("judge_straddling_above", {"seed": 1}, JUDGE_NOT_SHOWN_TITLE),
+    ("judge_good", {"seed": 1, "n_boot": 0}, JUDGE_NOT_SHOWN_TITLE),
+    ("judge_good", {"seed": 3}, "The judge tracks the humans"),
+]
+
+AGREEMENT_FINDINGS_WITH_A_BAND = [
+    ("ratings_good", {"seed": 1}),
+    ("ratings_good", {"seed": 1, "n_boot": 0}),
+    ("ratings_poor", {"seed": 1}),
+    ("ratings_straddling_above", {"seed": 1}),
+    ("ratings_straddling_below", {"seed": 1}),
+]
+
+
+@pytest.mark.parametrize(
+    "fixture_name, config, title", JUDGE_FINDINGS_WITH_A_BAND,
+    ids=[f"{n}-{i}" for i, (n, _, _) in enumerate(JUDGE_FINDINGS_WITH_A_BAND)],
+)
+def test_every_judge_finding_says_what_the_lines_were_set_for(
+    fixture_name, config, title, request
+):
+    judge = request.getfixturevalue(fixture_name)
+    f = _one(audit(judge=judge, config=config), "judge")
+    assert f.title == title
+    assert f.result.summary() in f.detail
+    assert f.detail.count(JUDGE_LINES) == 1
+    assert RETIRED_STAND_IN not in f.detail
+
+
+@pytest.mark.parametrize(
+    "fixture_name, config", AGREEMENT_FINDINGS_WITH_A_BAND,
+    ids=[f"{n}-{i}" for i, (n, _) in enumerate(AGREEMENT_FINDINGS_WITH_A_BAND)],
+)
+def test_agreement_findings_do_not_carry_the_judge_lines(
+    fixture_name, config, request
+):
+    ratings = request.getfixturevalue(fixture_name)
+    f = _one(audit(ratings=ratings, config=config), "agreement")
+    band = f.result.summary()
+    assert band in f.detail
+    assert "0.667" in band or "0.800" in band
+    assert "These lines were set for human coders" not in f.detail
+    assert "human_baseline" not in f.detail
+
+
+def test_the_judge_finding_below_the_threshold_whole(judge_poor):
+    f = _one(audit(judge=judge_poor, config={"seed": 3}), "judge")
+    assert f.detail == (
+        "The judge is standing in for the humans, and it tracks them less "
+        "closely than the 0.667 this report is holding it to. Judge and human "
+        "agree at alpha 0.405 (95% CI: 0.285 to 0.530, nominal, 200 items). "
+        "Plain accuracy is 70.5%. The whole interval sits below 0.667, the "
+        "conventional floor for drawing any conclusion from coded data. These "
+        "lines were set for human coders, and how closely a judge has to agree "
+        "depends on the decision it is used for. Passing human_baseline "
+        "measures the judge against a second human instead. Say which decision "
+        "the judge is used for, and set judge_threshold from it."
+    )
+
+
+def test_the_judge_finding_straddling_the_threshold_whole(judge_mediocre):
+    """The summary says a judge's threshold depends on the decision, so the
+    action gives the instruction without making the point again."""
+    f = _one(audit(judge=judge_mediocre, config={"seed": 3}), "judge")
+    assert f.result.ci_low < THRESHOLD < f.result.ci_high
+    assert f.detail == (
+        "The report holds the judge to 0.667, and the interval on its "
+        "agreement with the humans runs both sides of it. Judge and human "
+        "agree at alpha 0.581 (95% CI: 0.467 to 0.691, nominal, 200 items). "
+        "Plain accuracy is 79.0%. The interval runs both sides of 0.667, the "
+        "conventional floor for drawing any conclusion from coded data, so the "
+        "data cannot show that the judge's agreement with the humans clears "
+        "it. That does not mean it falls short of it. These lines were set for "
+        "human coders, and how closely a judge has to agree depends on the "
+        "decision it is used for. Passing human_baseline measures the judge "
+        "against a second human instead. The eval has not shown that the judge "
+        "tracks the humans at the level this report holds it to. That does not "
+        "mean it falls short of it. Labelling more items by hand narrows the "
+        "interval. Set judge_threshold from the decision the judge is used for."
+    )
+
+
+# --------------------------------------------------------------------------
 # The report verdict with warnings, and with criticals
 #
 # "The result stands and the design weakens it" asserted the result holds

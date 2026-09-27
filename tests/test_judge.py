@@ -3988,7 +3988,10 @@ HEADLINE_WITHOUT_RESAMPLES = (
     " accuracy is 68.1%. Without an interval there is nothing to place the "
     "judge's agreement with the humans against the conventional lines at "
     "0.667 and 0.800, so the data cannot show that it clears either. That "
-    "does not mean it falls short of them."
+    "does not mean it falls short of them. These lines were set for human "
+    "coders, and how closely a judge has to agree depends on the decision it "
+    "is used for. Passing human_baseline measures the judge against a second "
+    "human instead."
 )
 
 HEADLINE_REFUSED = (
@@ -3999,7 +4002,10 @@ HEADLINE_REFUSED = (
     "upper bound. Plain accuracy is 66.7%. Without an interval there is "
     "nothing to place the judge's agreement with the humans against the "
     "conventional lines at 0.667 and 0.800, so the data cannot show that it"
-    " clears either. That does not mean it falls short of them."
+    " clears either. That does not mean it falls short of them. These lines "
+    "were set for human coders, and how closely a judge has to agree depends "
+    "on the decision it is used for. Passing human_baseline measures the "
+    "judge against a second human instead."
 )
 
 
@@ -4773,6 +4779,108 @@ def test_headline_summary_when_its_interval_is_refused():
 
     assert (result.n_boot, result.n_boot_usable) == (BASELINE_BOOT, 1409)
     assert result.summary() == HEADLINE_REFUSED
+
+
+# --------------------------------------------------------------------------
+# The band sentence without a baseline
+#
+# Krippendorff's lines at 0.667 and 0.800 were set for human coders. Below
+# 0.667 the summary used to add "The judge is not a stand-in for the humans
+# at this level.", a verdict the lines cannot give about a judge. Each band
+# now says what the lines were set for and points at human_baseline. The
+# branch with no interval is pinned whole above, in
+# HEADLINE_WITHOUT_RESAMPLES and HEADLINE_REFUSED.
+# --------------------------------------------------------------------------
+
+def flipped_judge(seed, n, flip):
+    """Human labels, and judge labels flipped at a set rate."""
+    rng = np.random.default_rng(seed)
+    human = rng.integers(0, 2, n)
+    judge = human.copy()
+    flipped = rng.random(n) < flip
+    judge[flipped] = 1 - judge[flipped]
+    return human, judge
+
+
+BAND_SUMMARY_ABOVE = (
+    "Judge and human agree at alpha 0.887 (95% CI: 0.855 to 0.919, nominal, "
+    "800 items). Plain accuracy is 94.4%. The whole interval sits above 0.800, "
+    "the conventional bar for treating coded data as reliable. These lines "
+    "were set for human coders, and how closely a judge has to agree depends "
+    "on the decision it is used for. Passing human_baseline measures the "
+    "judge against a second human instead."
+)
+
+BAND_SUMMARY_BELOW = (
+    "Judge and human agree at alpha 0.405 (95% CI: 0.269 to 0.525, nominal, "
+    "200 items). Plain accuracy is 70.5%. The whole interval sits below 0.667, "
+    "the conventional floor for drawing any conclusion from coded data. These "
+    "lines were set for human coders, and how closely a judge has to agree "
+    "depends on the decision it is used for. Passing human_baseline measures "
+    "the judge against a second human instead."
+)
+
+BAND_SUMMARY_BETWEEN = (
+    "Judge and human agree at alpha 0.740 (95% CI: 0.694 to 0.785, nominal, "
+    "800 items). Plain accuracy is 87.0%. The whole interval sits between "
+    "0.667 and 0.800, which supports tentative conclusions and no firm ones. "
+    "These lines were set for human coders, and how closely a judge has to "
+    "agree depends on the decision it is used for. Passing human_baseline "
+    "measures the judge against a second human instead."
+)
+
+BAND_SUMMARY_CLEARS_FLOOR_ONLY = (
+    "Judge and human agree at alpha 0.870 (95% CI: 0.790 to 0.940, nominal, "
+    "200 items). Plain accuracy is 93.5%. The interval clears 0.667, which "
+    "supports tentative conclusions. It runs both sides of 0.800, so the data "
+    "cannot show that the judge's agreement with the humans reaches the bar "
+    "for reliable coded data. That does not mean it falls short of it. These "
+    "lines were set for human coders, and how closely a judge has to agree "
+    "depends on the decision it is used for. Passing human_baseline measures "
+    "the judge against a second human instead."
+)
+
+BAND_SUMMARY_OVER_FLOOR = (
+    "Judge and human agree at alpha 0.801 (95% CI: 0.601 to 0.951, nominal, "
+    "40 items). Plain accuracy is 90.0%. The interval runs both sides of "
+    "0.667, the conventional floor for drawing any conclusion from coded "
+    "data, so the data cannot show that the judge's agreement with the humans "
+    "clears it. That does not mean it falls short of it. These lines were set "
+    "for human coders, and how closely a judge has to agree depends on the "
+    "decision it is used for. Passing human_baseline measures the judge "
+    "against a second human instead."
+)
+
+# (seed, n, flip), where the interval sits against the two lines, and the
+# whole summary. The interval is checked first, so a fixture that drifts
+# into another band fails on the guard and not on the wording.
+BAND_SUMMARIES = [
+    ("above", (0, 800, 0.07), BAND_SUMMARY_ABOVE),
+    ("below", (0, 200, 0.35), BAND_SUMMARY_BELOW),
+    ("between", (3, 800, 0.12), BAND_SUMMARY_BETWEEN),
+    ("clears floor only", (22, 200, 0.05), BAND_SUMMARY_CLEARS_FLOOR_ONLY),
+    ("over floor", (0, 40, 0.1), BAND_SUMMARY_OVER_FLOOR),
+]
+
+
+def band_of_interval(low, high):
+    if low > 0.800:
+        return "above"
+    if high < 0.667:
+        return "below"
+    if low > 0.667:
+        return "between" if high < 0.800 else "clears floor only"
+    return "over floor"
+
+
+@pytest.mark.parametrize(
+    "band, args, expected", BAND_SUMMARIES, ids=[b for b, _, _ in BAND_SUMMARIES]
+)
+def test_judge_summary_without_a_baseline_in_each_band(band, args, expected):
+    result = judge_validation(*flipped_judge(*args), n_boot=1000, seed=1)
+    assert not result.has_baseline
+    assert band_of_interval(result.ci_low, result.ci_high) == band
+    assert result.summary() == expected
 
 
 # Refusals. Each message is compared whole.
@@ -5879,7 +5987,10 @@ HEADLINE_ONE_OF_ONE_UNDEFINED = (
     "accuracy is 66.7%. Without an interval there is nothing to place the "
     "judge's agreement with the humans against the conventional lines at "
     "0.667 and 0.800, so the data cannot show that it clears either. That "
-    "does not mean it falls short of them."
+    "does not mean it falls short of them. These lines were set for human "
+    "coders, and how closely a judge has to agree depends on the decision it "
+    "is used for. Passing human_baseline measures the judge against a second "
+    "human instead."
 )
 
 HEADLINE_ONE_OF_FIVE_UNDEFINED = (
@@ -5890,7 +6001,10 @@ HEADLINE_ONE_OF_FIVE_UNDEFINED = (
     "accuracy is 66.7%. Without an interval there is nothing to place the "
     "judge's agreement with the humans against the conventional lines at "
     "0.667 and 0.800, so the data cannot show that it clears either. That "
-    "does not mean it falls short of them."
+    "does not mean it falls short of them. These lines were set for human "
+    "coders, and how closely a judge has to agree depends on the decision it "
+    "is used for. Passing human_baseline measures the judge against a second "
+    "human instead."
 )
 
 

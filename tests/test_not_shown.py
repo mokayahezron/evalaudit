@@ -333,12 +333,20 @@ def test_agreement_without_an_interval_names_no_band():
     ) in r.summary()
 
 
+# The lines were set for human coders, so the judge's band says so and
+# points at the human baseline. It used to add "The judge is not a stand-in
+# for the humans at this level." below 0.667.
+JUDGE_LINES = (
+    " These lines were set for human coders, and how closely a judge has to "
+    "agree depends on the decision it is used for. Passing human_baseline "
+    "measures the judge against a second human instead."
+)
+
 JUDGE_BANDS = [
-    ("above", (0, 800, 0.07), BAND_ABOVE),
-    ("over bar", (22, 200, 0.05), band_over_bar(JUDGE)),
-    ("over floor", (0, 40, 0.1), band_over_floor(JUDGE)),
-    ("below", (0, 200, 0.35),
-     BAND_BELOW + " The judge is not a stand-in for the humans at this level."),
+    ("above", (0, 800, 0.07), BAND_ABOVE + JUDGE_LINES),
+    ("over bar", (22, 200, 0.05), band_over_bar(JUDGE) + JUDGE_LINES),
+    ("over floor", (0, 40, 0.1), band_over_floor(JUDGE) + JUDGE_LINES),
+    ("below", (0, 200, 0.35), BAND_BELOW + JUDGE_LINES),
 ]
 
 
