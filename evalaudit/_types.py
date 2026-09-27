@@ -793,6 +793,17 @@ _BASELINE_TIE_WORDS = {
 }
 
 
+# Krippendorff's lines were set for human coders. How closely a judge has to
+# agree depends on what it is used for, so the judge's band sentence says so
+# and gives no verdict of its own. Only the summary without a baseline
+# prints it, since a baseline summary prints no band sentence.
+_JUDGE_LINES = (
+    " These lines were set for human coders, and how closely a judge has to "
+    "agree depends on the decision it is used for. Passing human_baseline "
+    "measures the judge against a second human instead."
+)
+
+
 def _the_resamples(n: int) -> str:
     """How a sentence points back at the n resamples it just counted."""
     return "That is the resample" if n == 1 else "Those are the resamples"
@@ -842,6 +853,14 @@ class JudgeValidation:
     under ``ties="drop"``. ``n_dropped`` still counts the items with no
     label on a side, and an item with no label on one side and a tie on the
     other counts there.
+
+    Without a baseline, ``summary()`` places the interval on ``agreement``
+    against Krippendorff's lines at 0.667 and 0.800, the same way
+    ``rater_agreement`` does. After every band it says those lines were set
+    for human coders, that how closely a judge has to agree depends on the
+    decision it is used for, and that ``human_baseline`` measures the judge
+    against a second human instead. It gives no verdict on the judge from
+    the lines alone.
 
     With a baseline, ``summary()`` reads the interval on the difference and
     prints no band sentence. The conventional lines measure the judge
@@ -998,15 +1017,22 @@ class JudgeValidation:
         )
 
     def _verdict(self) -> str:
+        """The band sentence, then what the lines were set for.
+
+        Every branch of the band sentence gets the same two sentences after
+        it, so none of them reads as a verdict on whether the judge can
+        stand in for the humans.
+        """
         if self.agreement != self.agreement:
             return ""
-        return _band_verdict(
+        band = _band_verdict(
             self.ci_low,
             self.ci_high,
             self.has_interval,
             "the judge's agreement with the humans",
-            " The judge is not a stand-in for the humans at this level.",
+            "",
         )
+        return band + _JUDGE_LINES
 
     def _baseline(self) -> str:
         """The judge against a second human, and what the data says about it.

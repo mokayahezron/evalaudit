@@ -884,10 +884,8 @@ def _judge_finding(judge_data: dict, cfg: AuditConfig):
                 f"them less closely than the {cfg.judge_threshold:.3f} this "
                 f"report is holding it to.",
                 result,
-                "That threshold is a convention rather than a validated "
-                "line, so the question is whether this level of agreement "
-                "is good enough for the decision being made. Say which "
-                "decision, and set judge_threshold from it.",
+                "Say which decision the judge is used for, and set "
+                "judge_threshold from it.",
             ),
             result=result,
         )
@@ -913,8 +911,8 @@ def _judge_finding(judge_data: dict, cfg: AuditConfig):
                 "The eval has not shown that the judge tracks the humans at "
                 "the level this report holds it to. That does not mean it "
                 "falls short of it. Labelling more items by hand narrows the "
-                "interval, and the threshold is a convention, so set "
-                "judge_threshold from the decision being made.",
+                "interval. Set judge_threshold from the decision the judge is "
+                "used for.",
             ),
             result=result,
         )
