@@ -1420,6 +1420,26 @@ def test_unknown_judge_key_is_an_error(judge_good):
         audit(judge={**judge_good, "humann": [1, 0]})
 
 
+def test_audit_refuses_a_human_baseline_in_the_judge_mapping(judge_good):
+    """The judge summary without a baseline ends by pointing at
+    judge_validation with a human_baseline. It names judge_validation
+    because audit refuses this key, and audit carries that summary in its
+    judge findings. If audit ever accepts human_baseline, that sentence needs
+    another look."""
+    baseline = pd.DataFrame({
+        "item_id": ["i0", "i0"],
+        "cluster_id": ["c0", "c0"],
+        "rater_id": ["h0", "h1"],
+        "rating": [1, 1],
+    })
+    with pytest.raises(ValueError) as refused:
+        audit(judge={**judge_good, "human_baseline": baseline})
+    assert str(refused.value) == (
+        "unknown judge keys ['human_baseline']. Valid keys are ['human', "
+        "'judge', 'slices', 'preferences', 'lengths', 'human_preferences']"
+    )
+
+
 def test_bad_confidence_is_an_error(undecided_scores):
     with pytest.raises(ValueError, match="confidence"):
         audit(scores=undecided_scores, config={"confidence": 1.5})
@@ -2143,8 +2163,8 @@ def test_a_judge_whose_interval_clears_the_line_tracks_the_humans(judge_good):
 
 JUDGE_LINES = (
     "These lines were set for human coders, and how closely a judge has to "
-    "agree depends on the decision it is used for. Passing human_baseline "
-    "measures the judge against a second human instead."
+    "agree depends on the decision it is used for. Calling judge_validation "
+    "with a human_baseline measures the judge against a second human instead."
 )
 RETIRED_STAND_IN = "The judge is not a stand-in for the humans at this level."
 
@@ -2209,9 +2229,10 @@ def test_the_judge_finding_below_the_threshold_whole(judge_poor):
         "Plain accuracy is 70.5%. The whole interval sits below 0.667, the "
         "conventional floor for drawing any conclusion from coded data. These "
         "lines were set for human coders, and how closely a judge has to agree "
-        "depends on the decision it is used for. Passing human_baseline "
-        "measures the judge against a second human instead. Say which decision "
-        "the judge is used for, and set judge_threshold from it."
+        "depends on the decision it is used for. Calling judge_validation "
+        "with a human_baseline measures the judge against a second human "
+        "instead. Say which decision the judge is used for, and set "
+        "judge_threshold from it."
     )
 
 
@@ -2229,11 +2250,12 @@ def test_the_judge_finding_straddling_the_threshold_whole(judge_mediocre):
         "data cannot show that the judge's agreement with the humans clears "
         "it. That does not mean it falls short of it. These lines were set for "
         "human coders, and how closely a judge has to agree depends on the "
-        "decision it is used for. Passing human_baseline measures the judge "
-        "against a second human instead. The eval has not shown that the judge "
-        "tracks the humans at the level this report holds it to. That does not "
-        "mean it falls short of it. Labelling more items by hand narrows the "
-        "interval. Set judge_threshold from the decision the judge is used for."
+        "decision it is used for. Calling judge_validation with a "
+        "human_baseline measures the judge against a second human instead. "
+        "The eval has not shown that the judge tracks the humans at the level "
+        "this report holds it to. That does not mean it falls short of it. "
+        "Labelling more items by hand narrows the interval. Set "
+        "judge_threshold from the decision the judge is used for."
     )
 
 

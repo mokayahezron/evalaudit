@@ -26,24 +26,24 @@ checked against the published wheels and the commit each wheel matches.
   gone. Every band sentence, including the one printed when there is no
   interval, is now followed by "These lines were set for human coders, and
   how closely a judge has to agree depends on the decision it is used for.
-  Passing human_baseline measures the judge against a second human
-  instead." Judge labels with alpha 0.405 and an interval of 0.269 to 0.525
-  on 200 items printed "The whole interval sits below 0.667, the
-  conventional floor for drawing any conclusion from coded data. The judge
-  is not a stand-in for the humans at this level." They now print "The
+  Calling judge_validation with a human_baseline measures the judge against
+  a second human instead." Judge labels with alpha 0.405 and an interval of
+  0.269 to 0.525 on 200 items printed "The whole interval sits below 0.667,
+  the conventional floor for drawing any conclusion from coded data. The
+  judge is not a stand-in for the humans at this level." They now print "The
   whole interval sits below 0.667, the conventional floor for drawing any
-  conclusion from coded data. These lines were set for human coders, and
-  how closely a judge has to agree depends on the decision it is used for.
-  Passing human_baseline measures the judge against a second human
-  instead." `audit` carries the judge's summary word for word, so its judge
-  findings carry the new sentences too. The one exception is the finding
-  for undefined agreement, which has no band sentence. The action text of
-  two judge findings, "Judge-human agreement is below the working
-  threshold" and "The data cannot show that the judge clears the working
-  threshold", was shortened, because the summary now makes the point that
-  a judge's threshold depends on the decision. `rater_agreement`
-  and the summary with a baseline are unchanged. Anything matching on the
-  old sentences will stop matching.
+  conclusion from coded data. These lines were set for human coders, and how
+  closely a judge has to agree depends on the decision it is used for.
+  Calling judge_validation with a human_baseline measures the judge against
+  a second human instead." `audit` carries the judge's summary word for
+  word, so its judge findings carry the new sentences too. The one exception
+  is the finding for undefined agreement, which has no band sentence. The
+  action text of two judge findings, "Judge-human agreement is below the
+  working threshold" and "The data cannot show that the judge clears the
+  working threshold", was shortened, because the summary now makes the point
+  that a judge's threshold depends on the decision. `rater_agreement` and
+  the summary with a baseline are unchanged. Anything matching on the old
+  sentences will stop matching.
 
 ## [0.5.0] - 2026-09-26
 

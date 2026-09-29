@@ -3990,8 +3990,8 @@ HEADLINE_WITHOUT_RESAMPLES = (
     "0.667 and 0.800, so the data cannot show that it clears either. That "
     "does not mean it falls short of them. These lines were set for human "
     "coders, and how closely a judge has to agree depends on the decision it "
-    "is used for. Passing human_baseline measures the judge against a second "
-    "human instead."
+    "is used for. Calling judge_validation with a human_baseline measures the "
+    "judge against a second human instead."
 )
 
 HEADLINE_REFUSED = (
@@ -4004,8 +4004,8 @@ HEADLINE_REFUSED = (
     "conventional lines at 0.667 and 0.800, so the data cannot show that it"
     " clears either. That does not mean it falls short of them. These lines "
     "were set for human coders, and how closely a judge has to agree depends "
-    "on the decision it is used for. Passing human_baseline measures the "
-    "judge against a second human instead."
+    "on the decision it is used for. Calling judge_validation with a "
+    "human_baseline measures the judge against a second human instead."
 )
 
 
@@ -4807,8 +4807,8 @@ BAND_SUMMARY_ABOVE = (
     "800 items). Plain accuracy is 94.4%. The whole interval sits above 0.800, "
     "the conventional bar for treating coded data as reliable. These lines "
     "were set for human coders, and how closely a judge has to agree depends "
-    "on the decision it is used for. Passing human_baseline measures the "
-    "judge against a second human instead."
+    "on the decision it is used for. Calling judge_validation with a "
+    "human_baseline measures the judge against a second human instead."
 )
 
 BAND_SUMMARY_BELOW = (
@@ -4816,8 +4816,8 @@ BAND_SUMMARY_BELOW = (
     "200 items). Plain accuracy is 70.5%. The whole interval sits below 0.667, "
     "the conventional floor for drawing any conclusion from coded data. These "
     "lines were set for human coders, and how closely a judge has to agree "
-    "depends on the decision it is used for. Passing human_baseline measures "
-    "the judge against a second human instead."
+    "depends on the decision it is used for. Calling judge_validation with a "
+    "human_baseline measures the judge against a second human instead."
 )
 
 BAND_SUMMARY_BETWEEN = (
@@ -4825,8 +4825,8 @@ BAND_SUMMARY_BETWEEN = (
     "800 items). Plain accuracy is 87.0%. The whole interval sits between "
     "0.667 and 0.800, which supports tentative conclusions and no firm ones. "
     "These lines were set for human coders, and how closely a judge has to "
-    "agree depends on the decision it is used for. Passing human_baseline "
-    "measures the judge against a second human instead."
+    "agree depends on the decision it is used for. Calling judge_validation "
+    "with a human_baseline measures the judge against a second human instead."
 )
 
 BAND_SUMMARY_CLEARS_FLOOR_ONLY = (
@@ -4836,8 +4836,8 @@ BAND_SUMMARY_CLEARS_FLOOR_ONLY = (
     "cannot show that the judge's agreement with the humans reaches the bar "
     "for reliable coded data. That does not mean it falls short of it. These "
     "lines were set for human coders, and how closely a judge has to agree "
-    "depends on the decision it is used for. Passing human_baseline measures "
-    "the judge against a second human instead."
+    "depends on the decision it is used for. Calling judge_validation with a "
+    "human_baseline measures the judge against a second human instead."
 )
 
 BAND_SUMMARY_OVER_FLOOR = (
@@ -4847,8 +4847,8 @@ BAND_SUMMARY_OVER_FLOOR = (
     "data, so the data cannot show that the judge's agreement with the humans "
     "clears it. That does not mean it falls short of it. These lines were set "
     "for human coders, and how closely a judge has to agree depends on the "
-    "decision it is used for. Passing human_baseline measures the judge "
-    "against a second human instead."
+    "decision it is used for. Calling judge_validation with a human_baseline "
+    "measures the judge against a second human instead."
 )
 
 # (seed, n, flip), where the interval sits against the two lines, and the
@@ -5989,8 +5989,8 @@ HEADLINE_ONE_OF_ONE_UNDEFINED = (
     "0.667 and 0.800, so the data cannot show that it clears either. That "
     "does not mean it falls short of them. These lines were set for human "
     "coders, and how closely a judge has to agree depends on the decision it "
-    "is used for. Passing human_baseline measures the judge against a second "
-    "human instead."
+    "is used for. Calling judge_validation with a human_baseline measures the "
+    "judge against a second human instead."
 )
 
 HEADLINE_ONE_OF_FIVE_UNDEFINED = (
@@ -6003,8 +6003,8 @@ HEADLINE_ONE_OF_FIVE_UNDEFINED = (
     "0.667 and 0.800, so the data cannot show that it clears either. That "
     "does not mean it falls short of them. These lines were set for human "
     "coders, and how closely a judge has to agree depends on the decision it "
-    "is used for. Passing human_baseline measures the judge against a second "
-    "human instead."
+    "is used for. Calling judge_validation with a human_baseline measures the "
+    "judge against a second human instead."
 )
 
 

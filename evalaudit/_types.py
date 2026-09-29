@@ -799,8 +799,8 @@ _BASELINE_TIE_WORDS = {
 # prints it, since a baseline summary prints no band sentence.
 _JUDGE_LINES = (
     " These lines were set for human coders, and how closely a judge has to "
-    "agree depends on the decision it is used for. Passing human_baseline "
-    "measures the judge against a second human instead."
+    "agree depends on the decision it is used for. Calling judge_validation "
+    "with a human_baseline measures the judge against a second human instead."
 )
 
 
