@@ -338,8 +338,8 @@ def test_agreement_without_an_interval_names_no_band():
 # for the humans at this level." below 0.667.
 JUDGE_LINES = (
     " These lines were set for human coders, and how closely a judge has to "
-    "agree depends on the decision it is used for. Passing human_baseline "
-    "measures the judge against a second human instead."
+    "agree depends on the decision it is used for. Calling judge_validation "
+    "with a human_baseline measures the judge against a second human instead."
 )
 
 JUDGE_BANDS = [
