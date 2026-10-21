@@ -2572,3 +2572,70 @@ def test_the_docstring_describes_the_power_check_without_a_stated_effect():
     doc = " ".join(audit.__doc__.split())
     assert "When no effect_of_interest is stated" in doc
     assert "makes no claim about the margin" in doc
+
+
+# --------------------------------------------------------------------------
+# Inputs the audit used to misread
+# --------------------------------------------------------------------------
+
+def test_missing_scores_are_refused_rather_than_read_as_a_margin():
+    """A NaN score gave NaN bounds, and NaN bounds failed the test for
+    crossing zero, so the report said the margin cleared zero."""
+    with pytest.raises(ValueError, match="finite"):
+        audit(scores={"A": [0.2, np.nan, 0.8], "B": [0.1, 0.3, 0.7]})
+
+
+def test_power_does_not_run_on_unequal_independent_groups():
+    """The power arithmetic assumes equal groups. Ten items against 990 was
+    read as 500 in each, which claimed 80% power for a 15-point difference
+    the design reaches about 13% of the time."""
+    r = audit(
+        scores={"A": [1] * 5 + [0] * 5, "B": [1] * 500 + [0] * 490},
+        config={"seed": 1, "effect_of_interest": 0.15},
+    )
+    assert "power" in _skipped(r)
+    assert not _by_check(r, "power")
+    reason = _reason(r, "power")
+    assert "10" in reason and "990" in reason
+    assert "compare" not in _skipped(r)
+
+
+def test_power_still_runs_on_equal_independent_groups():
+    r = audit(
+        scores={"A": [1, 0] * 50, "B": [1, 1, 0, 0] * 25},
+        config={"seed": 1, "paired": False, "effect_of_interest": 0.15},
+    )
+    assert "power" not in _skipped(r)
+    assert _one(r, "power").result.n_per_group == 100
+
+
+def test_identical_binary_results_skip_power_instead_of_crashing():
+    """Two systems that agree on every item have no discordant pairs, and
+    paired power has nothing to run on. The other checks still report."""
+    r = audit(scores={"A": [1, 0] * 50, "B": [1, 0] * 50},
+              config={"seed": 1})
+    assert "power" in _skipped(r)
+    assert "disagree" in _reason(r, "power")
+    assert _one(r, "compare").result.difference == 0
+    assert len(_by_check(r, "scores")) == 2
+
+
+def test_position_title_names_the_second_slot_when_that_is_the_bias():
+    second = pd.DataFrame([
+        {"pair_id": f"p{i}", "option_a": "alpha", "option_b": "beta",
+         "winner": "beta"}
+        for i in range(100)
+    ])
+    f = _one(audit(comparisons=second, config={"seed": 1}), "position")
+    assert f.result.has_position_effect
+    assert "second" in f.title
+    assert "first" not in f.title
+
+
+def test_position_title_names_the_first_slot_when_that_is_the_bias(
+    comparisons_biased,
+):
+    f = _one(audit(comparisons=comparisons_biased, config={"seed": 1}),
+             "position")
+    assert "first" in f.title
+    assert "second" not in f.title

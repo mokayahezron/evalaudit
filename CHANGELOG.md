@@ -16,6 +16,16 @@ checked against the published wheels and the commit each wheel matches.
 
 ## [Unreleased]
 
+### Documented
+
+- The two-sample bootstrap in `compare_independent` covers less than it
+  claims on skewed scores with small groups. A 95% interval on exponential
+  scores covered about 92% of the time with 25 and 60 items, about 93% with
+  40 and 120, and about 94.5% with 100 and 300. The docstring and README now
+  say so. Tests now match its bounds against a separate implementation and
+  against Welch's interval on a large normal sample. They also check its
+  coverage on normal data and guard the skewed-data shortfall from growing.
+
 ### Fixed
 
 - **Breaking.** `JudgeValidation.summary()` without a human baseline no
@@ -44,6 +54,40 @@ checked against the published wheels and the commit each wheel matches.
   that a judge's threshold depends on the decision. `rater_agreement` and
   the summary with a baseline are unchanged. Anything matching on the old
   sentences will stop matching.
+- **Breaking.** `score_ci`, `compare_paired`, `compare_independent` and
+  `audit` now raise `ValueError` on a NaN or infinite score. They used to
+  carry it into the mean and return NaN bounds. A NaN bound fails every
+  comparison with zero, so the margin read as clearing zero. `audit(scores=
+  {"A": [0.2, nan, 0.8], "B": [0.1, 0.3, 0.7]})` reported "The headline
+  margin clears zero" off a margin nobody measured. It now raises "scores for
+  A must be finite numbers, got 1 missing or infinite value(s), the first at
+  position 1. Drop or fill those items before computing an interval". The
+  compare functions name the argument, `a` or `b`, in place of the system.
+- **Breaking.** `audit` no longer runs the power check on two independent
+  groups of different sizes. The power arithmetic assumes equal groups, and
+  the audit passed it the total, so it split the items evenly. Groups of 10
+  and 990 were read as 500 in each, and with an effect of interest of 0.15
+  the report said "This eval was large enough for the effect at issue". With
+  the 990-item group at a 50% pass rate and the 10-item group 15 points
+  above it, the shipped test has about 13% power. The check now lands in
+  `not_run`
+  with "The two groups have 10 and 990 items. The power arithmetic here
+  assumes equal groups, and splitting the total evenly would overstate what
+  the smaller group can find. Nothing to report rather than a figure that
+  does not apply." Equal groups are unchanged.
+- `audit` no longer raises when two paired binary systems agree on every
+  item. The measured discordance rate of zero went to `detectable_effect`,
+  which refuses it, so `audit(scores={"A": [1, 0] * 50, "B": [1, 0] * 50})`
+  raised `ValueError`. The power check now lands in `not_run` with "The two
+  systems never disagree on an item, so there are no discordant pairs and
+  paired power has nothing to run on. The eval cannot say which system is
+  better from these items." The other checks report as usual.
+- **Breaking.** The `audit` position finding now names the side the judge
+  favours. Its title was always "The judge favours whichever answer it reads
+  first", even for a judge that picked the second answer in all 100 pairs,
+  whose detail already said "second". That judge now gets "The judge
+  favours whichever answer it reads second". A judge that favours the first
+  answer gets the same title as before.
 
 ## [0.5.0] - 2026-09-26
 

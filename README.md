@@ -274,13 +274,15 @@ they claim. Generate datasets with a known truth, then confirm the 95%
 interval contains it about 95% of the time. Runs per test range from a
 hundred or so to a thousand, set by what each simulation costs.
 
-The package builds eighteen intervals and nine of them are tested that way.
-Those nine are the Wilson and bootstrap intervals on a single score, the
+The package builds eighteen intervals and ten of them are tested that way.
+Those ten are the Wilson and bootstrap intervals on a single score, the
 Tango, bootstrap and Hodges-Lehmann intervals on a paired difference, the
-bootstrap intervals on Krippendorff's alpha and on judge-human alpha, and the
-Bradley-Terry intervals on each rating and on each gap between two ratings.
-The gap interval is tested on data where comparisons made on the same prompt
-move together, which is the case its item bootstrap is for.
+two-sample bootstrap in `compare_independent`, the bootstrap intervals on
+Krippendorff's alpha and on judge-human alpha, and the Bradley-Terry
+intervals on each rating and on each gap between two ratings. The gap
+interval is tested on data where comparisons made on the same prompt move
+together, which is the case its item bootstrap is for. One of the ten shows
+documented undercoverage. That is the two-sample bootstrap, described below.
 
 Eight more are pinned against a reference instead, which is the sharper test
 where one exists. The score interval for two independent proportions is swept
@@ -297,9 +299,17 @@ puts on judge-human minus human-human alpha, when it is given a human
 baseline, is matched against a separate implementation in the tests and
 against the MT-Bench figures in `analysis/mt-bench.md`.
 
-The last one has nothing pinning its bounds, and this is the place to say so
-rather than leave you to find out. It is the two-sample bootstrap in
-`compare_independent`.
+The two-sample bootstrap in `compare_independent` is also checked against a
+reference. Its bounds are matched against a separate implementation in the
+tests and checked against Welch's interval on a large normal sample. Its
+coverage falls short on skewed data, and this is the place to say so rather
+than leave you to find out. On normal scores with groups of 30 and 90 the 95%
+interval covered 94.1% of 1000 runs. On exponential scores it covered about
+92% with groups of 25 and 60, about 93% with 40 and 120, and about 94.5% with
+100 and 300. Those small-sample figures sit clearly below 95%. If your scores
+are skewed and your groups are small, read the interval as somewhat too
+narrow. The test on skewed data guards against this getting worse. It does
+not show the interval covers at 95%.
 
 Those tests run in CI and you can read them in `tests/`.
 

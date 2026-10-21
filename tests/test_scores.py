@@ -487,3 +487,12 @@ def test_a_width_that_prints_as_one_point_is_singular():
         "difference, which compare_paired and compare_independent report. Two "
         "score intervals that overlap do not show the systems are level."
     )
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("method", ["auto", "wilson", "bootstrap", "t"])
+def test_rejects_non_finite_scores(bad, method):
+    """A missing score has no place in a mean. It used to come back as a NaN
+    estimate with NaN bounds."""
+    with pytest.raises(ValueError, match="finite"):
+        score_ci([0.2, bad, 0.8, 0.5], method=method)

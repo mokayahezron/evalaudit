@@ -45,7 +45,7 @@ from .agreement import _LEVELS, rater_agreement
 from .compare import compare_independent, compare_paired
 from .judge import judge_validation, length_bias, position_bias
 from .power import detectable_effect
-from .scores import _is_binary, score_ci
+from .scores import _check_finite, _is_binary, score_ci
 
 __all__ = ["audit"]
 
@@ -294,8 +294,12 @@ def _systems(scores) -> dict:
             "compared, such as {name: frame[name] for name in (...)}"
         )
     if isinstance(scores, Mapping):
-        return {str(name): np.asarray(list(v)) for name, v in scores.items()}
-    return {"system": np.asarray(list(scores))}
+        systems = {str(name): np.asarray(list(v)) for name, v in scores.items()}
+    else:
+        systems = {"system": np.asarray(list(scores))}
+    for name, values in systems.items():
+        _check_finite(values.astype(float), f"scores for {name}")
+    return systems
 
 
 def _judge_data(judge) -> dict:
@@ -465,13 +469,21 @@ def _power_finding(comparison, systems: dict, cfg: AuditConfig):
             "not apply."
         )
 
+    discordance = _discordance(systems, paired, cfg)
+    if discordance == 0:
+        return (
+            "The two systems never disagree on an item, so there are no "
+            "discordant pairs and paired power has nothing to run on. The "
+            "eval cannot say which system is better from these items."
+        )
+
     result = detectable_effect(
         n,
         baseline=_baseline(systems),
         power=cfg.power,
         alpha=cfg.alpha,
         paired=paired,
-        discordance_rate=_discordance(systems, paired, cfg),
+        discordance_rate=discordance,
     )
     if effect is None:
         return _reach_finding(result)
@@ -651,6 +663,16 @@ def _reach_finding(result) -> Finding:
 def _power_design(comparison, systems: dict, cfg: AuditConfig):
     """Items, pairing and whether the data is binary, or why not."""
     if comparison is not None:
+        if not comparison.paired:
+            sizes = [values.size for values in systems.values()]
+            if sizes[0] != sizes[1]:
+                return (
+                    f"The two groups have {sizes[0]:,} and {sizes[1]:,} "
+                    f"items. The power arithmetic here assumes equal groups, "
+                    f"and splitting the total evenly would overstate what "
+                    f"the smaller group can find. Nothing to report rather "
+                    f"than a figure that does not apply."
+                )
         return comparison.n, comparison.paired, comparison.binary
     if len(systems) == 1:
         values = next(iter(systems.values()))
@@ -966,10 +988,11 @@ def _position_finding(comparisons, cfg: AuditConfig):
         )
 
     if result.has_position_effect:
+        side = "first" if result.position_a_rate > 0.5 else "second"
         return Finding(
             check="position",
             severity="warning",
-            title="The judge favours whichever answer it reads first",
+            title=f"The judge favours whichever answer it reads {side}",
             detail=_detail(
                 "A judge that reads position rather than quality can rank "
                 "two systems wrongly while agreeing with humans often "
