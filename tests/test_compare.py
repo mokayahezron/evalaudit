@@ -577,6 +577,111 @@ def test_independent_bootstrap_allows_single_item_group():
 
 
 # --------------------------------------------------------------------------
+# Independent bootstrap, continuous data
+#
+# A percentile bootstrap written out here must give the same bounds from the
+# same seed. On a large normal sample the interval must land near Welch's,
+# taken from statsmodels. A simulation on normal data with unequal group
+# sizes checks that the 95% interval covers the true difference about 95% of
+# the time. On skewed data it covers less than that. The skewed test measures
+# that shortfall and guards against it growing.
+# --------------------------------------------------------------------------
+
+def reference_independent_bootstrap(a, b, confidence, n_boot, seed):
+    """Percentile bootstrap of mean(a) - mean(b), each group resampled on
+    its own. Draws A's index matrix first and then B's, from one generator."""
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    rng = np.random.default_rng(seed)
+    draws_a = rng.integers(0, a.size, size=(n_boot, a.size))
+    draws_b = rng.integers(0, b.size, size=(n_boot, b.size))
+    diffs = a[draws_a].mean(axis=1) - b[draws_b].mean(axis=1)
+    tail = (1 - confidence) / 2
+    return np.quantile(diffs, tail), np.quantile(diffs, 1 - tail)
+
+
+@pytest.mark.parametrize("confidence", [0.90, 0.95, 0.99])
+@pytest.mark.parametrize("n_a, n_b", [(15, 40), (40, 15), (1, 6)])
+def test_independent_bootstrap_matches_reference(n_a, n_b, confidence):
+    rng = np.random.default_rng(11)
+    a = rng.exponential(1.2, n_a)
+    b = rng.normal(0.8, 0.5, n_b)
+    r = compare_independent(
+        a, b, method="bootstrap", confidence=confidence, n_boot=3000, seed=5,
+    )
+    lo, hi = reference_independent_bootstrap(a, b, confidence, 3000, 5)
+    assert r.method == "bootstrap"
+    assert r.paired is False
+    assert r.confidence == confidence
+    assert r.ci_low == pytest.approx(lo, abs=1e-12)
+    assert r.ci_high == pytest.approx(hi, abs=1e-12)
+
+
+def test_independent_bootstrap_near_welch_on_large_normal_sample():
+    """With many items per group the bootstrap distribution of the
+    difference is close to normal, so its percentile interval should sit
+    close to Welch's. The tolerance is a tenth of Welch's half-width, which
+    is several times the Monte Carlo error from 4000 resamples."""
+    rng = np.random.default_rng(8)
+    a = rng.normal(0.3, 1.0, 1000)
+    b = rng.normal(0.0, 2.0, 1600)
+    r = compare_independent(a, b, method="bootstrap", n_boot=4000, seed=2)
+    lo, hi = statsmodels_means(a, b).tconfint_diff(alpha=0.05, usevar="unequal")
+    tol = 0.1 * (hi - lo) / 2
+    assert r.ci_low == pytest.approx(lo, abs=tol)
+    assert r.ci_high == pytest.approx(hi, abs=tol)
+
+
+TRUE_INDEPENDENT_DIFF = 0.5
+
+
+def independent_bootstrap_coverage(draw, trials=1000):
+    """Share of trials whose 95% bootstrap CI contains TRUE_INDEPENDENT_DIFF.
+    With 1000 trials the standard error of the rate is about 0.007."""
+    rng = np.random.default_rng(44)
+    covered = 0
+    for _ in range(trials):
+        a, b = draw(rng)
+        r = compare_independent(
+            a, b, method="bootstrap", n_boot=1000,
+            seed=int(rng.integers(1_000_000)),
+        )
+        if r.ci_low <= TRUE_INDEPENDENT_DIFF <= r.ci_high:
+            covered += 1
+    return covered / trials
+
+
+def test_independent_bootstrap_coverage_normal():
+    """On normal data with unequal sizes and unequal spreads, the 95% CI
+    covers the true difference at close to 95%. The small group is the
+    tight one. The measured rate is 0.941, and the exact 95% interval on
+    941 of 1000 is 0.925 to 0.955, which contains 0.95."""
+    rate = independent_bootstrap_coverage(lambda rng: (
+        rng.normal(0.5, 1.0, 30), rng.normal(0.0, 2.0, 90),
+    ))
+    assert 0.92 <= rate <= 0.98, f"coverage was {rate:.3f}"
+
+
+def test_independent_bootstrap_skewed_undercoverage_guard():
+    """A regression guard on a known shortfall. It does not show nominal
+    coverage.
+
+    On right-skewed data at small sizes the percentile bootstrap covers less
+    than it claims. Exponential scores with means 1.5 and 1.0 on 40 and 120
+    items cover at 0.929 here. The exact 95% interval on 929 of 1000 is
+    0.911 to 0.944, which excludes 0.95. A 5000-trial run gives 0.927 at
+    40 and 120 items, 0.920 at 25 and 60, and 0.945 at 100 and 300. The
+    shortfall is documented in the compare_independent docstring and the
+    README. This test fails if coverage drops further. If it rises past the
+    band, the documentation is out of date and should change with it.
+    """
+    rate = independent_bootstrap_coverage(lambda rng: (
+        rng.exponential(1.5, 40), rng.exponential(1.0, 120),
+    ))
+    assert 0.91 <= rate <= 0.96, f"coverage was {rate:.3f}"
+
+
+# --------------------------------------------------------------------------
 # Welch's t, continuous independent samples
 #
 # The interval is checked against statsmodels CompareMeans, which shares no
@@ -930,3 +1035,27 @@ def test_one_changed_item_is_counted_in_the_singular():
         "is better. That does not mean the two are level. 1 of 1 item changed "
         "between systems."
     )
+
+
+# --------------------------------------------------------------------------
+# Missing scores
+#
+# A NaN used to flow through to NaN bounds. The comparison then read as one
+# whose interval clears zero, because a NaN fails every test of crossing it,
+# and the audit printed a direction off a margin nobody measured.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+def test_paired_rejects_non_finite_scores(bad):
+    with pytest.raises(ValueError, match="finite"):
+        compare_paired([0.2, bad, 0.8], [0.1, 0.3, 0.7])
+    with pytest.raises(ValueError, match="finite"):
+        compare_paired([0.1, 0.3, 0.7], [0.2, bad, 0.8])
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+def test_independent_rejects_non_finite_scores(bad):
+    with pytest.raises(ValueError, match="finite"):
+        compare_independent([0.2, bad, 0.8], [0.1, 0.3, 0.7, 0.5])
+    with pytest.raises(ValueError, match="finite"):
+        compare_independent([0.1, 0.3, 0.7, 0.5], [0.2, bad, 0.8])

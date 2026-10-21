@@ -73,6 +73,7 @@ def score_ci(
     n = len(x)
     if n == 0:
         raise ValueError("scores must not be empty")
+    _check_finite(x, "scores")
     if method not in _VALID_METHODS:
         raise ValueError(f"method must be one of {_VALID_METHODS}, got {method!r}")
     if not 0 < confidence < 1:
@@ -109,6 +110,23 @@ def score_ci(
         binary=binary,
         confidence=confidence,
     )
+
+
+def _check_finite(x: np.ndarray, name: str) -> None:
+    """Refuse NaN and infinite scores.
+
+    A missing score carried into a mean gives NaN bounds. A NaN bound fails
+    every comparison with zero, so an interval built on one reads as clearing
+    zero when nothing was measured at all.
+    """
+    bad = ~np.isfinite(x)
+    if bad.any():
+        raise ValueError(
+            f"{name} must be finite numbers, got {int(bad.sum())} missing or "
+            f"infinite value(s), the first at position "
+            f"{int(np.argmax(bad))}. Drop or fill those items before "
+            f"computing an interval"
+        )
 
 
 def _is_binary(x: np.ndarray) -> bool:

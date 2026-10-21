@@ -16,7 +16,7 @@ from scipy import optimize as _optimize
 from scipy import stats as _stats
 
 from ._types import ComparisonResult
-from .scores import _is_binary
+from .scores import _check_finite, _is_binary
 
 __all__ = ["compare_paired", "compare_independent"]
 
@@ -101,6 +101,8 @@ def compare_paired(
         )
     if x.size == 0:
         raise ValueError("a and b must not be empty")
+    _check_finite(x, "a")
+    _check_finite(y, "b")
 
     n = int(x.size)
     binary = _is_binary(x) and _is_binary(y)
@@ -154,7 +156,12 @@ def compare_independent(
         ``"score"`` is the score interval and score test for a difference of
         two independent proportions. The interval is the test inverted, so
         the two never disagree about zero.
-        ``"bootstrap"`` resamples each group separately.
+        ``"bootstrap"`` resamples each group separately. It is a percentile
+        bootstrap, and on skewed scores with small groups it covers less
+        than it claims. In simulation a 95% interval on exponential scores
+        covered about 92% of the time with 25 and 60 items, about 93% with
+        40 and 120, and about 94.5% with 100 and 300. On normal scores it
+        covers close to 95%.
         ``"t"`` is Welch's t interval, which does not assume equal variance.
     confidence
         Nominal coverage, strictly between 0 and 1, default 0.95.
@@ -180,6 +187,8 @@ def compare_independent(
     y = np.asarray(b, dtype=float)
     if x.size == 0 or y.size == 0:
         raise ValueError("a and b must not be empty")
+    _check_finite(x, "a")
+    _check_finite(y, "b")
 
     binary = _is_binary(x) and _is_binary(y)
     if method == "auto":
