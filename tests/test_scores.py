@@ -496,3 +496,27 @@ def test_rejects_non_finite_scores(bad, method):
     estimate with NaN bounds."""
     with pytest.raises(ValueError, match="finite"):
         score_ci([0.2, bad, 0.8, 0.5], method=method)
+
+
+# One non-finite score is counted in the singular and named by its position.
+# Two or more are counted in the plural, and the message points at the first.
+# It said "got 1 missing or infinite value(s), the first at position 1".
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+def test_one_non_finite_score_is_counted_in_the_singular(bad):
+    with pytest.raises(ValueError) as refused:
+        score_ci([0.2, bad, 0.8, 0.5])
+    assert str(refused.value) == (
+        "scores must be finite numbers, got 1 missing or infinite value, at "
+        "position 1. Drop or fill that item before computing an interval"
+    )
+
+
+def test_two_non_finite_scores_are_counted_from_the_first():
+    with pytest.raises(ValueError) as refused:
+        score_ci([np.nan, 0.2, np.inf, 0.5])
+    assert str(refused.value) == (
+        "scores must be finite numbers, got 2 missing or infinite values, the "
+        "first at position 0. Drop or fill those items before computing an "
+        "interval"
+    )

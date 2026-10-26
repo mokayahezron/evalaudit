@@ -158,10 +158,13 @@ def compare_independent(
         the two never disagree about zero.
         ``"bootstrap"`` resamples each group separately. It is a percentile
         bootstrap, and on skewed scores with small groups it covers less
-        than it claims. In simulation a 95% interval on exponential scores
-        covered about 92% of the time with 25 and 60 items, about 93% with
-        40 and 120, and about 94.5% with 100 and 300. On normal scores it
-        covers close to 95%.
+        than it claims. In 5,000 simulated evals per setting, a 95% interval
+        on exponential scores covered 92.6% of the time with 25 and 60
+        items, 93.0% with 40 and 120, and 94.5% with 100 and 300. On normal
+        scores with 30 and 90 items it covered 94.1%. Each figure has a
+        Monte Carlo standard error between 0.3 and 0.4 points.
+        ``examples/independent_bootstrap_coverage_study.py`` reproduces
+        them.
         ``"t"`` is Welch's t interval, which does not assume equal variance.
     confidence
         Nominal coverage, strictly between 0 and 1, default 0.95.

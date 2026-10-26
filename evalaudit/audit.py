@@ -663,7 +663,10 @@ def _reach_finding(result) -> Finding:
 def _power_design(comparison, systems: dict, cfg: AuditConfig):
     """Items, pairing and whether the data is binary, or why not."""
     if comparison is not None:
-        if not comparison.paired:
+        # Scores that are not 0/1 get no power check whatever the group
+        # sizes, and _power_finding says so. Group sizes matter only after
+        # that.
+        if not comparison.paired and comparison.binary:
             sizes = [values.size for values in systems.values()]
             if sizes[0] != sizes[1]:
                 return (

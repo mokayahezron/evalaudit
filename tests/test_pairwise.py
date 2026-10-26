@@ -2331,7 +2331,42 @@ def test_a_missing_item_id_on_the_only_comparison_is_singular():
     with pytest.raises(ValueError) as excinfo:
         bradley_terry(data, n_boot=10)
     assert str(excinfo.value) == (
-        "item_id is missing on 1 of 1 comparison, the first between 'a' and "
+        "item_id is missing on 1 of 1 comparison, the one between 'a' and "
+        "'b'. The bootstrap resamples whole items, so it needs to know which "
+        "item every comparison belongs to. Fill in the item ids, or pass "
+        "resample='comparisons' to resample comparisons one at a time, which "
+        "treats every judgement as independent."
+    )
+
+
+def test_one_missing_item_id_among_two_comparisons_is_the_one():
+    """One win each way, so the fit exists and the item bootstrap is
+    reached. The second comparison has no item id. It said "the first
+    between", which points at one of several when only one is missing."""
+    data = pd.DataFrame(
+        [("q1", "a", "b", "a"), (None, "a", "b", "b")],
+        columns=["item_id", "model_a", "model_b", "winner"],
+    )
+    with pytest.raises(ValueError) as excinfo:
+        bradley_terry(data, n_boot=10)
+    assert str(excinfo.value) == (
+        "item_id is missing on 1 of 2 comparisons, the one between 'a' and "
+        "'b'. The bootstrap resamples whole items, so it needs to know which "
+        "item every comparison belongs to. Fill in the item ids, or pass "
+        "resample='comparisons' to resample comparisons one at a time, which "
+        "treats every judgement as independent."
+    )
+
+
+def test_two_missing_item_ids_name_the_first():
+    data = pd.DataFrame(
+        [(None, "a", "b", "a"), (None, "a", "b", "b")],
+        columns=["item_id", "model_a", "model_b", "winner"],
+    )
+    with pytest.raises(ValueError) as excinfo:
+        bradley_terry(data, n_boot=10)
+    assert str(excinfo.value) == (
+        "item_id is missing on 2 of 2 comparisons, the first between 'a' and "
         "'b'. The bootstrap resamples whole items, so it needs to know which "
         "item every comparison belongs to. Fill in the item ids, or pass "
         "resample='comparisons' to resample comparisons one at a time, which "

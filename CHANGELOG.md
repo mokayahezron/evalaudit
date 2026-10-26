@@ -3,7 +3,7 @@
 Every change to evalaudit that a caller can see is recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 version numbers follow [semantic versioning](https://semver.org/). Before 1.0
-a minor version can break things, and 0.3.0, 0.4.0 and 0.5.0 all do.
+a minor version can break things, and 0.3.0, 0.4.0, 0.5.0 and 0.6.0 all do.
 
 An entry marked **Breaking** changes what a call that worked on the previous
 release returns, raises or prints. The mark goes on the entry wherever it
@@ -14,17 +14,27 @@ the first release with a tag, and 0.4.0 and 0.5.0 have one too. The entries
 below 0.3.0 were reconstructed after the fact, and their contents were
 checked against the published wheels and the commit each wheel matches.
 
-## [Unreleased]
+## [0.6.0] - Unreleased
 
-### Documented
+Most of this release is text, and most of it changes what a summary or a
+message prints. Missing and infinite scores are now refused where they used
+to give NaN bounds that read as clearing zero. `audit` stops sizing the
+power check on two unequal groups, stops raising when two systems never
+disagree, and names the side a position-biased judge favours. The judge's
+summary without a human baseline no longer reads Krippendorff's lines as a
+verdict on the judge. Rates near 0% and 100% print enough digits to stay
+off the end they have not reached. Anything that matches on the old
+sentences will stop matching. Every entry was checked by running the same
+calls against the v0.5.0 tag and against this tree. Three entries were first
+written at commit 898a9cb and changed after it, and each one says how.
 
-- The two-sample bootstrap in `compare_independent` covers less than it
-  claims on skewed scores with small groups. A 95% interval on exponential
-  scores covered about 92% of the time with 25 and 60 items, about 93% with
-  40 and 120, and about 94.5% with 100 and 300. The docstring and README now
-  say so. Tests now match its bounds against a separate implementation and
-  against Welch's interval on a large normal sample. They also check its
-  coverage on normal data and guard the skewed-data shortfall from growing.
+### Changed
+
+- Nothing.
+
+### Added
+
+- Nothing.
 
 ### Fixed
 
@@ -60,21 +70,31 @@ checked against the published wheels and the commit each wheel matches.
   comparison with zero, so the margin read as clearing zero. `audit(scores=
   {"A": [0.2, nan, 0.8], "B": [0.1, 0.3, 0.7]})` reported "The headline
   margin clears zero" off a margin nobody measured. It now raises "scores for
-  A must be finite numbers, got 1 missing or infinite value(s), the first at
-  position 1. Drop or fill those items before computing an interval". The
-  compare functions name the argument, `a` or `b`, in place of the system.
+  A must be finite numbers, got 1 missing or infinite value, at position 1.
+  Drop or fill that item before computing an interval". With two or more
+  such values the message counts them and points at the first, as in "got 2
+  missing or infinite values, the first at position 0. Drop or fill those
+  items before computing an interval". The compare functions name the
+  argument, `a` or `b`, in place of the system. As first written for this
+  release, the message for a single value read "got 1 missing or infinite
+  value(s), the first at position 1. Drop or fill those items".
 - **Breaking.** `audit` no longer runs the power check on two independent
-  groups of different sizes. The power arithmetic assumes equal groups, and
-  the audit passed it the total, so it split the items evenly. Groups of 10
-  and 990 were read as 500 in each, and with an effect of interest of 0.15
-  the report said "This eval was large enough for the effect at issue". With
-  the 990-item group at a 50% pass rate and the 10-item group 15 points
-  above it, the shipped test has about 13% power. The check now lands in
-  `not_run`
-  with "The two groups have 10 and 990 items. The power arithmetic here
-  assumes equal groups, and splitting the total evenly would overstate what
-  the smaller group can find. Nothing to report rather than a figure that
-  does not apply." Equal groups are unchanged.
+  groups of 0/1 scores with different sizes. The power arithmetic assumes
+  equal groups, and the audit passed it the total, so it split the items
+  evenly. Groups of 10 and 990 were read as 500 in each, and with an effect
+  of interest of 0.15 the report said "This eval was large enough for the
+  effect at issue". With the 990-item group at a 50% pass rate and the
+  10-item group 15 points above it, the shipped test has about 13% power.
+  The check now lands in `not_run` with "The two groups have 10 and 990
+  items. The power arithmetic here assumes equal groups, and splitting the
+  total evenly would overstate what the smaller group can find. Nothing to
+  report rather than a figure that does not apply." Equal groups are
+  unchanged. Scores that are not 0/1 keep the reason 0.5.0 gave, "The power
+  arithmetic here is for pass rates and these scores are not 0/1. Nothing to
+  report rather than a figure that does not apply.", whatever the group
+  sizes. As first written for this release, the check for unequal groups
+  ran first and gave groups of continuous scores the reason about group
+  sizes instead.
 - `audit` no longer raises when two paired binary systems agree on every
   item. The measured discordance rate of zero went to `detectable_effect`,
   which refuses it, so `audit(scores={"A": [1, 0] * 50, "B": [1, 0] * 50})`
@@ -88,6 +108,79 @@ checked against the published wheels and the commit each wheel matches.
   whose detail already said "second". That judge now gets "The judge
   favours whichever answer it reads second". A judge that favours the first
   answer gets the same title as before.
+- **Breaking.** `JudgeValidation.summary()` on a result with no item left
+  said "One item cannot carry a reliability estimate" and printed "Plain
+  accuracy is nan%". `judge_validation` refuses such data with "no item
+  carries a label from both sides", so only a `JudgeValidation` built by
+  hand reaches this. Built with `agreement` and `accuracy` NaN, `n_items=0`
+  and `n_dropped=2`, it now reads "Judge and human agreement is undefined
+  (nominal, 0 items). No item has a label from both sides, so there is
+  nothing to compare and no number to report. Label more items and run this
+  again. 2 items were set aside because one side had no label."
+- **Breaking.** `JudgeValidation.summary()` explained an alpha left
+  undefined by labels that never varied with "This comes from a rubric with
+  one label in it." The data shows only that one label was used, and the
+  rubric may have had others. On `judge_validation([1] * 40, [1] * 40)` it
+  now reads "This comes from both sides using one label throughout." The
+  `audit` finding for undefined judge agreement carries the new sentence.
+- **Breaking.** `PowerResult.summary()` said "about 0 discordant pairs, and
+  McNemar reads only those" when the expected count rounded to zero.
+  `detectable_effect(2, discordance_rate=0.25)` expects 0.5 discordant
+  pairs, which rounds to 0. Its summary now reads "At a 25% discordance rate
+  that is under one discordant pair on average, and McNemar reads only
+  discordant pairs. Items where the two systems agree carry no information
+  about which one is better." Counts of one or more print as before. The
+  `audit` power finding carries the new sentence.
+- **Breaking.** `PowerResult.summary()` printed rates to one decimal place,
+  so a positive rate could print as 0% and a rate below 1 as 100%.
+  `detectable_effect(1000, alpha=0.0004, discordance_rate=0.3)` said "a 0%
+  significance level" and now says "a 0.04% significance level".
+  `detectable_effect(1000, power=0.9996, discordance_rate=0.3)` said "At
+  100% power" and now says "At 99.96% power". A positive rate that rounds to
+  0% now prints with two significant figures. A rate below 1 that rounds to
+  100% prints its gap from 100% to two significant figures, so the float
+  just below 1 prints as 99.999999999999989%. Exactly 0 and 1 print as 0%
+  and 100%, and every other rate prints as before. The `audit` power finding
+  carries these summaries.
+- **Breaking.** `bradley_terry` with `resample="items"` said "the first
+  between" when one comparison had no `item_id`, as if several did. With one
+  missing id it now reads "item_id is missing on 1 of 2 comparisons, the one
+  between 'a' and 'b'." Two or more missing ids keep "the first between".
+
+### Documented
+
+- The two-sample bootstrap in `compare_independent` covers less than it
+  claims on skewed scores with small groups. In 5,000 simulated evals per
+  setting, a 95% interval on exponential scores covered 92.6% of the time
+  with 25 and 60 items, 93.0% with 40 and 120, and 94.5% with 100 and 300,
+  each with a Monte Carlo standard error between 0.3 and 0.4 points. On
+  normal scores with 30 and 90 items it covered 94.1%. The docstring and
+  README now say so, and `examples/independent_bootstrap_coverage_study.py`
+  reproduces the figures with its seeds, settings and recorded output.
+  0.5.0's README said nothing pinned this interval's bounds. Tests now match
+  its bounds against a separate implementation and against Welch's interval
+  on a large normal sample. They also check its coverage on normal data and
+  guard the skewed-data shortfall from growing. As first written for this
+  release the figures were about 92%, about 93% and about 94.5%, from a
+  5,000-trial run whose seed was not recorded. That run cannot be repeated,
+  so those figures have no reproducible source. That does not show they were
+  wrong, and the recorded run gives the same 94.5% with 100 and 300 items.
+- The `bradley_terry` docstring said the prompt-level spread on MT-Bench was
+  not measured, and stopped there. It now also says what was measured. On
+  the MT-Bench human votes, with the item bootstrap clustered on
+  question_id, seed 0 and 2,000 resamples, the mean gap-interval width over
+  the fifteen pairs was 1.58 times the comparison bootstrap's mean. That is
+  one run of each, a ratio of means rather than a per-pair figure, and not
+  an estimate of the spread.
+- `analysis/mt-bench.md` said that correcting for clustering "widens every
+  gap interval by a factor of 1.58". The 1.58 is the ratio of the mean
+  gap-interval widths over the fifteen pairs, and single pairs vary around
+  it. The section now says so and carries a dated correction. No figure
+  changed.
+
+### Removed
+
+- Nothing.
 
 ## [0.5.0] - 2026-09-26
 
@@ -903,7 +996,7 @@ hour after the upload. It reported `__version__` as 0.1.0.
 
 - Nothing.
 
-[Unreleased]: https://github.com/mokayahezron/evalaudit/compare/v0.5.0...main
+[0.6.0]: https://github.com/mokayahezron/evalaudit/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mokayahezron/evalaudit/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mokayahezron/evalaudit/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mokayahezron/evalaudit/compare/809a650...v0.3.0

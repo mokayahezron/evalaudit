@@ -24,6 +24,11 @@ implementation was run against them.
 
 ## 1. The pair the votes do not order
 
+*Correction, 2026-10-25. This section said that correcting for clustering
+widens every gap interval by a factor of 1.58. The 1.58 is a ratio of mean
+widths over the fifteen pairs, and single pairs vary around it. The wording
+below now says so. No figure changed.*
+
 I fit a Bradley-Terry model to all 2,575 decisive human votes and
 put a 95% percentile interval on the gap between every pair of models. The
 bootstrap resamples questions rather than single comparisons, because every
@@ -58,8 +63,10 @@ The test is the interval on the gap.
 
 The other is clustering. Resampling single comparisons treats 2,575 judgements
 spread over 80 prompts as independent. They are not. Correcting for that widens
-every gap interval by a factor of 1.58, a design effect of 2.48. An analysis that
-skips it reports intervals about a third too narrow.
+the gap intervals. Over the fifteen pairs, the mean width under the question
+bootstrap is 1.58 times the mean width under the comparison bootstrap, a design
+effect of 2.48. Single pairs vary around that ratio. An analysis that skips it
+reports intervals about a third too narrow.
 
 A leaderboard prints a total order whether or not the data carries one, and it
 carries no marker for where the support runs out. That order is partly a

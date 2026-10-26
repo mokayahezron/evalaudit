@@ -1891,6 +1891,53 @@ def test_an_undefined_judge_agreement_is_not_called_a_threshold_failure():
     assert "tracks them less closely" not in f.detail
 
 
+def test_the_undefined_judge_finding_carries_no_band_sentence():
+    """The judge findings carry the judge's summary word for word, and every
+    band sentence ends by saying what the lines were set for. An undefined
+    alpha has no band sentence, so this finding is the one judge finding
+    without those lines. One item remains once the unlabelled one is set
+    aside."""
+    r = audit(judge={"human": ["a", "b"], "judge": ["b", None]},
+              config={"seed": 1})
+    f = _one(r, "judge")
+    assert f.result.n_items == 1
+    assert f.result.agreement != f.result.agreement  # NaN
+    assert f.title == JUDGE_UNDEFINED_TITLE
+    assert f.detail == (
+        "The report holds the judge to 0.667, and this data gives no alpha to "
+        "hold against it. Judge and human agreement is undefined (nominal, 1 "
+        "item). One item cannot carry a reliability estimate, so there is no "
+        "number to report and no interval around it. Label more items and run "
+        "this again. Plain accuracy is 0.0%. 1 item was set aside because one "
+        "side had no label. Until there is an alpha, the eval has not shown "
+        "that the judge tracks the humans. Label more items by hand and run "
+        "this again. If every compared label came out the same, check that "
+        "the rubric leaves the judge and the humans room to differ."
+    )
+
+
+def test_the_undefined_judge_finding_names_one_label_used_throughout():
+    """Every label the same on both sides. The finding carries the judge's
+    summary, which said the cause was a rubric with one label in it."""
+    r = audit(judge={"human": ["y"] * 10, "judge": ["y"] * 10},
+              config={"seed": 1})
+    f = _one(r, "judge")
+    assert f.result.n_items == 10
+    assert f.result.agreement != f.result.agreement  # NaN
+    assert f.title == JUDGE_UNDEFINED_TITLE
+    assert f.detail == (
+        "The report holds the judge to 0.667, and this data gives no alpha to "
+        "hold against it. Judge and human agreement is undefined (nominal, 10 "
+        "items). Every label that could be compared was identical, so there "
+        "is no disagreement to divide by. This comes from both sides using "
+        "one label throughout. It is not perfect agreement. Plain accuracy is "
+        "100.0%. Until there is an alpha, the eval has not shown that the "
+        "judge tracks the humans. Label more items by hand and run this "
+        "again. If every compared label came out the same, check that the "
+        "rubric leaves the judge and the humans room to differ."
+    )
+
+
 def test_a_defined_low_judge_agreement_keeps_the_threshold_title(judge_poor):
     """This ran on judge_mediocre, whose interval runs from 0.467 to 0.691.
     That interval crosses 0.667, so "below the working threshold" was never
@@ -2639,3 +2686,117 @@ def test_position_title_names_the_first_slot_when_that_is_the_bias(
              "position")
     assert "first" in f.title
     assert "second" not in f.title
+
+
+# --------------------------------------------------------------------------
+# The same inputs, with every message, reason and title compared whole
+#
+# The tests above look for words inside the text. A message that named the
+# wrong system, a reason that read "100 and 990", or a title that read the
+# other way could pass them. These compare the whole text.
+# --------------------------------------------------------------------------
+
+UNEQUAL_GROUPS_REASON = (
+    "The two groups have 10 and 990 items. The power arithmetic here assumes "
+    "equal groups, and splitting the total evenly would overstate what the "
+    "smaller group can find. Nothing to report rather than a figure that "
+    "does not apply."
+)
+NOT_PASS_RATES_REASON = (
+    "The power arithmetic here is for pass rates and these scores are not "
+    "0/1. Nothing to report rather than a figure that does not apply."
+)
+NO_DISAGREEMENT_REASON = (
+    "The two systems never disagree on an item, so there are no discordant "
+    "pairs and paired power has nothing to run on. The eval cannot say which "
+    "system is better from these items."
+)
+
+
+def test_one_missing_score_names_its_system_and_position():
+    with pytest.raises(ValueError) as refused:
+        audit(scores={"A": [0.2, np.nan, 0.8], "B": [0.1, 0.3, 0.7]})
+    assert str(refused.value) == (
+        "scores for A must be finite numbers, got 1 missing or infinite "
+        "value, at position 1. Drop or fill that item before computing an "
+        "interval"
+    )
+
+
+def test_two_missing_scores_are_counted_from_the_first():
+    with pytest.raises(ValueError) as refused:
+        audit(scores={"A": [0.2, 0.5, 0.8], "B": [np.nan, 0.3, np.inf]})
+    assert str(refused.value) == (
+        "scores for B must be finite numbers, got 2 missing or infinite "
+        "values, the first at position 0. Drop or fill those items before "
+        "computing an interval"
+    )
+
+
+def test_unequal_binary_groups_give_the_unequal_groups_reason():
+    r = audit(
+        scores={"A": [1] * 5 + [0] * 5, "B": [1] * 500 + [0] * 490},
+        config={"seed": 1, "effect_of_interest": 0.15},
+    )
+    comparison = _one(r, "compare").result
+    assert (comparison.paired, comparison.binary) == (False, True)
+    assert _reason(r, "power") == UNEQUAL_GROUPS_REASON
+
+
+def test_unequal_continuous_groups_keep_the_pass_rate_reason():
+    """Scores that are not 0/1 get no power check whatever the group sizes,
+    and 0.5.0 said so. The check for unequal groups ran first and replaced
+    that reason with one about group sizes, which suggests equal groups
+    would get a figure."""
+    r = audit(
+        scores={
+            "A": np.linspace(0.0, 0.9, 10),
+            "B": np.linspace(0.05, 0.95, 20),
+        },
+        config={"seed": 1},
+    )
+    comparison = _one(r, "compare").result
+    assert (comparison.paired, comparison.binary) == (False, False)
+    assert _reason(r, "power") == NOT_PASS_RATES_REASON
+
+
+def test_equal_continuous_groups_give_the_pass_rate_reason():
+    r = audit(
+        scores={
+            "A": np.linspace(0.0, 0.9, 10),
+            "B": np.linspace(0.05, 0.95, 10),
+        },
+        config={"seed": 1, "paired": False},
+    )
+    comparison = _one(r, "compare").result
+    assert (comparison.paired, comparison.binary) == (False, False)
+    assert _reason(r, "power") == NOT_PASS_RATES_REASON
+
+
+def test_identical_binary_results_give_the_no_disagreement_reason():
+    r = audit(scores={"A": [1, 0] * 50, "B": [1, 0] * 50},
+              config={"seed": 1})
+    comparison = _one(r, "compare").result
+    assert (comparison.paired, comparison.binary) == (True, True)
+    assert comparison.n_discordant == 0
+    assert _reason(r, "power") == NO_DISAGREEMENT_REASON
+
+
+def test_the_position_title_reads_second_in_full():
+    second = pd.DataFrame([
+        {"pair_id": f"p{i}", "option_a": "alpha", "option_b": "beta",
+         "winner": "beta"}
+        for i in range(100)
+    ])
+    f = _one(audit(comparisons=second, config={"seed": 1}), "position")
+    assert f.result.has_position_effect
+    assert f.result.position_a_rate < 0.5
+    assert f.title == "The judge favours whichever answer it reads second"
+
+
+def test_the_position_title_reads_first_in_full(comparisons_biased):
+    f = _one(audit(comparisons=comparisons_biased, config={"seed": 1}),
+             "position")
+    assert f.result.has_position_effect
+    assert f.result.position_a_rate > 0.5
+    assert f.title == "The judge favours whichever answer it reads first"

@@ -1090,12 +1090,17 @@ def test_agreement_is_undefined_when_nobody_varied():
 def test_the_nobody_varied_summary_is_in_plain_sentences():
     """The sentence used to read "That is not perfect agreement, it is a
     rubric with one label in it." That construction is banned in this
-    codebase. Both halves of the meaning stay. The cause is a rubric with one
-    label in it, and the result is not perfect agreement."""
+    codebase. Both halves of the meaning stay. The cause is both sides using
+    one label throughout, and the result is not perfect agreement. It said
+    the cause was a rubric with one label in it, which the data cannot show.
+    The rubric may have had other labels nobody used."""
     text = judge_validation([1] * 40, [1] * 40, n_boot=200, seed=1).summary()
-    assert (
-        "This comes from a rubric with one label in it. It is not perfect "
-        "agreement." in text
+    assert text == (
+        "Judge and human agreement is undefined (nominal, 40 items). Every "
+        "label that could be compared was identical, so there is no "
+        "disagreement to divide by. This comes from both sides using one "
+        "label throughout. It is not perfect agreement. Plain accuracy is "
+        "100.0%."
     )
     assert "not perfect agreement, it is" not in text
 
@@ -1132,6 +1137,87 @@ def test_one_set_aside_item_is_singular():
     assert r.n_dropped == 1
     assert " 1 item was set aside because one side had no label." in r.summary()
     assert "1 items" not in r.summary()
+
+
+# --------------------------------------------------------------------------
+# How many items remain after the set-aside rule
+#
+# Zero, one and two remaining items, and two that carry one label between
+# them. judge_validation refuses zero before a result exists, so the
+# zero-item summary is reached only by building the result directly. It used
+# to say "One item cannot carry a reliability estimate" about no items at
+# all, and print a plain accuracy of nan%.
+# --------------------------------------------------------------------------
+
+def test_no_remaining_item_is_refused_before_a_result_exists():
+    with pytest.raises(ValueError) as refused:
+        judge_validation(["a", "b"], [None, None], n_boot=0)
+    assert str(refused.value) == "no item carries a label from both sides"
+
+
+def test_a_result_with_no_remaining_item_says_there_is_nothing_to_compare():
+    r = JudgeValidation(
+        agreement=float("nan"),
+        ci_low=float("nan"),
+        ci_high=float("nan"),
+        accuracy=float("nan"),
+        n_items=0,
+        n_dropped=2,
+        level="nominal",
+        by_slice=pd.DataFrame(),
+    )
+    assert r.n_items == 0
+    assert np.isnan(r.agreement)
+    assert r.summary() == (
+        "Judge and human agreement is undefined (nominal, 0 items). No item "
+        "has a label from both sides, so there is nothing to compare and no "
+        "number to report. Label more items and run this again. 2 items were "
+        "set aside because one side had no label."
+    )
+
+
+def test_one_remaining_item_is_too_few():
+    r = judge_validation(["a", "b"], ["b", None], n_boot=0)
+    assert (r.n_items, r.n_dropped) == (1, 1)
+    assert np.isnan(r.agreement)
+    assert r.summary() == (
+        "Judge and human agreement is undefined (nominal, 1 item). One item "
+        "cannot carry a reliability estimate, so there is no number to report "
+        "and no interval around it. Label more items and run this again. "
+        "Plain accuracy is 0.0%. 1 item was set aside because one side had no "
+        "label."
+    )
+
+
+def test_two_remaining_items_that_vary_give_an_alpha():
+    r = judge_validation(["a", "b", "a"], ["a", "b", None], n_boot=0)
+    assert (r.n_items, r.n_dropped) == (2, 1)
+    assert r.agreement == 1.0
+    assert r.summary() == (
+        "Judge and human agree at alpha 1.000 (nominal, 2 items). No interval "
+        "was computed, so nothing here is placed against sampling error. "
+        "Plain accuracy is 100.0%. 1 item was set aside because one side had "
+        "no label. Without an interval there is nothing to place the judge's "
+        "agreement with the humans against the conventional lines at 0.667 "
+        "and 0.800, so the data cannot show that it clears either. That does "
+        "not mean it falls short of them. These lines were set for human "
+        "coders, and how closely a judge has to agree depends on the decision "
+        "it is used for. Calling judge_validation with a human_baseline "
+        "measures the judge against a second human instead."
+    )
+
+
+def test_two_remaining_items_with_one_label_have_no_disagreement():
+    r = judge_validation(["a", "a", "b"], ["a", "a", None], n_boot=0)
+    assert (r.n_items, r.n_dropped) == (2, 1)
+    assert np.isnan(r.agreement)
+    assert r.summary() == (
+        "Judge and human agreement is undefined (nominal, 2 items). Every "
+        "label that could be compared was identical, so there is no "
+        "disagreement to divide by. This comes from both sides using one "
+        "label throughout. It is not perfect agreement. Plain accuracy is "
+        "100.0%. 1 item was set aside because one side had no label."
+    )
 
 
 # --------------------------------------------------------------------------
