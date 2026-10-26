@@ -10,11 +10,11 @@ release returns, raises or prints. The mark goes on the entry wherever it
 sits, under Changed, Fixed or Removed.
 
 Every release is dated by the day PyPI received its upload, in UTC. 0.3.0 is
-the first release with a tag, and 0.4.0 and 0.5.0 have one too. The entries
-below 0.3.0 were reconstructed after the fact, and their contents were
-checked against the published wheels and the commit each wheel matches.
+the first release with a tag, and 0.4.0, 0.5.0 and 0.6.0 have one too. The
+entries below 0.3.0 were reconstructed after the fact, and their contents
+were checked against the published wheels and the commit each wheel matches.
 
-## [0.6.0] - Unreleased
+## [0.6.0] - 2026-10-26
 
 Most of this release is text, and most of it changes what a summary or a
 message prints. Missing and infinite scores are now refused where they used
