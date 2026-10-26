@@ -164,8 +164,16 @@ def bradley_terry(
     spread of 1.0 they were 63.5% as wide, covered 80%, and separated about
     one more pair of the fifteen on average. With no prompt-level spread the
     two agree, and the item bootstrap covered between 93.7% and 94.6% at
-    every spread. The spread on MT-Bench itself was not measured.
-    ``examples/pairwise_cluster_study.py`` reproduces these figures.
+    every spread. ``examples/pairwise_cluster_study.py`` reproduces these
+    figures.
+
+    The spread on MT-Bench itself was not measured. A width ratio was. On
+    the MT-Bench human votes, with the item bootstrap clustered on
+    question_id, seed 0 and 2,000 resamples, the mean gap-interval width
+    over the fifteen pairs was 1.58 times the comparison bootstrap's mean.
+    That is one run of each. It is a ratio of means, not a per-pair figure,
+    and it is not an estimate of the spread. ``analysis/mt-bench.md``
+    reports its square, 2.48, as a design effect.
 
     A resample can be undefined the same two ways the full data can, by
     splitting the models into groups or by leaving one unbeaten. Those
@@ -518,9 +526,11 @@ def _clusters(used: pd.DataFrame, resample: str):
     missing = ids.isna()
     if missing.any():
         first = used[missing].iloc[0]
+        n_missing = int(missing.sum())
+        which = "the one" if n_missing == 1 else "the first"
         raise ValueError(
-            f"item_id is missing on {int(missing.sum())} of {len(used)} "
-            f"{_plural('comparison', len(used))}, the first between "
+            f"item_id is missing on {n_missing} of {len(used)} "
+            f"{_plural('comparison', len(used))}, {which} between "
             f"{first['model_a']!r} and {first['model_b']!r}. The bootstrap "
             f"resamples whole items, so it needs to know which item every "
             f"comparison belongs to. Fill in the item ids, or pass "

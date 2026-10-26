@@ -304,12 +304,15 @@ reference. Its bounds are matched against a separate implementation in the
 tests and checked against Welch's interval on a large normal sample. Its
 coverage falls short on skewed data, and this is the place to say so rather
 than leave you to find out. On normal scores with groups of 30 and 90 the 95%
-interval covered 94.1% of 1000 runs. On exponential scores it covered about
-92% with groups of 25 and 60, about 93% with 40 and 120, and about 94.5% with
-100 and 300. Those small-sample figures sit clearly below 95%. If your scores
-are skewed and your groups are small, read the interval as somewhat too
-narrow. The test on skewed data guards against this getting worse. It does
-not show the interval covers at 95%.
+interval covered 94.1% of 1,000 runs and 94.1% of 5,000. On exponential scores
+it covered 92.6% of 5,000 runs with groups of 25 and 60, 93.0% with 40 and
+120, and 94.5% with 100 and 300. Each 5,000-run figure has a Monte Carlo
+standard error between 0.3 and 0.4 points. The figures for 25 and 60 and for
+40 and 120 sit clearly below 95%. If your scores are skewed and your groups
+are small, read the interval as somewhat too narrow. The test on skewed data
+guards against this getting worse. It does not show the interval covers at
+95%. `examples/independent_bootstrap_coverage_study.py` reproduces these
+figures.
 
 Those tests run in CI and you can read them in `tests/`.
 
@@ -335,7 +338,7 @@ Python 3.9+, numpy, scipy, pandas. Nothing else.
 Upgrading from an earlier version? The
 [changelog](https://github.com/mokayahezron/evalaudit/blob/main/CHANGELOG.md)
 lists every change a caller can see, with what to do about each breaking one.
-0.3.0, 0.4.0 and 0.5.0 each change what some calls return or print, so read
+0.3.0, 0.4.0, 0.5.0 and 0.6.0 each change what some calls return or print, so read
 the changelog before upgrading.
 
 [What MT-Bench establishes, and what it does not](analysis/mt-bench.md)

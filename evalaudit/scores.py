@@ -120,13 +120,21 @@ def _check_finite(x: np.ndarray, name: str) -> None:
     zero when nothing was measured at all.
     """
     bad = ~np.isfinite(x)
-    if bad.any():
+    if not bad.any():
+        return
+    count = int(bad.sum())
+    where = int(np.argmax(bad))
+    if count == 1:
         raise ValueError(
-            f"{name} must be finite numbers, got {int(bad.sum())} missing or "
-            f"infinite value(s), the first at position "
-            f"{int(np.argmax(bad))}. Drop or fill those items before "
-            f"computing an interval"
+            f"{name} must be finite numbers, got 1 missing or infinite value, "
+            f"at position {where}. Drop or fill that item before computing an "
+            f"interval"
         )
+    raise ValueError(
+        f"{name} must be finite numbers, got {count} missing or infinite "
+        f"values, the first at position {where}. Drop or fill those items "
+        f"before computing an interval"
+    )
 
 
 def _is_binary(x: np.ndarray) -> bool:

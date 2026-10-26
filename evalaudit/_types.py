@@ -11,6 +11,15 @@ from __future__ import annotations
 
 import html as _html
 from dataclasses import dataclass
+from decimal import (
+    ROUND_HALF_EVEN,
+    Context,
+    Decimal,
+    DivisionByZero,
+    InvalidOperation,
+    Overflow,
+    localcontext,
+)
 from typing import Optional
 
 import numpy as np
@@ -962,6 +971,16 @@ class JudgeValidation:
         ) + _set_aside(self.n_dropped_ties, "", "one side called it a tie")
 
         if self.agreement != self.agreement:  # NaN
+            if self.n_items == 0:
+                # Only a result built by hand gets here, since
+                # judge_validation refuses data with no item left. With no
+                # item there is no accuracy to print either.
+                return (
+                    f"Judge and human agreement is undefined ({self.level}, 0 "
+                    f"items). No item has a label from both sides, so there "
+                    f"is nothing to compare and no number to report. Label "
+                    f"more items and run this again." + dropped
+                )
             return self._undefined() + accuracy + dropped
 
         if self.has_interval:
@@ -1012,8 +1031,8 @@ class JudgeValidation:
             f"Judge and human agreement is undefined ({self.level}, "
             f"{self.n_items} items). Every label that could be compared "
             f"was identical, so there is no disagreement to divide by. "
-            f"This comes from a rubric with one label in it. It is not "
-            f"perfect agreement."
+            f"This comes from both sides using one label throughout. It is "
+            f"not perfect agreement."
         )
 
     def _verdict(self) -> str:
@@ -1619,9 +1638,61 @@ def _points(x: float) -> str:
     return f"{round(x * 100, 1):g}"
 
 
+# The decimal context _rate rounds in. These are the decimal module's
+# default settings, which its outputs were computed and checked under. They
+# are written out here rather than read from the caller's context or from
+# decimal.DefaultContext, either of which a caller can change.
+_RATE_CONTEXT = Context(
+    prec=28,
+    rounding=ROUND_HALF_EVEN,
+    Emin=-999999,
+    Emax=999999,
+    capitals=1,
+    clamp=0,
+    flags=[],
+    traps=[InvalidOperation, DivisionByZero, Overflow],
+)
+
+
 def _rate(x: float) -> str:
-    """A rate as a percentage, trimmed of trailing zeros."""
-    return f"{round(x * 100, 1):g}%"
+    """A rate as a percentage, trimmed of trailing zeros.
+
+    One decimal place, except where that would print a rate at an end of the
+    scale it has not reached. A positive rate that rounds to 0% prints with
+    two significant figures, so 0.0004 is 0.04%. A rate below 1 that rounds
+    to 100% prints its gap from 100% to two significant figures, so 0.9996
+    is 99.96%. The gap is rounded and taken from 100 in decimal arithmetic,
+    since doing that in floats can round the gap away.
+
+    The decimal work runs in a copy of _RATE_CONTEXT. The caller's decimal
+    context does not change the result, and gets no flags from it.
+    """
+    shown = round(x * 100, 1)
+    if 0 < x and shown == 0:
+        with localcontext(_RATE_CONTEXT):
+            return _decimal_percent(_two_figures(Decimal(float(x))).scaleb(2))
+    if x < 1 and shown == 100:
+        with localcontext(_RATE_CONTEXT):
+            # 1 - x is exact in floats here, since x is within a factor of
+            # two of 1.
+            gap = _two_figures(Decimal(1.0 - float(x))).scaleb(2)
+            return _decimal_percent(100 - gap)
+    return f"{shown:g}%"
+
+
+def _two_figures(x: Decimal) -> Decimal:
+    """x rounded to two significant figures, half to even as round() does."""
+    return x.quantize(
+        Decimal(1).scaleb(x.adjusted() - 1), rounding=ROUND_HALF_EVEN
+    )
+
+
+def _decimal_percent(x: Decimal) -> str:
+    """A decimal as a percentage, written out in full and trimmed."""
+    text = format(x, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text + "%"
 
 
 @dataclass(frozen=True)
@@ -1776,6 +1847,14 @@ class PowerResult:
         if not self.paired or self.n_discordant is None:
             return ""
         n = self.n_discordant
+        if n == 0:
+            # The count is rounded, so zero means under one pair expected.
+            return (
+                f" At a {_rate(self.discordance_rate)} discordance rate that "
+                f"is under one discordant pair on average, and McNemar reads "
+                f"only discordant pairs. Items where the two systems agree "
+                f"carry no information about which one is better."
+            )
         those = "that one" if n == 1 else "those"
         return (
             f" At a {_rate(self.discordance_rate)} discordance rate that is "

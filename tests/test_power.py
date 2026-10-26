@@ -23,6 +23,9 @@ directions, so composing them has to return where it started, and one item
 short of the answer has to fall short.
 """
 
+import decimal
+import math
+
 import numpy as np
 import pytest
 from scipy import stats
@@ -32,6 +35,7 @@ from statsmodels.stats.proportion import (
 )
 
 from evalaudit import PowerResult, detectable_effect, min_sample_size
+from evalaudit._types import _rate
 from evalaudit.power import (
     _DEFAULT_DISCORDANCE,
     _REFERENCE_DIFFERENCE,
@@ -1100,8 +1104,204 @@ def test_an_unreachable_difference_of_one_point_is_singular():
         "take a difference of 1 point. A difference can never exceed the "
         "discordance rate, which here is 0.1%, so no difference of any size "
         "reaches 80% power here. A null result from this eval says little "
-        "about the systems. At a 0.1% discordance rate that is about 0 "
-        "discordant pairs, and McNemar reads only those. The rest of the "
-        "items agree across both systems and carry no information about which "
+        "about the systems. At a 0.1% discordance rate that is under one "
+        "discordant pair on average, and McNemar reads only discordant pairs. "
+        "Items where the two systems agree carry no information about which "
         "one is better."
     )
+
+
+# --------------------------------------------------------------------------
+# Fewer than one discordant pair
+#
+# The count printed is the rate times the pairs, rounded. Two pairs at 25%
+# expect 0.5 discordant pairs, and Python rounds 0.5 to the even 0, so the
+# summary said "about 0 discordant pairs, and McNemar reads only those". Two
+# pairs at 30% expect 0.6 discordant pairs, which rounds to 1.
+# --------------------------------------------------------------------------
+
+def test_an_expected_count_that_rounds_to_zero_is_under_one_pair():
+    r = detectable_effect(2, discordance_rate=0.25)
+    assert (r.n, r.n_discordant, r.attainable) == (2, 0, False)
+    assert r.summary() == (
+        "This eval ran 2 paired comparisons. No difference reaches 80% power "
+        "at this size. A difference can never exceed the discordance rate, "
+        "which here is 25%, so no difference of any size reaches 80% power "
+        "here. A null result from this eval says little about the systems. At "
+        "a 25% discordance rate that is under one discordant pair on average, "
+        "and McNemar reads only discordant pairs. Items where the two systems "
+        "agree carry no information about which one is better."
+    )
+
+
+def test_an_expected_count_that_rounds_to_one_is_one_pair():
+    r = detectable_effect(2, discordance_rate=0.3)
+    assert (r.n, r.n_discordant, r.attainable) == (2, 1, False)
+    assert r.summary() == (
+        "This eval ran 2 paired comparisons. No difference reaches 80% power "
+        "at this size. A difference can never exceed the discordance rate, "
+        "which here is 30%, so no difference of any size reaches 80% power "
+        "here. A null result from this eval says little about the systems. At "
+        "a 30% discordance rate that is about 1 discordant pair, and McNemar "
+        "reads only that one. The rest of the items agree across both systems "
+        "and carry no information about which one is better."
+    )
+
+
+# --------------------------------------------------------------------------
+# Rates at the ends of the scale
+#
+# Rates printed with one decimal place, so 0.04% showed as "0%" and 99.96%
+# as "100%". A positive rate that rounds to 0 now shows two significant
+# figures. A rate below 1 that rounds to 100 shows two significant figures
+# of its gap from 100%. Every other rate prints as before.
+#
+# The first two tests take only rates that printed wrongly. The two control
+# tests take the rates beside each boundary that printed correctly, and pin
+# that output unchanged. Each control carries its one-decimal rounding, which
+# places it on its side of the boundary and is what it printed before. The
+# smallest positive float is the low end's lower edge, and it is a valid
+# rate.
+# --------------------------------------------------------------------------
+
+RATES_THAT_PRINTED_AS_ZERO = [
+    (0.0001, "0.01%"),
+    (math.nextafter(0.0005, 0), "0.05%"),
+    (5e-324, "0." + "0" * 321 + "49%"),
+]
+
+RATES_THAT_PRINTED_AS_A_HUNDRED = [
+    (0.9995, "99.95%"),
+    (math.nextafter(0.9995, 1), "99.95%"),
+    (0.9996, "99.96%"),
+    (0.99999, "99.999%"),
+    (math.nextafter(1, 0), "99.999999999999989%"),
+]
+
+LOW_END_RATES_UNCHANGED = [
+    (0.0, 0.0, "0%"),
+    (0.0005, 0.1, "0.1%"),
+    (math.nextafter(0.0005, 1), 0.1, "0.1%"),
+    (0.0049, 0.5, "0.5%"),
+    (0.005, 0.5, "0.5%"),
+]
+
+TOP_END_RATES_UNCHANGED = [
+    (math.nextafter(0.9995, 0), 99.9, "99.9%"),
+    (1.0, 100.0, "100%"),
+]
+
+
+@pytest.mark.parametrize(
+    "rate, expected", RATES_THAT_PRINTED_AS_ZERO,
+    ids=[repr(rate) for rate, _ in RATES_THAT_PRINTED_AS_ZERO],
+)
+def test_a_positive_rate_never_prints_as_zero(rate, expected):
+    assert rate > 0
+    assert round(rate * 100, 1) == 0.0
+    assert _rate(rate) == expected
+
+
+@pytest.mark.parametrize(
+    "rate, expected", RATES_THAT_PRINTED_AS_A_HUNDRED,
+    ids=[repr(rate) for rate, _ in RATES_THAT_PRINTED_AS_A_HUNDRED],
+)
+def test_a_rate_below_one_never_prints_as_a_hundred(rate, expected):
+    assert rate < 1
+    assert round(rate * 100, 1) == 100.0
+    assert _rate(rate) == expected
+
+
+@pytest.mark.parametrize(
+    "rate, one_decimal, expected", LOW_END_RATES_UNCHANGED,
+    ids=[repr(rate) for rate, _, _ in LOW_END_RATES_UNCHANGED],
+)
+def test_low_end_rates_keep_their_unchanged_output(
+    rate, one_decimal, expected
+):
+    assert round(rate * 100, 1) == one_decimal
+    assert f"{one_decimal:g}%" == expected
+    assert _rate(rate) == expected
+
+
+@pytest.mark.parametrize(
+    "rate, one_decimal, expected", TOP_END_RATES_UNCHANGED,
+    ids=[repr(rate) for rate, _, _ in TOP_END_RATES_UNCHANGED],
+)
+def test_top_end_rates_keep_their_unchanged_output(
+    rate, one_decimal, expected
+):
+    assert round(rate * 100, 1) == one_decimal
+    assert f"{one_decimal:g}%" == expected
+    assert _rate(rate) == expected
+
+
+# --------------------------------------------------------------------------
+# Rates do not depend on the caller's decimal context
+#
+# _rate rounds in decimal arithmetic. A caller can change the precision, the
+# rounding or the traps of the current decimal context, and none of that may
+# change a printed rate, raise from it, or leave a flag behind. Every test
+# here works inside decimal.localcontext, so the context it changes is
+# restored when it ends.
+# --------------------------------------------------------------------------
+
+APPROVED_RATES = (
+    RATES_THAT_PRINTED_AS_ZERO
+    + RATES_THAT_PRINTED_AS_A_HUNDRED
+    + [(rate, expected) for rate, _, expected in LOW_END_RATES_UNCHANGED]
+    + [(rate, expected) for rate, _, expected in TOP_END_RATES_UNCHANGED]
+)
+APPROVED_IDS = [repr(rate) for rate, _ in APPROVED_RATES]
+
+
+def test_the_float_below_one_survives_a_ten_digit_context():
+    with decimal.localcontext() as ctx:
+        ctx.prec = 10
+        assert _rate(math.nextafter(1, 0)) == "99.999999999999989%"
+
+
+@pytest.mark.parametrize("prec", [10, 2])
+@pytest.mark.parametrize("rate, expected", APPROVED_RATES, ids=APPROVED_IDS)
+def test_rates_ignore_the_callers_precision(rate, expected, prec):
+    with decimal.localcontext() as ctx:
+        ctx.prec = prec
+        assert _rate(rate) == expected
+
+
+@pytest.mark.parametrize(
+    "rounding", [decimal.ROUND_CEILING, decimal.ROUND_FLOOR]
+)
+@pytest.mark.parametrize("rate, expected", APPROVED_RATES, ids=APPROVED_IDS)
+def test_rates_ignore_the_callers_rounding(rate, expected, rounding):
+    with decimal.localcontext() as ctx:
+        ctx.rounding = rounding
+        assert _rate(rate) == expected
+
+
+@pytest.mark.parametrize("rate, expected", APPROVED_RATES, ids=APPROVED_IDS)
+def test_rates_raise_nothing_when_the_caller_traps_inexact(rate, expected):
+    with decimal.localcontext() as ctx:
+        ctx.traps[decimal.Inexact] = True
+        assert _rate(rate) == expected
+
+
+@pytest.mark.parametrize("rate, expected", APPROVED_RATES, ids=APPROVED_IDS)
+def test_rates_leave_the_callers_context_as_they_found_it(rate, expected):
+    """The settings here do not change any approved output, so a failure is
+    about the context and not about the rate."""
+    trapped = (decimal.InvalidOperation, decimal.DivisionByZero,
+               decimal.Overflow)
+    with decimal.localcontext() as ctx:
+        ctx.prec = 50
+        ctx.rounding = decimal.ROUND_CEILING
+        for signal in ctx.traps:
+            ctx.traps[signal] = signal in trapped
+        traps_set = dict(ctx.traps)
+        ctx.clear_flags()
+        result = _rate(rate)
+        assert result == expected
+        assert ctx.prec == 50
+        assert ctx.rounding == decimal.ROUND_CEILING
+        assert dict(ctx.traps) == traps_set
+        assert [s.__name__ for s, raised in ctx.flags.items() if raised] == []

@@ -652,10 +652,20 @@ def independent_bootstrap_coverage(draw, trials=1000):
 
 
 def test_independent_bootstrap_coverage_normal():
-    """On normal data with unequal sizes and unequal spreads, the 95% CI
-    covers the true difference at close to 95%. The small group is the
-    tight one. The measured rate is 0.941, and the exact 95% interval on
-    941 of 1000 is 0.925 to 0.955, which contains 0.95."""
+    """Normal data with unequal sizes and unequal spreads. The small group is
+    the tight one.
+
+    This test runs 1000 trials and measures 0.941. The exact 95% interval on
+    941 of 1000 is 0.925 to 0.955. It contains 0.95, so this run on its own
+    cannot tell its coverage apart from 95%.
+
+    A separate run of 5000 trials is recorded on line 49 of
+    examples/independent_bootstrap_coverage_study.py. It measured 0.9406,
+    and its exact 95% interval, 0.9337 to 0.9470, excludes 0.95. The
+    5,000-trial study includes the same first 1,000 trials used by this
+    test. It extends the simulation rather than providing an independent
+    replication.
+    """
     rate = independent_bootstrap_coverage(lambda rng: (
         rng.normal(0.5, 1.0, 30), rng.normal(0.0, 2.0, 90),
     ))
@@ -669,11 +679,18 @@ def test_independent_bootstrap_skewed_undercoverage_guard():
     On right-skewed data at small sizes the percentile bootstrap covers less
     than it claims. Exponential scores with means 1.5 and 1.0 on 40 and 120
     items cover at 0.929 here. The exact 95% interval on 929 of 1000 is
-    0.911 to 0.944, which excludes 0.95. A 5000-trial run gives 0.927 at
-    40 and 120 items, 0.920 at 25 and 60, and 0.945 at 100 and 300. The
-    shortfall is documented in the compare_independent docstring and the
-    README. This test fails if coverage drops further. If it rises past the
-    band, the documentation is out of date and should change with it.
+    0.911 to 0.944, which excludes 0.95. The same procedure at 5000 trials,
+    in examples/independent_bootstrap_coverage_study.py, records 0.926 at
+    25 and 60 items, 0.930 at 40 and 120, and 0.945 at 100 and 300. The
+    figures given here before, 0.920, 0.927 and 0.945, came from a
+    5000-trial run whose seed was not recorded, so that run cannot be
+    repeated. That does not show its figures were wrong. The shortfall is
+    documented in the compare_independent docstring and the README.
+
+    This test fails if coverage drops further. Its upper bound sits above
+    0.95, so it still passes if the shortfall closes, and it cannot tell
+    the documentation has gone stale. Rerun the example script and check
+    the documented figures whenever the bootstrap changes.
     """
     rate = independent_bootstrap_coverage(lambda rng: (
         rng.exponential(1.5, 40), rng.exponential(1.0, 120),
@@ -1059,3 +1076,62 @@ def test_independent_rejects_non_finite_scores(bad):
         compare_independent([0.2, bad, 0.8], [0.1, 0.3, 0.7, 0.5])
     with pytest.raises(ValueError, match="finite"):
         compare_independent([0.1, 0.3, 0.7, 0.5], [0.2, bad, 0.8])
+
+
+# Each message names the argument that holds the bad score. One is counted in
+# the singular and two in the plural, and each message is compared whole.
+
+def test_paired_names_a_when_it_holds_one_non_finite_score():
+    with pytest.raises(ValueError) as refused:
+        compare_paired([0.2, np.nan, 0.8], [0.1, 0.3, 0.7])
+    assert str(refused.value) == (
+        "a must be finite numbers, got 1 missing or infinite value, at "
+        "position 1. Drop or fill that item before computing an interval"
+    )
+
+
+def test_paired_names_b_when_it_holds_one_non_finite_score():
+    with pytest.raises(ValueError) as refused:
+        compare_paired([0.1, 0.3, 0.7], [0.2, np.inf, 0.8])
+    assert str(refused.value) == (
+        "b must be finite numbers, got 1 missing or infinite value, at "
+        "position 1. Drop or fill that item before computing an interval"
+    )
+
+
+def test_paired_counts_two_non_finite_scores_from_the_first():
+    with pytest.raises(ValueError) as refused:
+        compare_paired([0.1, np.nan, -np.inf], [0.2, 0.3, 0.8])
+    assert str(refused.value) == (
+        "a must be finite numbers, got 2 missing or infinite values, the "
+        "first at position 1. Drop or fill those items before computing an "
+        "interval"
+    )
+
+
+def test_independent_names_a_when_it_holds_one_non_finite_score():
+    with pytest.raises(ValueError) as refused:
+        compare_independent([0.2, -np.inf, 0.8], [0.1, 0.3, 0.7, 0.5])
+    assert str(refused.value) == (
+        "a must be finite numbers, got 1 missing or infinite value, at "
+        "position 1. Drop or fill that item before computing an interval"
+    )
+
+
+def test_independent_names_b_when_it_holds_one_non_finite_score():
+    with pytest.raises(ValueError) as refused:
+        compare_independent([0.1, 0.3, 0.7, 0.5], [0.2, np.nan, 0.8])
+    assert str(refused.value) == (
+        "b must be finite numbers, got 1 missing or infinite value, at "
+        "position 1. Drop or fill that item before computing an interval"
+    )
+
+
+def test_independent_counts_two_non_finite_scores_from_the_first():
+    with pytest.raises(ValueError) as refused:
+        compare_independent([0.1, 0.3, 0.7, 0.5], [np.nan, 0.3, np.inf])
+    assert str(refused.value) == (
+        "b must be finite numbers, got 2 missing or infinite values, the "
+        "first at position 0. Drop or fill those items before computing an "
+        "interval"
+    )
