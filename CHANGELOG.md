@@ -9,10 +9,54 @@ An entry marked **Breaking** changes what a call that worked on the previous
 release returns, raises or prints. The mark goes on the entry wherever it
 sits, under Changed, Fixed or Removed.
 
-Every release is dated by the day PyPI received its upload, in UTC. 0.3.0 is
-the first release with a tag, and 0.4.0, 0.5.0 and 0.6.0 have one too. The
-entries below 0.3.0 were reconstructed after the fact, and their contents
-were checked against the published wheels and the commit each wheel matches.
+Every released version is dated by the day PyPI received its upload, in UTC.
+0.3.0 is the first release with a tag, and 0.4.0, 0.5.0 and 0.6.0 have one
+too. The entries below 0.3.0 were reconstructed after the fact, and their
+contents were checked against the published wheels and the commit each wheel
+matches.
+
+## [0.7.0] - Unreleased
+
+### Added
+
+- `AuditConfig.claimed_winner`, an optional name for the score system the
+  claim says is better. Higher scores are read as better. For a metric where
+  lower is better, pass 1 minus each 0/1 score, or the negated score for a
+  continuous metric. It identifies the direction the claim asserts
+  independently of the order the score systems were supplied in. When the
+  margin's interval excludes zero against the claimed winner, the margin
+  finding is critical, titled "The headline margin contradicts the claimed
+  winner". With `claimed_winner="new"`, new scoring 20% and old 80%, the
+  critical verdict in the report summary ends with "The interval on the
+  margin shows new behind, against the claim." in place of "That does not
+  mean the conclusion is wrong." With any other critical finding, including
+  a margin whose interval includes zero, the verdict keeps that sentence. A
+  losing point estimate whose interval includes zero produces "The headline
+  margin does not exclude zero". That finding does not claim the opposite
+  winner has been established. `claimed_winner` requires exactly two systems
+  and `claims_direction=True`, and a refusal names what was passed. It is
+  matched against the system names as a string, so `claimed_winner=1` names
+  the system passed under the key `1`. The field is appended, preserving
+  existing positional construction of `AuditConfig`.
+
+### Fixed
+
+- **Breaking.** On 0.6.0, `audit` asked only whether the margin's interval
+  excluded zero, so a margin against the claim could produce "No critical
+  findings and no warnings." Any `claim` text with `claims_direction=True`
+  and no `claimed_winner` now gets a comparison warning when the interval
+  excludes zero, titled "The claimed direction was not checked". The text is
+  displayed and never parsed, so the warning fires whatever the text says.
+  Set `claimed_winner` to the system the claim names. Generic comparisons
+  without claim text keep their existing behaviour. The report summary also
+  states that it cannot say whether the margin supports a claim whose
+  direction was not checked. With other warnings in the report, it then says
+  "Once the direction is checked, report the result with what the other
+  warning says attached.", or "what the other warnings say attached" for
+  more than one. With a critical finding from another check, the summary
+  keeps the critical verdict and adds "The claimed direction was not checked
+  either. Set claimed_winner to the system the claim says is better."
+  Pairing inference and human-baseline support in `audit` are unchanged.
 
 ## [0.6.0] - 2026-10-26
 
@@ -996,6 +1040,7 @@ hour after the upload. It reported `__version__` as 0.1.0.
 
 - Nothing.
 
+[0.7.0]: https://github.com/mokayahezron/evalaudit/compare/v0.6.0...main
 [0.6.0]: https://github.com/mokayahezron/evalaudit/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mokayahezron/evalaudit/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mokayahezron/evalaudit/compare/v0.3.0...v0.4.0

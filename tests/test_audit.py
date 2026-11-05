@@ -51,6 +51,7 @@ from evalaudit.audit import (
     CHECK_ORDER,
     CHECK_TITLES,
     SEVERITY_ORDER,
+    _compare_finding,
     _detail,
     _ranked,
 )
@@ -491,6 +492,370 @@ def test_margin_clear_of_zero_is_info(decided_scores):
     f = _one(r, "compare")
     assert f.severity == "info"
     assert not f.result.crosses_zero
+
+
+@pytest.mark.parametrize("winner_first", [True, False])
+def test_claimed_winner_losing_decisively_is_critical(winner_first):
+    scores = {"new": [0] * 80 + [1] * 20,
+              "old": [0] * 20 + [1] * 80}
+    if not winner_first:
+        scores = dict(reversed(list(scores.items())))
+    r = audit(scores=scores, config={
+        "claim": "new is better than old", "claimed_winner": "new",
+        "paired": False, "effect_of_interest": 0.1, "seed": 0,
+    })
+    f = _one(r, "compare")
+    # The claimed winner loses. Supplied first, the margin is new minus old
+    # and the whole interval sits below zero. Supplied second, above it.
+    assert (f.result.ci_high < 0, f.result.ci_low > 0) == (
+        winner_first, not winner_first
+    )
+    assert f.severity == "critical"
+    assert f.title == "The headline margin contradicts the claimed winner"
+    assert f.detail == (
+        "The claim names new as the winner, but the interval supports old "
+        "over new. " + f.result.summary() +
+        " Do not report new as better than old from this data. Report the "
+        "opposite direction with its interval, or revisit the claim and the "
+        "evaluation design."
+    )
+    assert r.summary() == (
+        "Claim under audit: new is better than old. 1 critical finding, "
+        "0 warnings and 3 for context. On the critical finding this data "
+        "cannot support the conclusion as stated. The interval on the margin "
+        "shows new behind, against the claim. 4 checks could not run for "
+        "lack of data. They are listed at the end."
+    )
+
+
+def test_claimed_winner_losing_with_interval_crossing_zero_is_unresolved():
+    r = audit(scores={"new": _scores(120, 60, 8),
+                      "old": _scores(120, 66, 7)}, config={
+        "claim": "new is better than old", "claimed_winner": "new",
+        "paired": True, "seed": 0,
+    })
+    f = _one(r, "compare")
+    assert f.result.difference < 0
+    assert f.result.crosses_zero
+    assert f.severity == "critical"
+    assert f.title == "The headline margin does not exclude zero"
+    assert f.detail == (
+        "This is the margin between new and old, which is the number the "
+        "claim rests on. " + f.result.summary() +
+        " Do not report a direction from this data. Either run enough more "
+        "items to close the interval, or state the result as unresolved."
+    )
+    assert r.summary() == (
+        "Claim under audit: new is better than old. 1 critical finding, "
+        "1 warning and 2 for context. On the critical finding this data "
+        "cannot support the conclusion as stated. That does not mean the "
+        "conclusion is wrong. 4 checks could not run for lack of data. "
+        "They are listed at the end."
+    )
+
+
+def test_free_text_claim_without_a_winner_does_not_get_a_clean_verdict():
+    r = audit(scores={"new": [0] * 80 + [1] * 20,
+                      "old": [0] * 20 + [1] * 80}, config={
+        "claim": "new is better than old", "paired": False,
+        "effect_of_interest": 0.1, "seed": 0,
+    })
+    f = _one(r, "compare")
+    assert f.severity == "warning"
+    assert f.title == "The claimed direction was not checked"
+    assert f.detail == (
+        "The margin excludes zero, but the free-text claim does not specify "
+        "a winner the audit can check. " + f.result.summary() +
+        " Set claimed_winner to the system the claim says is better. The "
+        "claim text is displayed as supplied and is not interpreted."
+    )
+    assert r.summary() == (
+        "Claim under audit: new is better than old. No critical findings. "
+        "1 warning and 3 for context. The claimed direction was not checked, "
+        "so this report cannot say whether the margin supports the claim. "
+        "Set claimed_winner to the system the claim says is better. "
+        "4 checks could not run for lack of data. They are listed at the end."
+    )
+
+
+@pytest.mark.parametrize("winner_first", [True, False])
+def test_claimed_winner_winning_decisively_is_info(winner_first):
+    scores = {"new": [0] * 20 + [1] * 80,
+              "old": [0] * 80 + [1] * 20}
+    if not winner_first:
+        scores = dict(reversed(list(scores.items())))
+    r = audit(scores=scores, config={"claimed_winner": "new",
+                                    "paired": False, "seed": 0})
+    f = _one(r, "compare")
+    # The claimed winner wins. Supplied first, the whole interval sits above
+    # zero. Supplied second, below it.
+    assert (f.result.ci_low > 0, f.result.ci_high < 0) == (
+        winner_first, not winner_first
+    )
+    first, second = scores
+    assert f.severity == "info"
+    assert f.title == "The headline margin clears zero"
+    assert f.detail == (
+        f"This is the margin between {first} and {second}, and its interval "
+        "excludes zero. " + f.result.summary() + " Report the interval "
+        "alongside the difference. The end of the interval nearer zero is "
+        "the smallest margin this data supports."
+    )
+
+
+def test_claimed_winner_matches_integer_system_names():
+    """System names become strings, so the claimed winner is read as one.
+
+    The config keeps the integer the caller passed.
+    """
+    r = audit(scores={1: [0] * 80 + [1] * 20, 2: [0] * 20 + [1] * 80},
+              config={"claim": "1 is better than 2", "claimed_winner": 1,
+                      "paired": False, "seed": 0})
+    assert r.config.claimed_winner == 1
+    f = _one(r, "compare")
+    assert f.result.ci_high < 0
+    assert f.severity == "critical"
+    assert f.title == "The headline margin contradicts the claimed winner"
+    assert f.detail == (
+        "The claim names 1 as the winner, but the interval supports 2 over "
+        "1. " + f.result.summary() +
+        " Do not report 1 as better than 2 from this data. Report the "
+        "opposite direction with its interval, or revisit the claim and the "
+        "evaluation design."
+    )
+
+
+@pytest.mark.parametrize("scores, config, message", [
+    ({"a": [0, 1], "b": [1, 0]}, {"claimed_winner": "c"},
+     "claimed_winner must name one of the two score systems, 'a' or 'b', "
+     "got 'c'"),
+    ({1: [0, 1], 2: [1, 0]}, {"claimed_winner": 3},
+     "claimed_winner must name one of the two score systems, '1' or '2', "
+     "got 3"),
+    ({"a": [0, 1]}, {"claimed_winner": "a"},
+     "claimed_winner needs exactly two score systems, got 1"),
+    (None, {"claimed_winner": "a"},
+     "claimed_winner needs exactly two score systems, got 0"),
+    ({"a": [0, 1], "b": [1, 0]},
+     {"claimed_winner": "a", "claims_direction": False},
+     "claimed_winner requires claims_direction=True"),
+])
+def test_claimed_winner_refuses_an_uncheckable_target(scores, config, message):
+    with pytest.raises(ValueError) as exc:
+        audit(scores=scores, config=config)
+    assert str(exc.value) == message
+
+
+CONTRADICTS = "The headline margin contradicts the claimed winner"
+NOT_EXCLUDED = "The headline margin does not exclude zero"
+
+
+@pytest.mark.parametrize("bound, at, title", [
+    ("ci_high", -0.001, CONTRADICTS),
+    ("ci_high", 0.0, NOT_EXCLUDED),
+    ("ci_high", 0.001, NOT_EXCLUDED),
+    ("ci_low", 0.001, CONTRADICTS),
+    ("ci_low", 0.0, NOT_EXCLUDED),
+    ("ci_low", -0.001, NOT_EXCLUDED),
+], ids=[
+    "high_below_zero", "high_at_zero", "high_above_zero",
+    "low_above_zero", "low_at_zero", "low_below_zero",
+])
+def test_the_contradiction_starts_only_past_zero(bound, at, title):
+    """An interval that ends exactly at zero does not exclude it.
+
+    crosses_zero reads ci_low <= 0.0 <= ci_high. The cases at zero pin each
+    <=, and the cases either side show where the contradiction begins. The
+    claimed winner loses in every case. Supplied first it loses below zero,
+    so ci_high is the bound nearer zero. Supplied second it loses above
+    zero, so ci_low is.
+    """
+    if bound == "ci_high":
+        ci_low, ci_high, claimed_winner = -0.1, at, "new"
+    else:
+        ci_low, ci_high, claimed_winner = at, 0.1, "old"
+    comparison = ComparisonResult(
+        difference=(ci_low + ci_high) / 2, ci_low=ci_low, ci_high=ci_high,
+        p_value=0.05, n=100, method="bootstrap", binary=True, paired=False,
+    )
+    cfg = AuditConfig(claims_direction=True, claimed_winner=claimed_winner)
+    f = _compare_finding(comparison, dict.fromkeys(["new", "old"]), cfg)
+    assert getattr(f.result, bound) == at
+    assert f.severity == "critical"
+    assert f.title == title
+
+
+def test_claim_text_without_a_winner_on_a_margin_that_includes_zero(
+    undecided_scores
+):
+    r = audit(scores=undecided_scores,
+              config={"claim": "new is better than old", "seed": 1})
+    f = _one(r, "compare")
+    assert f.result.crosses_zero
+    assert f.severity == "critical"
+    assert f.title == "The headline margin does not exclude zero"
+    assert r.summary() == (
+        "Claim under audit: new is better than old. 1 critical finding, "
+        "1 warning and 2 for context. On the critical finding this data "
+        "cannot support the conclusion as stated. That does not mean the "
+        "conclusion is wrong. 4 checks could not run for lack of data. "
+        "They are listed at the end."
+    )
+
+
+def test_claim_text_with_no_direction_claimed_clears_zero_as_info(
+    decided_scores
+):
+    r = audit(scores=decided_scores, config={
+        "claim": "new is better than old", "claims_direction": False,
+        "seed": 1,
+    })
+    f = _one(r, "compare")
+    assert not f.result.crosses_zero
+    assert f.severity == "info"
+    assert f.title == "The headline margin clears zero"
+    assert r.summary() == (
+        "Claim under audit: new is better than old. No critical findings. "
+        "1 warning and 3 for context. The checks that ran did not find a "
+        "problem that leaves the conclusion unsupported. That does not mean "
+        "the eval is sound. Report the result with what the warning says "
+        "attached. 4 checks could not run for lack of data. They are listed "
+        "at the end."
+    )
+
+
+def test_claim_text_with_a_winner_that_wins_clears_zero_as_info():
+    r = audit(scores={"new": [0] * 20 + [1] * 80,
+                      "old": [0] * 80 + [1] * 20}, config={
+        "claim": "new is better than old", "claimed_winner": "new",
+        "paired": False, "effect_of_interest": 0.1, "seed": 0,
+    })
+    f = _one(r, "compare")
+    assert f.result.ci_low > 0
+    assert f.severity == "info"
+    assert f.title == "The headline margin clears zero"
+    assert r.summary() == (
+        "Claim under audit: new is better than old. No critical findings "
+        "and no warnings. The 3 checks that ran did not find a problem in "
+        "what they could test. That does not mean the eval is sound. "
+        "4 checks could not run for lack of data. They are listed at the end."
+    )
+
+
+# New scores 20% and old 80%, under claim text that names no winner. The
+# margin excludes zero, so the compare finding is the not-checked warning.
+NEW_LOSES = {"new": [0] * 80 + [1] * 20, "old": [0] * 20 + [1] * 80}
+CLAIM_WITHOUT_WINNER = {
+    "claim": "new is better than old", "paired": False,
+    "effect_of_interest": 0.1, "seed": 0,
+}
+
+
+def test_the_unchecked_direction_beside_one_other_warning(
+    comparisons_biased
+):
+    r = audit(scores=NEW_LOSES, comparisons=comparisons_biased,
+              config=CLAIM_WITHOUT_WINNER)
+    warned = [f.check for f in r.findings if f.severity == "warning"]
+    assert warned == ["compare", "position"]
+    assert _one(r, "compare").title == "The claimed direction was not checked"
+    assert r.summary() == (
+        "Claim under audit: new is better than old. No critical findings. "
+        "2 warnings and 3 for context. The claimed direction was not "
+        "checked, so this report cannot say whether the margin supports the "
+        "claim. Set claimed_winner to the system the claim says is better. "
+        "Once the direction is checked, report the result with what the "
+        "other warning says attached. 3 checks could not run for lack of "
+        "data. They are listed at the end."
+    )
+
+
+def test_the_unchecked_direction_beside_two_other_warnings(
+    comparisons_biased, ratings_poor
+):
+    r = audit(scores=NEW_LOSES, comparisons=comparisons_biased,
+              ratings=ratings_poor, config=CLAIM_WITHOUT_WINNER)
+    warned = [f.check for f in r.findings if f.severity == "warning"]
+    assert warned == ["compare", "agreement", "position"]
+    assert _one(r, "compare").title == "The claimed direction was not checked"
+    assert r.summary() == (
+        "Claim under audit: new is better than old. No critical findings. "
+        "3 warnings and 3 for context. The claimed direction was not "
+        "checked, so this report cannot say whether the margin supports the "
+        "claim. Set claimed_winner to the system the claim says is better. "
+        "Once the direction is checked, report the result with what the "
+        "other warnings say attached. 2 checks could not run for lack of "
+        "data. They are listed at the end."
+    )
+
+
+def test_the_critical_verdict_also_says_the_direction_was_not_checked(
+    ratings_no_overlap
+):
+    r = audit(scores=NEW_LOSES, ratings=ratings_no_overlap,
+              config=CLAIM_WITHOUT_WINNER)
+    flagged = [(f.check, f.severity) for f in r.findings
+               if f.severity != "info"]
+    assert flagged == [("agreement", "critical"), ("compare", "warning")]
+    assert _one(r, "compare").title == "The claimed direction was not checked"
+    assert r.summary() == (
+        "Claim under audit: new is better than old. 1 critical finding, "
+        "1 warning and 3 for context. On the critical finding this data "
+        "cannot support the conclusion as stated. That does not mean the "
+        "conclusion is wrong. The claimed direction was not checked either. "
+        "Set claimed_winner to the system the claim says is better. 3 checks "
+        "could not run for lack of data. They are listed at the end."
+    )
+
+
+def test_a_claimed_winner_that_wins_beside_another_critical_keeps_the_verdict(
+    ratings_no_overlap
+):
+    r = audit(scores={"new": [0] * 20 + [1] * 80,
+                      "old": [0] * 80 + [1] * 20},
+              ratings=ratings_no_overlap, config={
+        "claim": "new is better than old", "claimed_winner": "new",
+        "paired": False, "effect_of_interest": 0.1, "seed": 0,
+    })
+    compare, agreement = _one(r, "compare"), _one(r, "agreement")
+    assert compare.result.ci_low > 0
+    assert agreement.result.n_overlapping_items == 0
+    assert compare.severity == "info"
+    assert compare.title == "The headline margin clears zero"
+    assert agreement.severity == "critical"
+    assert r.summary() == (
+        "Claim under audit: new is better than old. 1 critical finding, "
+        "0 warnings and 4 for context. On the critical finding this data "
+        "cannot support the conclusion as stated. That does not mean the "
+        "conclusion is wrong. 3 checks could not run for lack of data. "
+        "They are listed at the end."
+    )
+
+
+def test_audit_config_by_position_keeps_the_0_6_0_fields():
+    """claimed_winner is the last field, so a 0.6.0 positional call lands.
+
+    These are the 0.6.0 fields in their 0.6.0 order, each set away from its
+    default and from its neighbours, so a shifted field shows.
+    """
+    fields_0_6_0 = {
+        "claim": "new is better than old",
+        "claims_direction": False,
+        "effect_of_interest": 0.1,
+        "confidence": 0.9,
+        "level": "ordinal",
+        "agreement_threshold": 0.7,
+        "judge_threshold": 0.75,
+        "power": 0.85,
+        "alpha": 0.01,
+        "paired": True,
+        "discordance_rate": 0.3,
+        "n_boot": 500,
+        "seed": 7,
+    }
+    cfg = AuditConfig(*fields_0_6_0.values())
+    assert {name: getattr(cfg, name) for name in fields_0_6_0} == fields_0_6_0
+    assert cfg.claimed_winner is None
 
 
 def test_compare_reuses_the_comparison_summary(undecided_scores):

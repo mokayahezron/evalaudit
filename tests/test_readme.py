@@ -34,7 +34,7 @@ _CUT = "[...]"
 
 # Every module the README demonstrates. If a block is added or lost, the
 # count test below fails rather than the file quietly checking nothing.
-_EXPECTED_BLOCKS = 4
+_EXPECTED_BLOCKS = 5
 
 
 def _collapse(text: str) -> str:
