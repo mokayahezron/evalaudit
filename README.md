@@ -106,6 +106,44 @@ loud which checks it could not run.
 Every check runs only on the data you passed. Nothing is inferred from data
 that is not there.
 
+### Naming the winner
+
+To have the audit check which way the margin points, set `claimed_winner`
+to the system the claim says is better. Higher scores are read as better.
+
+```python
+from evalaudit import audit
+
+report = audit(
+    scores={"new": [0] * 80 + [1] * 20, "old": [0] * 20 + [1] * 80},
+    config={
+        "claim": "new is better than old",
+        "claimed_winner": "new",
+        "paired": False,
+        "effect_of_interest": 0.1,
+        "seed": 0,
+    },
+)
+print(report.summary())
+```
+
+```
+Claim under audit: new is better than old. 1 critical finding, 0 warnings
+and 3 for context. On the critical finding this data cannot support the
+conclusion as stated. The interval on the margin shows new behind, against
+the claim. 4 checks could not run for lack of data. They are listed at the
+end.
+```
+
+New passes 20 of 100 items and old passes 80, so the interval on the margin
+sits wholly on old's side. The critical finding is titled "The headline
+margin contradicts the claimed winner". Any `claim` text with
+`claims_direction=True` and no `claimed_winner` gets a warning that its
+direction was not checked when the margin excludes zero. The text is
+displayed and never parsed, so the warning fires whatever the text says.
+For a metric where lower is better, pass 1 minus each 0/1 score, or the
+negated score for a continuous metric.
+
 ---
 
 ## Why this exists

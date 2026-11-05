@@ -35,6 +35,8 @@ import numpy as np
 import pandas as pd
 
 from ._types import (
+    _CONTRADICTS_CLAIMED_WINNER,
+    _DIRECTION_NOT_CHECKED,
     _SEVERITIES,
     AuditConfig,
     AuditReport,
@@ -131,8 +133,13 @@ def audit(
         run the length check, with ``human_preferences`` sharpening it.
     config
         An :class:`evalaudit.AuditConfig` or a mapping of its fields. The
-        ones worth setting are ``claim``, ``effect_of_interest`` and
-        ``claims_direction``.
+        ones worth setting are ``claim``, ``claimed_winner``,
+        ``effect_of_interest`` and ``claims_direction``. ``claimed_winner``
+        names the score system the claim says is better, with higher scores
+        treated as better. Any ``claim`` text with ``claims_direction=True``
+        and no ``claimed_winner`` gets a warning that its direction was not
+        checked when the margin excludes zero. The text is displayed and
+        never parsed, so the warning fires whatever the text says.
 
     Returns
     -------
@@ -182,6 +189,22 @@ def audit(
     """
     cfg = _config(config)
     systems = _systems(scores)
+    if cfg.claimed_winner is not None:
+        if not cfg.claims_direction:
+            raise ValueError("claimed_winner requires claims_direction=True")
+        if len(systems) != 2:
+            raise ValueError(
+                "claimed_winner needs exactly two score systems, got "
+                f"{len(systems)}"
+            )
+        # _systems names every system with str(), so the claimed winner is
+        # matched the same way. The config keeps what the caller passed.
+        if str(cfg.claimed_winner) not in systems:
+            first, second = systems
+            raise ValueError(
+                "claimed_winner must name one of the two score systems, "
+                f"{first!r} or {second!r}, got {cfg.claimed_winner!r}"
+            )
     judge_data = _judge_data(judge)
 
     if not systems and comparisons is None and ratings is None and not judge_data:
@@ -380,6 +403,10 @@ def _compare_finding(comparison, systems: dict, cfg: AuditConfig):
         return _no_comparison_reason(systems)
 
     names = list(systems)
+    title = (
+        "The headline margin does not exclude zero"
+        if comparison.crosses_zero else "The headline margin clears zero"
+    )
     if comparison.crosses_zero:
         severity = "critical" if cfg.claims_direction else "warning"
         lead = (
@@ -396,6 +423,34 @@ def _compare_finding(comparison, systems: dict, cfg: AuditConfig):
                 " Nothing is claiming a direction here, so this weakens the "
                 "result rather than undoing it."
             )
+    elif cfg.claimed_winner is not None and (
+        (comparison.ci_high < 0 and str(cfg.claimed_winner) == names[0])
+        or (comparison.ci_low > 0 and str(cfg.claimed_winner) == names[1])
+    ):
+        loser = str(cfg.claimed_winner)
+        winner = names[1] if loser == names[0] else names[0]
+        severity = "critical"
+        title = _CONTRADICTS_CLAIMED_WINNER
+        lead = (
+            f"The claim names {loser} as the winner, but the interval "
+            f"supports {winner} over {loser}."
+        )
+        action = (
+            f"Do not report {loser} as better than {winner} from this "
+            "data. Report the opposite direction with its interval, "
+            "or revisit the claim and the evaluation design."
+        )
+    elif cfg.claim and cfg.claims_direction and cfg.claimed_winner is None:
+        severity = "warning"
+        title = _DIRECTION_NOT_CHECKED
+        lead = (
+            "The margin excludes zero, but the free-text claim does not "
+            "specify a winner the audit can check."
+        )
+        action = (
+            "Set claimed_winner to the system the claim says is better. "
+            "The claim text is displayed as supplied and is not interpreted."
+        )
     else:
         severity = "info"
         lead = (
@@ -417,11 +472,7 @@ def _compare_finding(comparison, systems: dict, cfg: AuditConfig):
     return Finding(
         check="compare",
         severity=severity,
-        title=(
-            "The headline margin does not exclude zero"
-            if comparison.crosses_zero
-            else "The headline margin clears zero"
-        ),
+        title=title,
         detail=_detail(lead, comparison, action),
         result=comparison,
     )

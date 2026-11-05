@@ -1917,6 +1917,15 @@ _SEVERITIES = ("critical", "warning", "info")
 # and it is not the same kind of number. See AuditConfig.
 _JUDGE_THRESHOLD = _ALPHA_FLOOR
 
+# The titles of two compare findings the report summary has to find. One is
+# the warning for claim text with no claimed_winner. The other is the
+# critical finding for a claimed winner the interval puts behind. The summary
+# finds each by its title, so each lives here once.
+_DIRECTION_NOT_CHECKED = "The claimed direction was not checked"
+_CONTRADICTS_CLAIMED_WINNER = (
+    "The headline margin contradicts the claimed winner"
+)
+
 
 @dataclass(frozen=True)
 class AuditConfig:
@@ -1930,6 +1939,17 @@ class AuditConfig:
     asserting that one system beat the other. A margin whose interval
     crosses zero is critical when a direction is being claimed and a warning
     when it is not, because in the second case nobody is leaning on it.
+
+    ``claimed_winner`` names the score system the claim says is better, and
+    scores are read with higher as better. It needs exactly two score
+    systems and ``claims_direction=True``. A margin whose interval excludes
+    zero against it is critical. For a metric where lower is better, pass 1
+    minus each 0/1 score, or the negated score for a continuous metric. 1
+    minus a 0/1 score is still 0/1, so the pass-rate intervals, the
+    comparison and the power check still run on it. Any ``claim`` text with
+    ``claims_direction=True`` and no ``claimed_winner`` gets a warning that
+    its direction was not checked when the margin excludes zero. The text is
+    displayed and never parsed, so the warning fires whatever the text says.
 
     ``paired`` is left as None so the design is read off the data. Two
     systems scored on the same number of items are taken as paired, which is
@@ -1978,6 +1998,7 @@ class AuditConfig:
     discordance_rate: Optional[float] = None
     n_boot: int = 1000
     seed: Optional[int] = None
+    claimed_winner: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -2078,14 +2099,43 @@ class AuditReport:
         criticals = counts["critical"]
         warnings = counts["warning"]
         if criticals:
-            return (
+            verdict = (
                 f"{criticals} critical {_plural('finding', criticals)}, "
                 f"{warnings} {_plural('warning', warnings)} and "
                 f"{counts['info']} for context. On the critical "
                 f"{_plural('finding', criticals)} this data cannot support "
-                f"the conclusion as stated. That does not mean the "
-                f"conclusion is wrong."
+                f"the conclusion as stated."
             )
+            if self._margin_is(_CONTRADICTS_CLAIMED_WINNER):
+                verdict += (
+                    f" The interval on the margin shows "
+                    f"{self.config.claimed_winner} behind, against the claim."
+                )
+            else:
+                verdict += " That does not mean the conclusion is wrong."
+            if self._margin_is(_DIRECTION_NOT_CHECKED):
+                verdict += (
+                    f" {_DIRECTION_NOT_CHECKED} either. Set claimed_winner "
+                    f"to the system the claim says is better."
+                )
+            return verdict
+        if warnings and self._margin_is(_DIRECTION_NOT_CHECKED):
+            verdict = (
+                f"No critical findings. {warnings} "
+                f"{_plural('warning', warnings)} and {counts['info']} for "
+                f"context. {_DIRECTION_NOT_CHECKED}, so this report cannot "
+                f"say whether the margin supports the claim. Set "
+                f"claimed_winner to the system the claim says is better."
+            )
+            others = warnings - 1
+            if others:
+                says = "says" if others == 1 else "say"
+                verdict += (
+                    f" Once the direction is checked, report the result with "
+                    f"what the other {_plural('warning', others)} {says} "
+                    f"attached."
+                )
+            return verdict
         if warnings:
             says = "says" if warnings == 1 else "say"
             return (
@@ -2113,6 +2163,13 @@ class AuditReport:
         return (
             f"No critical findings and no warnings. {tested} That does not "
             f"mean the eval is sound."
+        )
+
+    def _margin_is(self, title: str) -> bool:
+        """Whether the margin finding carries this title."""
+        return any(
+            finding.check == "compare" and finding.title == title
+            for finding in self.findings
         )
 
     def _coverage(self) -> str:
